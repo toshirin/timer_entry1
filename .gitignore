@@ -1,0 +1,6 @@
+**/.DS_store
+research/*/ref
+research/*/outputs
+dataset/
+ticks/
+fx_260312/
