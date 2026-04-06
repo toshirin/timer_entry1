@@ -1,6 +1,5 @@
 **/.DS_store
-research/*/ref
-research/*/outputs
+scan/out/
 dataset/
 ticks/
 fx_260312/
