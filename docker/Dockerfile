@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir \
     "numpy>=2.0,<3" \
     "scikit-learn>=1.4,<1.8" \
     "pyarrow>=17,<22" \
-    "tqdm>=4.66,<5"
+    "tqdm>=4.66,<5" \
+    "pytest>=8.3,<9"
 
 CMD ["bash"]
