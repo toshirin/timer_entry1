@@ -16,7 +16,17 @@ SUMMARY_COLUMNS = [
     "sl_pips",
     "tp_pips",
     "trade_count",
+    "trade_count_in",
+    "trade_count_out",
+    "in_gross_pips",
+    "out_gross_pips",
     "gross_pips",
+    "rank_in",
+    "rank_out",
+    "rank_gap_abs",
+    "top1_share_of_total",
+    "ex_top10_gross_pips",
+    "pass_stability_gate",
     "win_rate",
     "profit_factor",
     "max_dd_pips",
@@ -90,9 +100,11 @@ def append_summary_rows(run_dir: str | Path, summary_df: pd.DataFrame) -> None:
 def _select_primary_secondary(df: pd.DataFrame) -> tuple[pd.Series | None, pd.Series | None]:
     if df.empty:
         return None, None
-    ranked = df.sort_values(
-        ["gross_pips", "profit_factor", "max_dd_pips", "trade_count"],
-        ascending=[False, False, False, False],
+    gate_pass = df[df["pass_stability_gate"]].copy() if "pass_stability_gate" in df.columns else df.iloc[0:0].copy()
+    source = gate_pass if not gate_pass.empty else df
+    ranked = source.sort_values(
+        ["pass_stability_gate", "out_gross_pips", "in_gross_pips", "rank_gap_abs", "ex_top10_gross_pips", "profit_factor", "trade_count"],
+        ascending=[False, False, False, True, False, False, False],
     ).reset_index(drop=True)
     primary = ranked.iloc[0]
     secondary_pool = ranked[ranked["entry_clock_local"] != primary["entry_clock_local"]]
@@ -109,7 +121,14 @@ def _candidate_block(title: str, row: pd.Series | None) -> list[str]:
         f"- entry_clock_local: {row['entry_clock_local']}",
         f"- filter_label: {row['filter_label']}",
         f"- sl/tp: {int(row['sl_pips'])}/{int(row['tp_pips'])}",
+        f"- pass_stability_gate: {bool(row['pass_stability_gate'])}" if "pass_stability_gate" in row.index else "- pass_stability_gate: n/a",
+        f"- in_gross_pips: {float(row['in_gross_pips']):.6f}" if "in_gross_pips" in row.index and pd.notna(row["in_gross_pips"]) else "- in_gross_pips: nan",
+        f"- out_gross_pips: {float(row['out_gross_pips']):.6f}" if "out_gross_pips" in row.index and pd.notna(row["out_gross_pips"]) else "- out_gross_pips: nan",
         f"- gross_pips: {float(row['gross_pips']):.6f}",
+        f"- rank_in: {float(row['rank_in']):.0f}" if "rank_in" in row.index and pd.notna(row["rank_in"]) else "- rank_in: nan",
+        f"- rank_out: {float(row['rank_out']):.0f}" if "rank_out" in row.index and pd.notna(row["rank_out"]) else "- rank_out: nan",
+        f"- rank_gap_abs: {float(row['rank_gap_abs']):.0f}" if "rank_gap_abs" in row.index and pd.notna(row["rank_gap_abs"]) else "- rank_gap_abs: nan",
+        f"- ex_top10_gross_pips: {float(row['ex_top10_gross_pips']):.6f}" if "ex_top10_gross_pips" in row.index and pd.notna(row["ex_top10_gross_pips"]) else "- ex_top10_gross_pips: nan",
         f"- trade_count: {int(row['trade_count'])}",
         f"- win_rate: {float(row['win_rate']):.6f}",
         f"- profit_factor: {float(row['profit_factor']):.6f}" if pd.notna(row["profit_factor"]) else "- profit_factor: nan",
@@ -162,6 +181,11 @@ def build_summary_report(run_dir: str | Path) -> Path | None:
                 "filter_label": primary["filter_label"] if primary is not None else None,
                 "sl_pips": primary["sl_pips"] if primary is not None else None,
                 "tp_pips": primary["tp_pips"] if primary is not None else None,
+                "pass_stability_gate": primary["pass_stability_gate"] if primary is not None and "pass_stability_gate" in primary.index else None,
+                "in_gross_pips": primary["in_gross_pips"] if primary is not None and "in_gross_pips" in primary.index else None,
+                "out_gross_pips": primary["out_gross_pips"] if primary is not None and "out_gross_pips" in primary.index else None,
+                "rank_gap_abs": primary["rank_gap_abs"] if primary is not None and "rank_gap_abs" in primary.index else None,
+                "ex_top10_gross_pips": primary["ex_top10_gross_pips"] if primary is not None and "ex_top10_gross_pips" in primary.index else None,
                 "gross_pips": primary["gross_pips"] if primary is not None else None,
                 "trade_count": primary["trade_count"] if primary is not None else None,
             }

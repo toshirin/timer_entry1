@@ -15,6 +15,9 @@ from .minute_data import TradingDay
 
 I64_NAT = np.iinfo(np.int64).min
 SCAN_LABELS = canonical_filter_labels()
+DEFAULT_IN_YEARS = frozenset({2019, 2020, 2021, 2022})
+DEFAULT_OUT_YEARS = frozenset({2023, 2024, 2025})
+DEFAULT_STABILITY_RANK_GAP_MAX = 100.0
 
 REASON_FORCED_EXIT = 0
 REASON_TP = 1
@@ -381,7 +384,17 @@ def build_fast_summary(daily_df: pd.DataFrame) -> pd.DataFrame:
                 "sl_pips",
                 "tp_pips",
                 "trade_count",
+                "trade_count_in",
+                "trade_count_out",
+                "in_gross_pips",
+                "out_gross_pips",
                 "gross_pips",
+                "rank_in",
+                "rank_out",
+                "rank_gap_abs",
+                "top1_share_of_total",
+                "ex_top10_gross_pips",
+                "pass_stability_gate",
                 "win_rate",
                 "profit_factor",
                 "max_dd_pips",
@@ -395,7 +408,13 @@ def build_fast_summary(daily_df: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     group_cols = ["slot_id", "side", "filter_label", "entry_clock_local", "sl_pips", "tp_pips"]
     for key, group in daily_df.groupby(group_cols, sort=False):
-        pnl = group["pnl_pips"]
+        ordered = group.sort_values("date_local")
+        pnl = ordered["pnl_pips"]
+        in_mask = ordered["year"].isin(DEFAULT_IN_YEARS)
+        out_mask = ordered["year"].isin(DEFAULT_OUT_YEARS)
+        total_sum = float(pnl.sum())
+        top1 = float(pnl.max()) if len(ordered) else math.nan
+        top10 = float(pnl.sort_values(ascending=False).head(10).sum()) if len(ordered) else math.nan
         rows.append(
             {
                 "slot_id": key[0],
@@ -404,18 +423,34 @@ def build_fast_summary(daily_df: pd.DataFrame) -> pd.DataFrame:
                 "entry_clock_local": key[3],
                 "sl_pips": key[4],
                 "tp_pips": key[5],
-                "trade_count": int(len(group)),
-                "gross_pips": float(pnl.sum()),
-                "win_rate": float((pnl > 0.0).mean()) if len(group) else math.nan,
+                "trade_count": int(len(ordered)),
+                "trade_count_in": int(in_mask.sum()),
+                "trade_count_out": int(out_mask.sum()),
+                "in_gross_pips": round(float(ordered.loc[in_mask, "pnl_pips"].sum()), 6),
+                "out_gross_pips": round(float(ordered.loc[out_mask, "pnl_pips"].sum()), 6),
+                "gross_pips": round(total_sum, 6),
+                "top1_share_of_total": float(top1 / total_sum) if total_sum != 0.0 else math.nan,
+                "ex_top10_gross_pips": round(float(total_sum - top10), 6),
+                "win_rate": float((pnl > 0.0).mean()) if len(ordered) else math.nan,
                 "profit_factor": float(_safe_profit_factor(pnl)),
                 "max_dd_pips": float(_safe_max_dd(pnl)),
-                "max_hold_time_min": int(group["hold_min"].max()) if len(group) else math.nan,
-                "same_bar_conflict_count": int(group["same_bar_conflict_flag"].sum()),
-                "same_bar_unresolved_count": int(group["same_bar_unresolved_flag"].sum()),
-                "forced_exit_count": int((group["exit_reason"] == "forced_exit").sum()),
+                "max_hold_time_min": int(ordered["hold_min"].max()) if len(ordered) else math.nan,
+                "same_bar_conflict_count": int(ordered["same_bar_conflict_flag"].sum()),
+                "same_bar_unresolved_count": int(ordered["same_bar_unresolved_flag"].sum()),
+                "forced_exit_count": int((ordered["exit_reason"] == "forced_exit").sum()),
             }
         )
-    return pd.DataFrame(rows)
+    summary_df = pd.DataFrame(rows)
+    summary_df["rank_in"] = summary_df["in_gross_pips"].rank(ascending=False, method="min")
+    summary_df["rank_out"] = summary_df["out_gross_pips"].rank(ascending=False, method="min")
+    summary_df["rank_gap_abs"] = (summary_df["rank_in"] - summary_df["rank_out"]).abs()
+    summary_df["pass_stability_gate"] = (
+        (summary_df["in_gross_pips"] > 0.0)
+        & (summary_df["out_gross_pips"] > 0.0)
+        & (summary_df["rank_gap_abs"] < DEFAULT_STABILITY_RANK_GAP_MAX)
+        & (summary_df["ex_top10_gross_pips"] > 0.0)
+    )
+    return summary_df
 
 
 def run_scan_fast(
@@ -500,6 +535,9 @@ def run_scan_fast(
 
 
 __all__ = [
+    "DEFAULT_IN_YEARS",
+    "DEFAULT_OUT_YEARS",
+    "DEFAULT_STABILITY_RANK_GAP_MAX",
     "FastDay",
     "FastFeatureRow",
     "FastScanResult",

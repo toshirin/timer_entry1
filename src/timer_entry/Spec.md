@@ -178,8 +178,8 @@ class DirectionSpec:
 
 前半 25 分と後半 25 分の値動き比較のみを扱う。
 
-- `left_ret_pips = close(t-30) - close(t-55)`
-- `right_ret_pips = close(t-5) - close(t-30)`
+- `left_ret_pips = close(t-30) - open(t-55)`
+- `right_ret_pips = close(t-5) - open(t-30)`
 - `left_abs = abs(left_ret_pips)`
 - `right_abs = abs(right_ret_pips)`
 
@@ -282,6 +282,48 @@ filter は runtime でも scan / qualify でも同じ評価器を使う。
 - filter 名と閾値定義は `filters.py` に集約する
 - runtime 側だけ独自解釈を入れない
 - report 出力には filter 名、閾値、実測値を残せるようにする
+
+## 8.1 scan の stability gate
+
+scan は filter family の当たりを見る段階だが、gross の大きさだけで昇格候補を決めてはならない。
+`probe5` で用いていた `in/out` 安定性と `exclude top10` の思想は、本リポジトリでも上位仕様として維持する。
+
+scan summary では少なくとも以下を計算する。
+
+- `trade_count_in`
+- `trade_count_out`
+- `in_gross_pips`
+- `out_gross_pips`
+- `gross_pips`
+- `rank_in`
+- `rank_out`
+- `rank_gap_abs`
+- `top1_share_of_total`
+- `ex_top10_gross_pips`
+- `pass_stability_gate`
+
+ここで、
+
+- `in`
+  - 初版では `2019-2022`
+- `out`
+  - 初版では `2023-2025`
+
+とする。
+
+`rank_in` と `rank_out` は、同一 summary 集合の中での `in_gross_pips` / `out_gross_pips` の順位である。
+`rank_gap_abs = abs(rank_in - rank_out)` は、in では上位でも out で崩れる候補を検出するための指標である。
+
+`ex_top10_gross_pips` は、上位 10 日を除外した後でも損益が正かを見る指標であり、一部の大当たり依存を避けるために使う。
+
+初版の `pass_stability_gate` は以下をすべて満たすものとする。
+
+- `in_gross_pips > 0`
+- `out_gross_pips > 0`
+- `rank_gap_abs < 100`
+- `ex_top10_gross_pips > 0`
+
+`qualify` の優先順位付けでは、原則として `pass_stability_gate == True` の候補を優先し、これを満たさない候補は除外または強く減点する。
 
 ## 9. 1分足 backtest 仕様
 

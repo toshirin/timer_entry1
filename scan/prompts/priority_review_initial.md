@@ -14,6 +14,7 @@
 - `scan`
   - filter family の当たりを見る段階です
   - 基本閾値だけを見ています
+  - `pass_stability_gate` を満たさない候補は、原則として `qualify` 候補から除外します
 - `qualify`
   - scan で反応した family の閾値深掘りを行う段階です
 - Bid/Ask、same-bar、保守的 SL exit、event time の扱いは core で固定済みです
@@ -25,6 +26,11 @@
 3. 各 slot について、どの filter family を E001 で深掘るべきか示してください
 4. 理由は少なくとも以下を踏まえて説明してください
    - `gross_pips`
+   - `in_gross_pips`
+   - `out_gross_pips`
+   - `rank_gap_abs`
+   - `ex_top10_gross_pips`
+   - `pass_stability_gate`
    - `trade_count`
    - `profit_factor`
    - `max_dd_pips`
@@ -45,6 +51,7 @@
 ## 注意
 
 - `scan` は family 探しです。scan の条件名をそのまま最終結論扱いしないでください
+- `pass_stability_gate == False` の候補は、原則として除外してください
 - `qualify` では threshold sweep や percentile sweep の入口を示してください
 - `all` が強い場合は「追加 filter なしが有力」なのか、「未探索 family がある可能性」なのかを分けて考えてください
 - `same_bar_unresolved_count` が多い slot は execution リスク込みで評価してください

@@ -21,6 +21,7 @@
 
 - `summary.csv`
   - 全 slot / side / entry 時刻 / filter / SL / TP の集計
+  - `in/out` 損益、rank、`ex_top10_gross_pips`、`pass_stability_gate` を含む
 - `per_slot/summary_tyo09.csv`
   - slot ごとの集計 CSV
 - `reports/`
@@ -55,3 +56,9 @@ docker run --rm \
 - `tqdm` を必須とし、slot ごとの進捗を表示する
 - 東京系は `tyoXX`、ロンドン系は `lonXX` の slot 名を使う
 - slot ごとの処理が終わるたびに `summary.csv` と `per_slot` へ append する
+- `scan` の昇格ゲートとして `pass_stability_gate` を計算する
+- `pass_stability_gate`
+  - `in_gross_pips > 0`
+  - `out_gross_pips > 0`
+  - `rank_gap_abs < 100`
+  - `ex_top10_gross_pips > 0`
