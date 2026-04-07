@@ -27,6 +27,25 @@ SUMMARY_COLUMNS = [
 ]
 
 
+def _markdown_escape(value: object) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    return str(value).replace("|", "\\|")
+
+
+def _dataframe_to_markdown(df: pd.DataFrame) -> str:
+    if df.empty:
+        return "No rows."
+    columns = [str(col) for col in df.columns]
+    header = "| " + " | ".join(columns) + " |"
+    separator = "| " + " | ".join(["---"] * len(columns)) + " |"
+    rows = [
+        "| " + " | ".join(_markdown_escape(row[col]) for col in df.columns) + " |"
+        for _, row in df.iterrows()
+    ]
+    return "\n".join([header, separator] + rows)
+
+
 def ensure_run_layout(run_dir: str | Path) -> dict[str, Path]:
     root = Path(run_dir)
     per_slot_dir = root / "per_slot"
@@ -150,7 +169,7 @@ def build_summary_report(run_dir: str | Path) -> Path | None:
 
     out = pd.DataFrame(rows)
     report_path = paths["reports_dir"] / "summary_report.md"
-    lines = ["# summary_report", "", out.to_markdown(index=False) if not out.empty else "No summary rows."]
+    lines = ["# summary_report", "", _dataframe_to_markdown(out) if not out.empty else "No summary rows."]
     report_path.write_text("\n".join(lines), encoding="utf-8")
     return report_path
 
