@@ -30,6 +30,7 @@ tick replay は `qualify/` 内で共通化する。
 - `slot`
   - 1時間ごとの時間帯を指す
   - 例として `tyo09` や `lon08` のような単位で扱う
+  - `tyo` は `Asia/Tokyo` の `07:00-15:59`、`lon` は `Europe/London` の `08:00-21:59` を対象とする
 - `setting`
   - 1つの slot の中で使う具体的な売買条件を指す
   - entry 時刻、forced exit 時刻、TP / SL、軽量フィルター条件を含む
