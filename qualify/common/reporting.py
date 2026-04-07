@@ -68,6 +68,48 @@ def build_e001_summary(summary_rows: list[dict[str, object]]) -> pd.DataFrame:
     return df.loc[:, [column for column in columns if column in df.columns]]
 
 
+def build_e002_summary(summary_rows: list[dict[str, object]]) -> pd.DataFrame:
+    columns = [
+        "comparison_label",
+        "filter_label",
+        "tp_pips",
+        "sl_pips",
+        "input_pass_stability_gate",
+        "trade_count",
+        "eligible_day_count",
+        "gross_pips",
+        "in_gross_pips",
+        "out_gross_pips",
+        "rank_in",
+        "rank_out",
+        "rank_gap_abs",
+        "top1_share_of_total",
+        "ex_top10_gross_pips",
+        "pass_stability_gate",
+        "mean_pips",
+        "median_pips",
+        "std_pips",
+        "win_rate",
+        "profit_factor",
+        "max_dd_pips",
+        "annualized_pips",
+    ]
+    if not summary_rows:
+        return pd.DataFrame(columns=columns)
+
+    df = pd.DataFrame(summary_rows)
+    df["rank_in"] = df["in_gross_pips"].rank(ascending=False, method="min")
+    df["rank_out"] = df["out_gross_pips"].rank(ascending=False, method="min")
+    df["rank_gap_abs"] = (df["rank_in"] - df["rank_out"]).abs()
+    df["pass_stability_gate"] = (
+        (df["in_gross_pips"] > 0.0)
+        & (df["out_gross_pips"] > 0.0)
+        & (df["rank_gap_abs"] < DEFAULT_STABILITY_RANK_GAP_MAX)
+        & (df["ex_top10_gross_pips"] > 0.0)
+    )
+    return df.loc[:, [column for column in columns if column in df.columns]]
+
+
 def build_split_summary(
     trades_df: pd.DataFrame,
     *,
