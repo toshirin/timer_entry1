@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Literal
 
 from .features import FeatureComputationResult
@@ -72,6 +73,8 @@ SCAN_FILTERS: tuple[CanonicalFilter, ...] = (
 
 
 SCAN_FILTER_MAP: dict[str, CanonicalFilter] = {item.label: item for item in SCAN_FILTERS}
+_SLOPE_LABEL_RE = re.compile(r"^(ge|le)(-?\d+(?:[._]\d+)?)$")
+_VOL_PERCENTILE_LABEL_RE = re.compile(r"^vol_(ge|lt)_p(100|[1-9]?\d)$")
 
 
 def canonical_filter_labels() -> list[str]:
@@ -84,22 +87,61 @@ def get_canonical_filter(label: str) -> CanonicalFilter:
     return SCAN_FILTER_MAP[label]
 
 
+def parse_slope_filter_label(label: str) -> tuple[str, float] | None:
+    match = _SLOPE_LABEL_RE.fullmatch(label)
+    if match is None:
+        return None
+    operator, raw_threshold = match.groups()
+    threshold = float(raw_threshold.replace("_", "."))
+    return operator, threshold
+
+
+def parse_volatility_filter_label(label: str) -> tuple[str, str | int] | None:
+    if label == "vol_ge_med":
+        return "ge", "med"
+    if label == "vol_lt_med":
+        return "lt", "med"
+    match = _VOL_PERCENTILE_LABEL_RE.fullmatch(label)
+    if match is None:
+        return None
+    operator, percentile_text = match.groups()
+    return operator, int(percentile_text)
+
+
+def get_filter_family(label: str) -> FilterFamily:
+    canonical = SCAN_FILTER_MAP.get(label)
+    if canonical is not None:
+        return canonical.family
+    if parse_slope_filter_label(label) is not None:
+        return "pre_open_slope"
+    if parse_volatility_filter_label(label) is not None:
+        return "pre_range_regime"
+    raise ValueError(f"Unsupported filter label: {label}")
+
+
 def evaluate_canonical_filter(
     label: str,
     features: FeatureComputationResult,
     *,
     pre_range_median: float | None = None,
+    pre_range_threshold: float | None = None,
 ) -> bool:
     # scan / qualify の DataFrame 側で使う簡易評価器。
     if not features.feature_available:
         return False
 
+    resolved_pre_range_threshold = pre_range_threshold
+    if resolved_pre_range_threshold is None:
+        resolved_pre_range_threshold = pre_range_median
+
     if label == "all":
         return True
-    if label == "ge0":
-        return features.pre_open_slope_pips >= 0.0
-    if label == "le0":
-        return features.pre_open_slope_pips <= 0.0
+    slope_spec = parse_slope_filter_label(label)
+    if slope_spec is not None:
+        operator, threshold = slope_spec
+        if operator == "ge":
+            return features.pre_open_slope_pips >= threshold
+        return features.pre_open_slope_pips <= threshold
     if label == "left_stronger":
         return features.left_stronger
     if label == "right_stronger":
@@ -108,14 +150,14 @@ def evaluate_canonical_filter(
         return features.same_sign
     if label == "opposite_sign":
         return features.opposite_sign
-    if label == "vol_ge_med":
-        if pre_range_median is None:
-            raise ValueError("pre_range_median is required for vol_ge_med")
-        return features.pre_range_pips >= pre_range_median
-    if label == "vol_lt_med":
-        if pre_range_median is None:
-            raise ValueError("pre_range_median is required for vol_lt_med")
-        return features.pre_range_pips < pre_range_median
+    vol_spec = parse_volatility_filter_label(label)
+    if vol_spec is not None:
+        if resolved_pre_range_threshold is None:
+            raise ValueError(f"pre_range_threshold is required for {label}")
+        operator, _ = vol_spec
+        if operator == "ge":
+            return features.pre_range_pips >= resolved_pre_range_threshold
+        return features.pre_range_pips < resolved_pre_range_threshold
     if label == "trend_ge_0_5":
         return features.trend_ratio == features.trend_ratio and features.trend_ratio >= 0.5
     if label == "range_lt_0_3":
@@ -132,10 +174,10 @@ def to_runtime_filter_spec(
     # `all` は filter 無し運用と同義なので None を返す。
     if label == "all":
         return None
-    if label == "ge0":
-        return RuntimeFilterSpec(filter_type="pre_open_slope", operator="ge", threshold=0.0)
-    if label == "le0":
-        return RuntimeFilterSpec(filter_type="pre_open_slope", operator="le", threshold=0.0)
+    slope_spec = parse_slope_filter_label(label)
+    if slope_spec is not None:
+        operator, threshold = slope_spec
+        return RuntimeFilterSpec(filter_type="pre_open_slope", operator=operator, threshold=threshold)
     if label == "left_stronger":
         return RuntimeFilterSpec(filter_type="shape_balance", mode="left_stronger")
     if label == "right_stronger":
@@ -144,14 +186,12 @@ def to_runtime_filter_spec(
         return RuntimeFilterSpec(filter_type="shape_balance", mode="same_sign")
     if label == "opposite_sign":
         return RuntimeFilterSpec(filter_type="shape_balance", mode="opposite_sign")
-    if label == "vol_ge_med":
+    vol_spec = parse_volatility_filter_label(label)
+    if vol_spec is not None:
         if pre_range_threshold is None:
-            raise ValueError("pre_range_threshold is required for vol_ge_med")
-        return RuntimeFilterSpec(filter_type="pre_range_regime", operator="ge", threshold=float(pre_range_threshold))
-    if label == "vol_lt_med":
-        if pre_range_threshold is None:
-            raise ValueError("pre_range_threshold is required for vol_lt_med")
-        return RuntimeFilterSpec(filter_type="pre_range_regime", operator="lt", threshold=float(pre_range_threshold))
+            raise ValueError(f"pre_range_threshold is required for {label}")
+        operator, _ = vol_spec
+        return RuntimeFilterSpec(filter_type="pre_range_regime", operator=operator, threshold=float(pre_range_threshold))
     if label == "trend_ge_0_5":
         return RuntimeFilterSpec(filter_type="trend_ratio", operator="ge", threshold=0.5)
     if label == "range_lt_0_3":
@@ -180,7 +220,10 @@ __all__ = [
     "SCAN_FILTER_MAP",
     "canonical_filter_labels",
     "evaluate_canonical_filter",
+    "get_filter_family",
     "get_canonical_filter",
+    "parse_slope_filter_label",
+    "parse_volatility_filter_label",
     "runtime_filter_dicts",
     "to_runtime_filter_spec",
 ]
