@@ -60,10 +60,74 @@
 - ただし、現行 `qualify` では E001 も `pass_stability_gate` を前提ゲートとして扱う
 - gate を満たさない候補は、通常の E001 本線ではなく、例外的な再点検や派生実験として切り分ける
 
-## 7. 未解決論点
+## 7. E002 監査メモ
+
+### 7.1 参照対象
+
+- `../fx_260312/research/jst10_exhaustive1/e002.py`
+- `../fx_260312/research/jst12_exhaustive1/e002.py`
+- `../fx_260312/research/lon08_exhaustive1/e002.py`
+- `../fx_260312/research/jst09_exhaustive1/e002.py`
+- `../fx_260312/research/jst10_exhaustive1/specs/jst10_exhaustive1_E002_Spec_for_Codex.md`
+- `../fx_260312/research/jst12_exhaustive1/specs/jst12_exhaustive1_E002_Spec_for_Codex.md`
+- `../fx_260312/research/lon08_exhaustive1/specs/lon08_exhaustive1_E002_spec.md`
+- `../fx_260312/research/jst09_exhaustive1/specs/jst09_exhaustive1_E001_E002_Spec_for_Codex.md`
+
+### 7.2 結論
+
+- 旧 `jst10` / `jst12` / `lon08` の E002 は、ほぼ「固定条件に対する小規模 SL/TP sweep」で共通化しやすい
+- 旧 `jst09` の E002 は 9時台全体の scan 再現色が強く、今回の `qualify` の E002 には継承しない
+- したがって、`qualify/E002` は「E001 通過候補を固定し、TP / SL だけを sweep する段階」と再定義するのが妥当
+
+### 7.3 継承するもの
+
+- E002 は E001 通過候補の次段である
+- filter 条件は固定したまま TP / SL を小規模 sweep する
+- forced exit は原則固定する
+- gross 最大だけで決めず、PF / maxDD / in/out / ex_top10 を見る
+- 過剰最適化を避けるため sweep 範囲は近傍に限る
+- entry バー監視禁止、same-bar、不利側優先などの canonical 仕様を維持する
+
+### 7.4 継承しないもの
+
+- slot ごとに別々の candidate grid をコードへ埋め込む構成
+- series ごとの独自 summary 列
+- scan 再現型 E002
+- heatmap や top10 CSV を experiment 固有の必須成果物にする設計
+
+### 7.5 `qualify` 向け定義
+
+`qualify/E002` の定義は以下がよい。
+
+- 入力
+  - E001 で選ばれた baseline setting
+  - TP 候補群
+  - SL 候補群
+  - `pass_stability_gate`
+- 固定するもの
+  - slot
+  - side
+  - entry
+  - forced exit
+  - filter 条件
+- sweep するもの
+  - TP / SL のみ
+- 出力
+  - schema 主語の summary / split / year / trades / sanity
+  - comparison label として `tp/sl` を持つ
+
+### 7.6 実装含意
+
+- E001 runner の構造をかなり流用できる
+- 差分は comparison axis が filter label から `tp/sl grid` に変わる点だけに近い
+- `qualify/common/reporting.py` も大部分を再利用できるはず
+- E002 では `pass_stability_gate` を再計算するというより、E001 から持ち込んだ baseline の gate 状態を前提メタデータとして保持するのが自然
+
+## 8. 未解決論点
 
 - ChatGPT 側から受け取る JSON の最終 schema
 - `E001A` のような派生コードの命名・保存ルール
 - report 形式の最終標準形
 - E002 以降で共通利用する scenario metadata の最小集合
 - `pass_stability_gate == False` の候補をどの粒度で例外許可するか
+- E002 の TP / SL grid を ChatGPT 側 JSON でどこまで自由化するか

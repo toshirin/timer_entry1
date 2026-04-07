@@ -180,7 +180,7 @@ slot ごとの方言 CSV は増やさない。
   - filter family の深掘り
   - `all` 主線候補の小規模再審査
 - E002
-  - TP / SL 深掘り
+  - E001 通過候補の TP / SL 深掘り
 - E003
   - forced exit 深掘り
 - E004
@@ -244,7 +244,29 @@ E001 でも `pass_stability_gate` を適用する。
 
 E001 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md` に集約する。
 
-## 13. 旧資産の扱い
+## 13. E002 の位置付け
+
+E002 は E001 の次段であり、mission は以下とする。
+
+- E001 で通した baseline setting を固定する
+- filter 条件は原則固定し、TP / SL の小規模 sweep を行う
+- 「最良値の探索」ではなく、「壊れにくい近傍」の確認を目的とする
+
+E002 の原則は以下。
+
+- entry / side / forced exit / filter 条件は固定する
+- 新規 filter の追加や差し替えは行わない
+- TP / SL の sweep は説明可能な近傍に限る
+- gross 最大のみで順位を決めない
+- PF、maxDD、in/out、ex_top10、trade_count を併せて評価する
+- `pass_stability_gate` を引き続き適用する
+
+`qualify` における E002 は、旧 `fx_260312` の `jst10` / `jst12` / `lon08` 系のような
+「固定条件に対する小規模 SL/TP sweep」を継承し、`jst09` のような scan 再現型 E002 は継承しない。
+
+E002 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md` に集約する。
+
+## 14. 旧資産の扱い
 
 `fx_260312` は比較用の一時 checkout と位置付ける。
 このため、`qualify` の恒久仕様は以下の方針を取る。
@@ -257,7 +279,9 @@ E001 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md
 旧 `e001.py` は実験色が強いため、そのまま移植しない。
 今の core を使って組み直し、エッセンスだけを拝借する。
 
-## 14. 監査ドキュメント
+旧 `e002.py` についても同様に、そのまま移植せず、`E001 -> E002 -> E003` の共通 flow に沿って再構成する。
+
+## 15. 監査ドキュメント
 
 監査結果は `qualify/docs/Audit_Result.md` に集約する。
 ここには以下を載せる。
@@ -269,10 +293,11 @@ E001 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md
 - 継承しないもの
 - 未解決論点
 
-## 15. 次の実装順
+## 16. 次の実装順
 
 1. ChatGPT 側 prompt を JSON 出力前提に整える
 2. `qualify/common/params.py` と scenario 入力契約を定める
 3. `qualify/e001.py` と共通 runner を作る
 4. reporting を schema 主語で整える
-5. E002 以降へ横展開する
+5. E002 の監査結果を反映し、SL / TP sweep runner へ横展開する
+6. E003 以降へ進む
