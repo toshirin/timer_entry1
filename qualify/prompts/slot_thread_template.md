@@ -13,6 +13,8 @@
 
 - scan は filter family の当たりを見る段階です
 - qualify/E001 は scan で反応した family の threshold sweep を行う段階です
+- `pass_stability_gate == True` の候補を原則優先してください
+- `pass_stability_gate == False` の候補は、通常は除外し、扱う場合は明示的な理由を添えてください
 - Bid/Ask、same-bar、保守的 SL exit、event time の扱いは core で固定済みです
 - `strategy / slot / setting` の意味は添付資料に従ってください
 
@@ -22,8 +24,9 @@
 2. その family について、最初に試す閾値群を提案してください
 3. `all` を残すべきか外すべきかを判断してください
 4. `tp/sl` の初手候補を絞ってください
-5. `same_bar_conflict_count` と `same_bar_unresolved_count` を踏まえて、execution 上の注意点があれば書いてください
-6. 最後に Codex 実行用 JSON を出してください
+5. `pass_stability_gate` を満たしているかを確認し、満たさない場合は除外か例外採用かを明記してください
+6. `same_bar_conflict_count` と `same_bar_unresolved_count` を踏まえて、execution 上の注意点があれば書いてください
+7. 最後に Codex 実行用 JSON を出してください
 
 ## 出力形式
 
@@ -32,8 +35,9 @@
 1. 結論
 2. 根拠
 3. E001 の初手パラメータ案
-4. 注意点
-5. Codex 実行用 JSON
+4. gate 判定
+5. 注意点
+6. Codex 実行用 JSON
 
 ## JSON 形式
 
@@ -54,6 +58,7 @@
   },
   "comparison_family": "pre_open_slope",
   "comparison_labels": ["all", "ge0", "ge2", "ge4"],
+  "pass_stability_gate": true,
   "notes": "short rationale"
 }
 ```

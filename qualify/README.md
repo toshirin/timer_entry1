@@ -9,6 +9,7 @@
 - pandas の canonical engine である `src/timer_entry/backtest_1m.py` を基準にする
 - tick replay を `qualify/` 側で共通化する
 - ChatGPT 側スレッドで決まった実験パラメータを受けて、Codex 側で機械実行する
+- 原則として `pass_stability_gate == True` の候補を昇格審査対象にする
 
 ## 使い方
 
