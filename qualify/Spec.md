@@ -182,7 +182,7 @@ slot ごとの方言 CSV は増やさない。
 - E002
   - E001 通過候補の TP / SL 深掘り
 - E003
-  - forced exit 深掘り
+  - E002 通過候補の forced exit 深掘り
 - E004
   - tick replay 昇格審査
 - E005
@@ -266,7 +266,29 @@ E002 の原則は以下。
 
 E002 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md` に集約する。
 
-## 14. 旧資産の扱い
+## 14. E003 の位置付け
+
+E003 は E002 の次段であり、mission は以下とする。
+
+- E002 で通した baseline setting を固定する
+- entry / side / filter / TP / SL を固定したまま、forced exit 時刻だけを sweep する
+- 利益最大化ではなく、時間帯分離やロバスト性の観点から、自然な exit 帯を確認する
+
+E003 の原則は以下。
+
+- sweep 対象は forced exit 時刻のみ
+- TP / SL / filter / entry は変更しない
+- gross 最大のみで順位を決めない
+- PF、maxDD、in/out、ex_top10、trade_count を併せて評価する
+- `pass_stability_gate` を引き続き前提メタデータとして保持する
+
+`qualify` における E003 は、旧 `fx_260312` の `jst10` / `jst12` / `lon08` 系のような
+「固定条件に対する forced exit sweep」を継承する。
+`E003A` のような派生は、探索幅や問題設定を広げる variant として扱ってよい。
+
+E003 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md` に集約する。
+
+## 15. 旧資産の扱い
 
 `fx_260312` は比較用の一時 checkout と位置付ける。
 このため、`qualify` の恒久仕様は以下の方針を取る。
@@ -281,7 +303,9 @@ E002 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md
 
 旧 `e002.py` についても同様に、そのまま移植せず、`E001 -> E002 -> E003` の共通 flow に沿って再構成する。
 
-## 15. 監査ドキュメント
+旧 `e003.py` についても同様に、そのまま移植せず、comparison axis だけを forced exit へ差し替えた共通 runner として再構成する。
+
+## 16. 監査ドキュメント
 
 監査結果は `qualify/docs/Audit_Result.md` に集約する。
 ここには以下を載せる。
@@ -293,11 +317,12 @@ E002 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md
 - 継承しないもの
 - 未解決論点
 
-## 16. 次の実装順
+## 17. 次の実装順
 
 1. ChatGPT 側 prompt を JSON 出力前提に整える
 2. `qualify/common/params.py` と scenario 入力契約を定める
 3. `qualify/e001.py` と共通 runner を作る
 4. reporting を schema 主語で整える
 5. E002 の監査結果を反映し、SL / TP sweep runner へ横展開する
-6. E003 以降へ進む
+6. E003 の監査結果を反映し、forced exit sweep runner へ横展開する
+7. E004 以降へ進む

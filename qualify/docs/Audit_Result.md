@@ -123,7 +123,68 @@
 - `qualify/common/reporting.py` も大部分を再利用できるはず
 - E002 では `pass_stability_gate` を再計算するというより、E001 から持ち込んだ baseline の gate 状態を前提メタデータとして保持するのが自然
 
-## 8. 未解決論点
+## 8. E003 監査メモ
+
+### 8.1 参照対象
+
+- `../fx_260312/research/jst10_exhaustive1/e003.py`
+- `../fx_260312/research/jst12_exhaustive1/e003.py`
+- `../fx_260312/research/lon08_exhaustive1/e003.py`
+- `../fx_260312/research/jst09_exhaustive1/e003.py`
+- `../fx_260312/research/jst10_exhaustive1/specs/jst10_exhaustive1_E003_Spec_for_Codex.md`
+- `../fx_260312/research/jst12_exhaustive1/specs/jst12_exhaustive1_E003_Spec_for_Codex.md`
+- `../fx_260312/research/lon08_exhaustive1/specs/lon08_exhaustive1_E003_spec.md`
+- `../fx_260312/research/lon08_exhaustive1/specs/lon08_exhaustive1_E003A_spec.md`
+- `../fx_260312/research/jst09_exhaustive1/specs/E003_Spec.md`
+
+### 8.2 結論
+
+- 旧 `jst10` / `jst12` / `lon08` の E003 は、ほぼ「固定条件に対する forced exit sweep」で共通化しやすい
+- `lon08` では E003A のような探索幅拡張が行われており、これは `variant_code` で素直に表現できる
+- したがって、`qualify/E003` は「E002 通過候補を固定し、forced exit 時刻だけを sweep する段階」と再定義するのが妥当
+
+### 8.3 継承するもの
+
+- E003 は E002 通過候補の次段である
+- filter / TP / SL / entry は固定したまま forced exit だけを sweep する
+- gross 最大だけで決めず、PF / maxDD / in/out / ex_top10 を見る
+- 時刻帯分離や隣接 slot との干渉回避を評価軸に含めてよい
+- entry バー監視禁止、same-bar、不利側優先などの canonical 仕様を維持する
+
+### 8.4 継承しないもの
+
+- slot ごとに別々の forced exit 候補配列をコードへ埋め込む構成
+- series ごとの独自 summary 列や time profile 専用 CSV を必須成果物にする設計
+- slot 固有の議論を本体仕様へ埋め込む構成
+
+### 8.5 `qualify` 向け定義
+
+`qualify/E003` の定義は以下がよい。
+
+- 入力
+  - E002 で選ばれた baseline setting
+  - forced exit 候補群
+  - `pass_stability_gate`
+- 固定するもの
+  - slot
+  - side
+  - entry
+  - filter 条件
+  - TP / SL
+- sweep するもの
+  - forced exit 時刻のみ
+- 出力
+  - schema 主語の summary / split / year / trades / sanity
+  - comparison label として `forced_exit_clock_local` を持つ
+
+### 8.6 実装含意
+
+- E002 runner の構造をかなり流用できる
+- 差分は comparison axis が `tp/sl grid` から `forced_exit grid` に変わる点だけに近い
+- `variant_code` で `E003A` のような拡張探索も表現しやすい
+- E003 でも gate は再計算するというより、前段から持ち込んだ baseline の gate 状態を前提メタデータとして保持するのが自然
+
+## 9. 未解決論点
 
 - ChatGPT 側から受け取る JSON の最終 schema
 - `E001A` のような派生コードの命名・保存ルール
@@ -131,3 +192,4 @@
 - E002 以降で共通利用する scenario metadata の最小集合
 - `pass_stability_gate == False` の候補をどの粒度で例外許可するか
 - E002 の TP / SL grid を ChatGPT 側 JSON でどこまで自由化するか
+- E003 の forced exit grid を ChatGPT 側 JSON でどこまで自由化するか
