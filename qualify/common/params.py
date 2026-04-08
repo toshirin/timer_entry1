@@ -191,6 +191,75 @@ class E002Params:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class E003Params:
+    experiment_code: str
+    variant_code: str | None
+    slot_id: str
+    side: str
+    baseline: BaselineSettingInput
+    forced_exit_values: tuple[str, ...]
+    pass_stability_gate: bool
+    notes: str | None = None
+    date_from: str | None = None
+    date_to: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "E003Params":
+        experiment_code = str(data["experiment_code"])
+        if experiment_code != "E003":
+            raise ValueError(f"Unsupported experiment_code for E003 runner: {experiment_code}")
+        forced_exit_values = tuple(str(value) for value in data.get("forced_exit_values", []))
+        if not forced_exit_values:
+            raise ValueError("forced_exit_values must not be empty")
+        return cls(
+            experiment_code=experiment_code,
+            variant_code=str(data["variant_code"]) if data.get("variant_code") is not None else None,
+            slot_id=str(data["slot_id"]),
+            side=str(data["side"]),
+            baseline=BaselineSettingInput.from_dict(dict(data["baseline"])),
+            forced_exit_values=forced_exit_values,
+            pass_stability_gate=bool(data["pass_stability_gate"]),
+            notes=str(data["notes"]) if data.get("notes") is not None else None,
+            date_from=str(data["date_from"]) if data.get("date_from") is not None else None,
+            date_to=str(data["date_to"]) if data.get("date_to") is not None else None,
+        )
+
+    @property
+    def market_tz(self) -> str:
+        return _market_tz_from_slot(self.slot_id)
+
+    @property
+    def run_label(self) -> str:
+        return self.variant_code or self.experiment_code
+
+    def comparison_label(self, *, forced_exit_clock_local: str) -> str:
+        return f"fx{forced_exit_clock_local.replace(':', '')}"
+
+    def to_strategy_setting(
+        self,
+        *,
+        forced_exit_clock_local: str,
+    ) -> StrategySetting:
+        comparison_label = self.comparison_label(forced_exit_clock_local=forced_exit_clock_local)
+        setting_suffix = comparison_label.replace(".", "_")
+        return StrategySetting(
+            setting_id=f"{self.slot_id}_{self.side}_{self.run_label}_{setting_suffix}",
+            slot_id=self.slot_id,
+            side=self.side,  # type: ignore[arg-type]
+            market_tz=self.market_tz,  # type: ignore[arg-type]
+            entry_clock_local=self.baseline.entry_clock_local,
+            forced_exit_clock_local=forced_exit_clock_local,
+            tp_pips=self.baseline.tp_pips,
+            sl_pips=self.baseline.sl_pips,
+            filter_labels=self.baseline.filter_labels,
+            notes=self.notes,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 def load_e001_params(path: str | Path) -> E001Params:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -203,3 +272,10 @@ def load_e002_params(path: str | Path) -> E002Params:
     if not isinstance(payload, dict):
         raise ValueError("E002 params must be a JSON object")
     return E002Params.from_dict(payload)
+
+
+def load_e003_params(path: str | Path) -> E003Params:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("E003 params must be a JSON object")
+    return E003Params.from_dict(payload)

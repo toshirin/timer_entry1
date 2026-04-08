@@ -21,3 +21,57 @@
   - `qualify/prompts/slot_thread_template.md`
 
 実装コードはこれから追加します。入口は `qualify/e00N.py`、共通ロジックは `qualify/common/` に寄せる想定です。
+
+## Docker 実行
+
+ビルド:
+
+```bash
+docker build -f docker/Dockerfile -t timer_entry1 .
+```
+
+実行例:
+
+E001:
+
+```bash
+docker run --rm \
+  -v "$PWD:/work" \
+  timer_entry1 \
+  python qualify/e001.py \
+    --params-file qualify/params/e001_example.json \
+    --years 2019 2020 2021 2022 2023 2024 2025 \
+    --dataset-dir dataset \
+    --out-dir qualify/out/E001/latest
+```
+
+E002:
+
+```bash
+docker run --rm \
+  -v "$PWD:/work" \
+  timer_entry1 \
+  python qualify/e002.py \
+    --params-file qualify/params/e002_example.json \
+    --years 2019 2020 2021 2022 2023 2024 2025 \
+    --dataset-dir dataset \
+    --out-dir qualify/out/E002/latest
+```
+
+E003:
+
+```bash
+docker run --rm \
+  -v "$PWD:/work" \
+  timer_entry1 \
+  python qualify/e003.py \
+    --params-file qualify/params/e003_example.json \
+    --years 2019 2020 2021 2022 2023 2024 2025 \
+    --dataset-dir dataset \
+    --out-dir qualify/out/E003/latest
+```
+
+## 補足
+
+- `qualify` は `scan` のように自律探索するのではなく、ChatGPT 側で決めた JSON params を入力として実行します
+- `pass_stability_gate == False` の候補を流す場合は、各 runner に `--allow-gate-fail` を明示してください
