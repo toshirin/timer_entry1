@@ -60,16 +60,22 @@ def ensure_run_layout(run_dir: str | Path) -> dict[str, Path]:
     root = Path(run_dir)
     per_slot_dir = root / "per_slot"
     reports_dir = root / "reports"
+    sanity_dir = root / "sanity"
     root.mkdir(parents=True, exist_ok=True)
     per_slot_dir.mkdir(parents=True, exist_ok=True)
     reports_dir.mkdir(parents=True, exist_ok=True)
+    sanity_dir.mkdir(parents=True, exist_ok=True)
     return {
         "root": root,
         "summary_csv": root / "summary.csv",
         "per_slot_dir": per_slot_dir,
         "reports_dir": reports_dir,
+        "sanity_dir": sanity_dir,
         "metadata_json": root / "metadata.json",
         "report_zip": root / "report.zip",
+        "sanity_json": sanity_dir / "sanity.json",
+        "sanity_report_md": reports_dir / "sanity_report.md",
+        "duplicate_candidates_csv": sanity_dir / "duplicate_candidates.csv",
     }
 
 
@@ -198,10 +204,131 @@ def build_summary_report(run_dir: str | Path) -> Path | None:
     return report_path
 
 
+def _slot_sort_key(slot_id: str) -> tuple[str, int]:
+    prefix = "".join(ch for ch in slot_id if ch.isalpha())
+    hour_text = "".join(ch for ch in slot_id if ch.isdigit())
+    hour = int(hour_text) if hour_text else -1
+    return prefix, hour
+
+
+def _is_adjacent_slot(slot_a: str, slot_b: str) -> bool:
+    prefix_a, hour_a = _slot_sort_key(slot_a)
+    prefix_b, hour_b = _slot_sort_key(slot_b)
+    return prefix_a == prefix_b and abs(hour_a - hour_b) == 1
+
+
+def build_sanity_outputs(run_dir: str | Path) -> dict[str, object] | None:
+    paths = ensure_run_layout(run_dir)
+    summary_csv = paths["summary_csv"]
+    if not summary_csv.exists():
+        return None
+
+    df = pd.read_csv(summary_csv)
+    if df.empty:
+        payload = {
+            "summary_row_count": 0,
+            "exact_duplicate_row_count": 0,
+            "exact_duplicate_group_count": 0,
+            "adjacent_slot_duplicate_row_count": 0,
+            "adjacent_slot_duplicate_group_count": 0,
+            "adjacent_slot_duplicate_slots": [],
+        }
+        paths["sanity_json"].write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        paths["sanity_report_md"].write_text("# sanity_report\n\nNo summary rows.\n", encoding="utf-8")
+        return payload
+
+    key_columns = [
+        "side",
+        "filter_label",
+        "entry_clock_local",
+        "sl_pips",
+        "tp_pips",
+        "trade_count",
+        "trade_count_in",
+        "trade_count_out",
+        "in_gross_pips",
+        "out_gross_pips",
+        "gross_pips",
+        "rank_in",
+        "rank_out",
+        "rank_gap_abs",
+        "top1_share_of_total",
+        "ex_top10_gross_pips",
+        "pass_stability_gate",
+        "win_rate",
+        "profit_factor",
+        "max_dd_pips",
+        "max_hold_time_min",
+        "same_bar_conflict_count",
+        "same_bar_unresolved_count",
+        "forced_exit_count",
+    ]
+    available_keys = [col for col in key_columns if col in df.columns]
+    duplicate_mask = df.duplicated(subset=available_keys, keep=False)
+    duplicate_df = df.loc[duplicate_mask].copy()
+
+    exact_group_count = 0
+    adjacent_group_count = 0
+    adjacent_slots: set[str] = set()
+    annotated_groups: list[pd.DataFrame] = []
+
+    if not duplicate_df.empty:
+        for group_id, (_, group) in enumerate(duplicate_df.groupby(available_keys, sort=False, dropna=False), start=1):
+            unique_slots = sorted(group["slot_id"].astype(str).unique().tolist(), key=_slot_sort_key)
+            has_adjacent = any(
+                _is_adjacent_slot(unique_slots[idx], unique_slots[idx + 1])
+                for idx in range(len(unique_slots) - 1)
+            )
+            exact_group_count += 1
+            if has_adjacent:
+                adjacent_group_count += 1
+                adjacent_slots.update(unique_slots)
+            annotated = group.copy()
+            annotated.insert(0, "duplicate_group_id", group_id)
+            annotated.insert(1, "adjacent_slot_duplicate", has_adjacent)
+            annotated_groups.append(annotated)
+
+    duplicate_candidates_df = (
+        pd.concat(annotated_groups, ignore_index=True)
+        if annotated_groups
+        else pd.DataFrame(columns=["duplicate_group_id", "adjacent_slot_duplicate", *df.columns.tolist()])
+    )
+    duplicate_candidates_df.to_csv(paths["duplicate_candidates_csv"], index=False)
+
+    adjacent_row_count = int(
+        duplicate_candidates_df["adjacent_slot_duplicate"].sum()
+    ) if not duplicate_candidates_df.empty else 0
+    payload = {
+        "summary_row_count": int(len(df)),
+        "exact_duplicate_row_count": int(len(duplicate_df)),
+        "exact_duplicate_group_count": int(exact_group_count),
+        "adjacent_slot_duplicate_row_count": adjacent_row_count,
+        "adjacent_slot_duplicate_group_count": int(adjacent_group_count),
+        "adjacent_slot_duplicate_slots": sorted(adjacent_slots, key=_slot_sort_key),
+    }
+    paths["sanity_json"].write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    report_lines = [
+        "# sanity_report",
+        "",
+        f"- summary_row_count: {payload['summary_row_count']}",
+        f"- exact_duplicate_row_count: {payload['exact_duplicate_row_count']}",
+        f"- exact_duplicate_group_count: {payload['exact_duplicate_group_count']}",
+        f"- adjacent_slot_duplicate_row_count: {payload['adjacent_slot_duplicate_row_count']}",
+        f"- adjacent_slot_duplicate_group_count: {payload['adjacent_slot_duplicate_group_count']}",
+        f"- adjacent_slot_duplicate_slots: {', '.join(payload['adjacent_slot_duplicate_slots']) if payload['adjacent_slot_duplicate_slots'] else 'none'}",
+        "",
+        f"- duplicate_candidates_csv: {paths['duplicate_candidates_csv'].relative_to(paths['root'])}",
+    ]
+    paths["sanity_report_md"].write_text("\n".join(report_lines), encoding="utf-8")
+    return payload
+
+
 def build_report_zip(run_dir: str | Path) -> Path:
     paths = ensure_run_layout(run_dir)
     build_slot_reports(run_dir)
     build_summary_report(run_dir)
+    build_sanity_outputs(run_dir)
 
     zip_path = paths["report_zip"]
     if zip_path.exists():

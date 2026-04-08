@@ -27,6 +27,10 @@
   - slot ごとの集計 CSV
 - `reports/`
   - markdown 要約
+- `sanity/sanity.json`
+  - run 全体の summary-level sanity 結果
+- `sanity/duplicate_candidates.csv`
+  - exact duplicate 候補一覧
 - `metadata.json`
   - 実行条件
 - `report.zip`
