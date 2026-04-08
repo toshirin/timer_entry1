@@ -288,7 +288,29 @@ E003 の原則は以下。
 
 E003 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md` に集約する。
 
-## 15. 旧資産の扱い
+## 15. E004 の位置付け
+
+E004 は E003 の次段であり、mission は以下とする。
+
+- E003 で選ばれた最終候補を tick replay で昇格審査する
+- 約定順序、Bid/Ask 整合、forced exit、slippage、entry delay の現実性を確認する
+- 1分足実験と tick 実行を分離し、今後の E005-E008 でも再利用できる共通 engine を整備する
+
+E004 の原則は以下。
+
+- signal 生成と tick 執行を分離する
+- 1分足段階で signal day を確定してから、tick で entry / TP / SL / forced exit を再現する
+- `tick_executor` は side 主語の価格系列規約を厳守する
+- 全 tick 一括ロードは禁止し、対象日・対象時間帯だけを読む
+- `ProcessPoolExecutor` などによる日次並列化を許容する
+- `pass_stability_gate` は前段候補の前提メタデータとして保持する
+
+`qualify` における E004 は、旧 `*_exhaustive1/common/tick_runner.py` の高速・省メモリな枠組みを継承してよい。
+ただし、`tick_executor.py` はそのまま流用せず、side ごとの Bid/Ask 規約を監査済みの共通実装へ再構成する。
+
+E004 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md` に集約する。
+
+## 16. 旧資産の扱い
 
 `fx_260312` は比較用の一時 checkout と位置付ける。
 このため、`qualify` の恒久仕様は以下の方針を取る。
@@ -305,7 +327,9 @@ E003 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md
 
 旧 `e003.py` についても同様に、そのまま移植せず、comparison axis だけを forced exit へ差し替えた共通 runner として再構成する。
 
-## 16. 監査ドキュメント
+旧 `e004.py` についても同様に、そのまま移植せず、signal_provider / tick_runner / tick_executor / report_builder の責務分離を保ったまま、executor の価格系列と sanity を中心に再監査して再構成する。
+
+## 17. 監査ドキュメント
 
 監査結果は `qualify/docs/Audit_Result.md` に集約する。
 ここには以下を載せる。
@@ -317,7 +341,7 @@ E003 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md
 - 継承しないもの
 - 未解決論点
 
-## 17. 次の実装順
+## 18. 次の実装順
 
 1. ChatGPT 側 prompt を JSON 出力前提に整える
 2. `qualify/common/params.py` と scenario 入力契約を定める
@@ -325,4 +349,5 @@ E003 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md
 4. reporting を schema 主語で整える
 5. E002 の監査結果を反映し、SL / TP sweep runner へ横展開する
 6. E003 の監査結果を反映し、forced exit sweep runner へ横展開する
-7. E004 以降へ進む
+7. E004 の監査結果を反映し、tick replay engine を共通化する
+8. E005 以降へ進む

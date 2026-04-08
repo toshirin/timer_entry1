@@ -193,3 +193,127 @@
 - `pass_stability_gate == False` の候補をどの粒度で例外許可するか
 - E002 の TP / SL grid を ChatGPT 側 JSON でどこまで自由化するか
 - E003 の forced exit grid を ChatGPT 側 JSON でどこまで自由化するか
+- E004 の signal metadata と tick request の最小 schema
+
+## 10. E004 監査メモ
+
+### 10.1 参照対象
+
+- `../fx_260312/research/jst09_exhaustive1/e004.py`
+- `../fx_260312/research/jst10_exhaustive1/e004.py`
+- `../fx_260312/research/jst12_exhaustive1/e004.py`
+- `../fx_260312/research/lon08_exhaustive1/e004.py`
+- `../fx_260312/research/jst09_exhaustive1/common/tick_executor.py`
+- `../fx_260312/research/jst10_exhaustive1/common/tick_executor.py`
+- `../fx_260312/research/jst12_exhaustive1/common/tick_executor.py`
+- `../fx_260312/research/lon08_exhaustive1/common/tick_executor.py`
+- `../fx_260312/research/jst09_exhaustive1/common/tick_runner.py`
+- `../fx_260312/research/jst10_exhaustive1/common/tick_runner.py`
+- `../fx_260312/research/jst12_exhaustive1/specs/jst12_exhaustive1_E004_Spec_for_Codex.md`
+- `../fx_260312/research/jst10_exhaustive1/specs/jst10_exhaustive1_E004_Spec_for_Codex.md`
+- `../fx_260312/research/lon08_exhaustive1/specs/lon08_exhaustive1_E004_spec.md`
+- `../fx_260312/research/jst09_exhaustive1/specs/E004_Spec.md`
+
+### 10.2 結論
+
+- `tick_runner.py` の枠組みは軽量で、signal day 単位の並列化と対象時間帯だけの tick 読み込みになっており、`qualify` でも継承価値が高い
+- `tick_executor.py` は series 間でほぼコピペだが、`jst10` short 側だけ Bid/Ask 非準拠である
+- したがって、E004 では runner / io の枠組みは維持しつつ、executor は side 主語で共通化して再実装するのが妥当
+
+### 10.3 series 別監査表
+
+- `jst09`
+  - side: buy
+  - entry series: ask
+  - TP hit series: bid
+  - SL hit series: ask
+  - exit / forced exit series: bid
+  - compliant: yes
+- `jst12`
+  - side: buy
+  - entry series: ask
+  - TP hit series: bid
+  - SL hit series: ask
+  - exit / forced exit series: bid
+  - compliant: yes
+- `lon08`
+  - side: buy
+  - entry series: ask
+  - TP hit series: bid
+  - SL hit series: ask
+  - exit / forced exit series: bid
+  - compliant: yes
+- `jst10`
+  - side: sell
+  - entry series: ask
+  - TP hit series: bid
+  - SL hit series: ask
+  - exit / forced exit series: bid
+  - compliant: no
+
+### 10.4 `jst10` の非準拠点
+
+`jst10_exhaustive1/common/tick_executor.py` は short 側で以下の問題を持つ。
+
+- entry を `ask` で持っている
+- TP 判定を `bid <= tp_level` にしている
+- SL 判定を `ask >= sl_level` にしている
+- exit と forced exit を `bid` にしている
+- PnL を `entry_ask - exit_bid` で計算している
+
+short の canonical 規約は以下である。
+
+- entry: `bid`
+- TP 判定: `ask`
+- SL 判定: `bid`
+- exit / forced exit: `ask`
+
+したがって `jst10` の tick replay は non-compliant と判断する。
+
+### 10.5 継承するもの
+
+- signal_provider / tick_executor / tick_runner / report_builder の責務分離
+- signal day 単位の並列化
+- 全 tick 一括ロードを避ける対象日・対象時間帯限定の読み込み
+- slippage / entry delay フック
+- sanity summary の集計方針
+
+### 10.6 継承しないもの
+
+- series ごとの `tick_executor.py` コピペ
+- buy/sell 別の価格系列規約をコードに埋め込む構成
+- short 側の non-compliant な実装
+- series ごとに微妙に異なる request schema
+
+### 10.7 `qualify` 向け定義
+
+`qualify/E004` の定義は以下がよい。
+
+- 入力
+  - E003 で選ばれた baseline setting
+  - date range
+  - slippage mode
+  - entry delay
+  - jobs
+- 固定するもの
+  - entry / TP / SL / forced exit の setting
+  - side
+  - filter 条件
+- 共通化するもの
+  - signal_provider
+  - tick_io
+  - tick_runner
+  - tick_executor
+  - reporting
+- 出力
+  - signal days
+  - trades
+  - summary / yearly / sanity
+  - minute baseline との差分比較
+
+### 10.8 実装含意
+
+- `tick_runner` は旧実装の構造をほぼ踏襲してよい
+- `tick_executor` は `DirectionSpec` 相当の side 定義を使う形で書き直すべき
+- E005-E008 でも同じ tick engine を使う前提で、request / trade / sanity の schema を最初から共通化するのがよい
+- E004 は E005-E008 の前提 engine になるため、ここで side 規約と memory model を固める価値が高い
