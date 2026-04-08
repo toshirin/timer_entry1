@@ -5,6 +5,7 @@
 全時間帯の結果をメモリに溜め込まず、`summary.csv` と slot 別 CSV を逐次書き出します。
 
 内部では `src/timer_entry/backtest_fast.py` を使いますが、scan の構造は高速 batch 実行を優先します。
+監査結果は [docs/Audit_Result.md](docs/Audit_Result.md) に集約します。
 
 ## slot 定義
 
@@ -26,6 +27,10 @@
   - slot ごとの集計 CSV
 - `reports/`
   - markdown 要約
+- `sanity/sanity.json`
+  - run 全体の summary-level sanity 結果
+- `sanity/duplicate_candidates.csv`
+  - exact duplicate 候補一覧
 - `metadata.json`
   - 実行条件
 - `report.zip`
