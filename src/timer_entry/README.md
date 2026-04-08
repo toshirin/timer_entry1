@@ -4,6 +4,7 @@
 ここでは、価格系列規約、時刻処理、特徴量、軽量フィルター、schema、canonical backtest、高速 scan backtest を管理します。
 
 詳細な実装標準は [Spec.md](Spec.md) を参照してください。
+監査結果は [docs/Audit_Result.md](docs/Audit_Result.md) に集約します。
 
 ## 主なモジュール
 
