@@ -146,10 +146,14 @@ def _comparison_trade_frame(
 
 
 def _concat_trade_frames(frames: list[pd.DataFrame]) -> pd.DataFrame:
-    non_empty_frames = [frame for frame in frames if not frame.empty]
-    if not non_empty_frames:
+    records: list[dict[str, object]] = []
+    for frame in frames:
+        if frame.empty:
+            continue
+        records.extend(frame.to_dict(orient="records"))
+    if not records:
         return pd.DataFrame()
-    return pd.concat(non_empty_frames, ignore_index=True)
+    return pd.DataFrame.from_records(records)
 
 
 def _comparison_summary_row(

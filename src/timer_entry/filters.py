@@ -177,9 +177,9 @@ def evaluate_canonical_filter(
         return features.pre_range_pips < resolved_pre_range_threshold
     right_dom_spec = parse_right_dominance_filter_label(label)
     if right_dom_spec is not None:
-        if dynamic_threshold is None:
-            raise ValueError(f"dynamic_threshold is required for {label}")
-        return features.right_strength_balance_pips >= dynamic_threshold
+        _, parsed_threshold = right_dom_spec
+        resolved_threshold = dynamic_threshold if dynamic_threshold is not None else parsed_threshold
+        return features.right_strength_balance_pips >= resolved_threshold
     if label == "trend_ge_0_5":
         return features.trend_ratio == features.trend_ratio and features.trend_ratio >= 0.5
     if label == "range_lt_0_3":
@@ -217,13 +217,13 @@ def to_runtime_filter_spec(
         return RuntimeFilterSpec(filter_type="pre_range_regime", operator=operator, threshold=float(pre_range_threshold))
     right_dom_spec = parse_right_dominance_filter_label(label)
     if right_dom_spec is not None:
-        if dynamic_threshold is None:
-            raise ValueError(f"dynamic_threshold is required for {label}")
+        _, parsed_threshold = right_dom_spec
+        resolved_threshold = dynamic_threshold if dynamic_threshold is not None else parsed_threshold
         return RuntimeFilterSpec(
             filter_type="shape_balance",
             operator="ge",
             mode="right_strength_balance",
-            threshold=float(dynamic_threshold),
+            threshold=float(resolved_threshold),
         )
     if label == "trend_ge_0_5":
         return RuntimeFilterSpec(filter_type="trend_ratio", operator="ge", threshold=0.5)
