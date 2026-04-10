@@ -317,3 +317,121 @@ short の canonical 規約は以下である。
 - `tick_executor` は `DirectionSpec` 相当の side 定義を使う形で書き直すべき
 - E005-E008 でも同じ tick engine を使う前提で、request / trade / sanity の schema を最初から共通化するのがよい
 - E004 は E005-E008 の前提 engine になるため、ここで side 規約と memory model を固める価値が高い
+
+## 11. E005-E008 監査メモ
+
+### 11.1 参照対象
+
+- `../fx_260312/research/jst09_exhaustive1/e005.py`
+- `../fx_260312/research/jst09_exhaustive1/e006.py`
+- `../fx_260312/research/jst09_exhaustive1/e007.py`
+- `../fx_260312/research/jst09_exhaustive1/e008.py`
+- `../fx_260312/research/jst10_exhaustive1/e005.py`
+- `../fx_260312/research/jst10_exhaustive1/e006.py`
+- `../fx_260312/research/jst10_exhaustive1/e007.py`
+- `../fx_260312/research/jst10_exhaustive1/e008.py`
+- `../fx_260312/research/jst12_exhaustive1/e005.py`
+- `../fx_260312/research/jst12_exhaustive1/e006.py`
+- `../fx_260312/research/jst12_exhaustive1/e007.py`
+- `../fx_260312/research/jst12_exhaustive1/e008.py`
+- `../fx_260312/research/lon08_exhaustive1/e005.py`
+- `../fx_260312/research/lon08_exhaustive1/e006.py`
+- `../fx_260312/research/lon08_exhaustive1/e007.py`
+- `../fx_260312/research/lon08_exhaustive1/e008.py`
+- `../fx_260312/research/jst09_exhaustive1/specs/E005_E008_Spec.md`
+- `../fx_260312/research/jst10_exhaustive1/specs/jst10_exhaustive1_E005_E008_Spec_for_Codex.md`
+- `../fx_260312/research/jst12_exhaustive1/specs/jst12_exhaustive1_E005_E008_Spec_for_Codex.md`
+- `../fx_260312/research/lon08_exhaustive1/specs/lon08_exhaustive1_E005_E008_spec.md`
+- `../fx_260312/research/jst10_exhaustive1/common/safety_checks.py`
+
+### 11.2 結論
+
+- 旧 E005-E008 は、実装・仕様ともに「E004 通過 setting を固定し、variant axis だけ差し替える安全性 suite」としてかなり共通化しやすい
+- 一方で、旧 spec は「各 experiment は独立に実施」と書く series が多く、評価軸も experiment ごとに異なる
+- したがって、`qualify` では「実行入口は suite 化、評価と出力は experiment ごとに分離」とするのが妥当
+- E004 は独立の関門として残し、E005-E008 だけを `e005-e008.py` にまとめる方が自然
+
+### 11.3 継承するもの
+
+- E004 の tick replay 基盤をそのまま使う
+- signal / setting / TP / SL / forced exit は固定する
+- E005 は slippage 軸だけを振る
+- E006 は walk-forward split だけを振る
+- E007 は risk_fraction / kill-switch 軸だけを振る
+- E008 は entry delay 軸だけを振る
+- 出力は summary / yearly / sanity を基本にする
+
+### 11.4 継承しないもの
+
+- slot ごとに別ファイルでほぼ同じロジックを複製する構成
+- series ごとに少しずつ異なる summary 列
+- E005-E008 を完全に別々の params schema に分割する前提
+- E004 まで suite へ含める構成
+
+### 11.5 experiment 別監査
+
+#### E005
+
+- 実質は `run_tick_replay_batch(..., slippage_mode="fixed", fixed_slippage_pips=slip)` の grid 実験
+- `append_variant_metrics` により baseline slip=0 比の劣化率を追加している
+- `jst10` は slip grid が `(0.0, 0.2, 0.4, 0.6)`、`jst12/lon08/jst09` は `(0.0, 0.1, 0.2, 0.3)` 系で、grid 自体は slot 依存
+- 旧実装は entry / exit の両方に slip を乗せるため、表示上の `slip_pips=0.3` は実質往復 `0.6 pips` の penalty に相当する
+- よって `qualify/E005` では、`slip_pips` を one-way 表示とし、必要なら `round_trip_slip_pips = 2 * slip_pips` を併記すべき
+- よって、engine は完全共通化し、grid は params / CLI 指定に逃がすのがよい
+
+#### E006
+
+- 実質は E004 trades を固定して walk-forward summary を追加計算しているだけ
+- 旧 `build_walkforward_summary` は `train 2y -> test 1y` rolling で、train 側再最適化は行っていない
+- code 上も tick replay 再実行を必須としない構造で、suite 内では最も軽い
+
+#### E007
+
+- 実質は E004 trades を固定して equity curve を後段計算する段階
+- `build_risk_fraction_outputs` は旧 repo でも共通 helper に寄っており、suite 化しやすい
+- slot 差分は主に `risk_fraction` grid と `sl_pips` の固定値
+- `jst10` は `(0.25%, 0.5%, 1.0%)`、`lon08` は `(0.5%, 1.0%, 2.0%, 3.0%)` で、ここも grid を params / CLI へ逃がすべき
+- この差分は stop 幅に応じた基準 risk の違いと解釈でき、`SL5 -> risk_fraction 0.5%` を基準点に、その等価点と前後を比較する整理が自然
+- したがって center は `risk_fraction_center = 0.5% * (sl_pips / 5)` と置ける
+- summary では少なくとも `min_maintenance_margin_pct`, `annualized_pips`, `trade_rate`, `win_rate`, `CAGR` を持つべき
+
+#### E008
+
+- 実質は `entry_delay_seconds` の grid 実験
+- 旧 code でも E005 とほぼ鏡像で、variant axis が slip から delay に変わるだけ
+- `jst10` は `(0, 30, 60, 120)`、`jst12/lon08/jst09` は `(0, 5, 10, 15, 20, 30)` 系で、grid は slot 依存
+
+### 11.6 `qualify` 向け定義
+
+`qualify/E005-E008` の定義は以下がよい。
+
+- 入力
+  - 原則として `qualify/params/{slot_id}/e004.json`
+  - E004 通過済みの baseline setting
+- 実行入口
+  - `qualify/e005-e008.py`
+- default
+  - E005-E008 を一括実行
+- optional
+  - `--only E005` などで単独実行
+- 出力
+  - `qualify/out/E005/...`
+  - `qualify/out/E006/...`
+  - `qualify/out/E007/...`
+  - `qualify/out/E008/...`
+
+追加で以下を明示するのがよい。
+
+- E005
+  - `slip_pips` は one-way 表示
+  - 実質往復 penalty は `round_trip_slip_pips = 2 * slip_pips`
+- E007
+  - risk grid は `SL5 -> 0.5%` の基準点を中心に置く
+  - `trade_rate` は `trade_count / eligible_day_count` として定義する
+
+### 11.7 実装含意
+
+- E005 と E008 は同じ variant-runner で実装できる
+- E006 と E007 は tick replay 後段集計として実装できる
+- `common/safety_checks.py` 相当の helper 群を `qualify/common/e005_e008.py` に集約するのが自然
+- suite 入口は共通でよいが、summary / sanity / report は experiment ごとに分けるべき

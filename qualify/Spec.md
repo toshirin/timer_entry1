@@ -203,6 +203,18 @@ E005-E008 の運用原則は以下。
   - 原則として E004 で確定した `e004.json` を入力として受ける
   - E005-E008 専用の別 params を必須にはしない
 
+E005 と E007 では、以下を追加原則とする。
+
+- E005
+  - `slip_pips` は one-way 表示とする
+  - entry / exit の両方に不利側 slip を乗せるため、実質往復 penalty は `2 * slip_pips`
+  - report でも `round_trip_slip_pips` を併記できるようにする
+- E007
+  - risk grid は `SL5 -> risk_fraction 0.5%` を基準点として組む
+  - center は `risk_fraction_center = 0.5% * (sl_pips / 5)` としてよい
+  - 比較はこの center と、その前後の保守側 / 攻め側で行う
+  - summary には少なくとも `min_maintenance_margin_pct`, `annualized_pips`, `trade_rate`, `win_rate`, `CAGR` を出す
+
 派生実験は `E001A` のように扱ってよい。
 ただし、派生は experiment code の意味を壊さず、主実験の補助目的に留める。
 

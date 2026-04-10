@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run qualify E004 with shared tick replay engine.")
     parser.add_argument("--params-file", required=True, help="Path to ChatGPT-produced JSON params.")
     parser.add_argument("--dataset-dir", default="dataset")
-    parser.add_argument("--ticks-dir", default="dataset/ticks/USDJPY")
+    parser.add_argument("--ticks-dir", default="ticks/USDJPY")
     parser.add_argument("--out-dir", default="qualify/out/E004/latest")
     parser.add_argument("--years", nargs="+", type=int, default=[2019, 2020, 2021, 2022, 2023, 2024, 2025])
     parser.add_argument("--jobs", type=int, default=1)
@@ -31,6 +31,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     params = load_e004_params(args.params_file)
+    print(f"[START] E004 params={args.params_file} out={args.out_dir}")
+    print(f"[YEARS] {' '.join(str(year) for year in args.years)}")
+    print(f"[MODE] slippage={params.slippage_mode} slip={params.fixed_slippage_pips} delay={params.entry_delay_seconds}s jobs={args.jobs}")
     result = run_e004(
         params=params,
         dataset_dir=args.dataset_dir,

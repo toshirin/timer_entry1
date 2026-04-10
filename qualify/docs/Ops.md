@@ -147,6 +147,15 @@
 4. デフォルトは E005-E008 一括実行とする
 5. 必要なら引数で E005 / E006 / E007 / E008 の単独実行を行う
 
+追加運用ルール:
+
+- E005
+  - `slip_pips` は one-way 表示で扱う
+  - ChatGPT 側の評価文でも、実質往復 penalty は `2 * slip_pips` と明記する
+- E007
+  - risk grid は `SL5 -> 0.5%` を基準に、現在の stop 幅へ換算して決める
+  - summary では `min_maintenance_margin_pct`, `annualized_pips`, `trade_rate`, `win_rate`, `CAGR` を必須確認項目とする
+
 注意:
 
 - E004 までを一体化しない

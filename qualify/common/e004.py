@@ -287,17 +287,21 @@ def run_e004(
         raise ValueError("pass_stability_gate is False; rerun with explicit override if this is intentional")
 
     paths = ensure_run_layout(out_dir)
+    print(f"[LOAD] minute dataset from {dataset_dir}")
     days, load_summary = load_trading_days(years, dataset_dir=dataset_dir, session_tz=params.market_tz)  # type: ignore[arg-type]
     filtered_days = _filter_days(days, date_from=params.date_from, date_to=params.date_to)
     feature_rows = _eligible_feature_rows(filtered_days, params)  # type: ignore[arg-type]
     eligible_days_by_segment = _eligible_days_by_segment(feature_rows)
 
+    print(f"[SIGNALS] building E004 signal days from {len(filtered_days)} filtered days")
     signals, minute_result = generate_e004_signal_days(filtered_days, params=params, load_summary=load_summary)
     comparison_label = params.comparison_label()
     filter_label = ",".join(params.baseline.filter_labels)
 
     signals_df = pd.DataFrame([signal.to_dict() for signal in signals])
+    print(f"[SIGNALS] {len(signals_df)} signal days selected for {comparison_label}")
     if signals:
+        print(f"[TICK] replay start ticks_dir={ticks_dir} jobs={jobs}")
         tick_rows_df = run_tick_replay_batch(
             [signal.to_dict() for signal in signals],
             ticks_dir=ticks_dir,
@@ -307,6 +311,7 @@ def run_e004(
             entry_delay_seconds=params.entry_delay_seconds,
         )
     else:
+        print("[TICK] skipped because no signal days were selected")
         tick_rows_df = pd.DataFrame()
 
     minute_trade_df = _concat_trade_frames(
@@ -381,6 +386,9 @@ def run_e004(
     year_df.to_csv(paths["year_summary_csv"], index=False)
     comparison_trades_df.to_csv(paths["trades_csv"], index=False)
     sanity_df.to_csv(paths["sanity_csv"], index=False)
+    print(f"[WRITE] {paths['signal_days_csv']}")
+    print(f"[WRITE] {paths['summary_csv']}")
+    print(f"[WRITE] {paths['trades_csv']}")
 
     return {
         "signal_days_df": signals_df,

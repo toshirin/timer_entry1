@@ -81,7 +81,7 @@ docker run --rm \
     --params-file qualify/params/{slot_id}/e004.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
-    --ticks-dir dataset/ticks/USDJPY \
+    --ticks-dir ticks/USDJPY \
     --out-dir qualify/out/E004/latest \
     --jobs 4
 ```
@@ -96,7 +96,7 @@ docker run --rm \
     --params-file qualify/params/{slot_id}/e004.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
-    --ticks-dir dataset/ticks/USDJPY \
+    --ticks-dir ticks/USDJPY \
     --out-dir qualify/out \
     --only E005 E008
 ```

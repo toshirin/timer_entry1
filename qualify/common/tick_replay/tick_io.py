@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 
-DEFAULT_TICKS_DIR = Path("dataset") / "ticks" / "USDJPY"
+DEFAULT_TICKS_DIR = Path("ticks") / "USDJPY"
 
 
 def _to_epoch_us(ts_local: str, market_tz: str) -> int:
