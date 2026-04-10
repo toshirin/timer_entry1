@@ -122,3 +122,16 @@
 - 隣接 slot 重複率の自動レポート
 - `trade_count` 形状の比較レポート
 - 旧 top 候補と現行 top 候補の対応表
+
+## 8. sanity 実行結果
+
+現行 `scan/out/latest` に対して summary-level sanity を実行した結果は以下。
+
+- `summary_row_count = 151800`
+- `exact_duplicate_row_count = 0`
+- `exact_duplicate_group_count = 0`
+- `adjacent_slot_duplicate_row_count = 0`
+- `adjacent_slot_duplicate_group_count = 0`
+
+したがって、旧 `probe5` で問題になった London 隣接 slot の大量重複は、現行 scan では再発していない。
+少なくとも summary 構造の健全性という観点では、今回の `summary.csv` を scan 基準として採用してよい。
