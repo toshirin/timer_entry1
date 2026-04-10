@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 
 import pandas as pd
+from tqdm.auto import tqdm
 
 from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.minute_data import load_trading_days
@@ -107,42 +108,42 @@ def run_e002(
     summary_rows: list[dict[str, object]] = []
     sanity_rows: list[dict[str, object]] = []
     filter_label = ",".join(params.baseline.filter_labels)
+    comparisons = [(sl_pips, tp_pips) for sl_pips in params.sl_values for tp_pips in params.tp_values]
 
-    for sl_pips in params.sl_values:
-        for tp_pips in params.tp_values:
-            comparison_label = params.comparison_label(tp_pips=tp_pips, sl_pips=sl_pips)
-            setting = params.to_strategy_setting(tp_pips=tp_pips, sl_pips=sl_pips)
-            result = run_backtest_1m(
-                filtered_days,
-                setting,
-                time_jst_fallback_count=load_summary.time_jst_fallback_count,
-                duplicate_clock_removed_count=load_summary.duplicate_clock_removed_count,
+    for sl_pips, tp_pips in tqdm(comparisons, desc="E002 comparisons", unit="grid", mininterval=0.2):
+        comparison_label = params.comparison_label(tp_pips=tp_pips, sl_pips=sl_pips)
+        setting = params.to_strategy_setting(tp_pips=tp_pips, sl_pips=sl_pips)
+        result = run_backtest_1m(
+            filtered_days,
+            setting,
+            time_jst_fallback_count=load_summary.time_jst_fallback_count,
+            duplicate_clock_removed_count=load_summary.duplicate_clock_removed_count,
+        )
+        all_trade_frames.append(
+            _comparison_trade_frame(
+                comparison_label=comparison_label,
+                filter_label=filter_label,
+                tp_pips=tp_pips,
+                sl_pips=sl_pips,
+                result=result,
             )
-            all_trade_frames.append(
-                _comparison_trade_frame(
-                    comparison_label=comparison_label,
-                    filter_label=filter_label,
-                    tp_pips=tp_pips,
-                    sl_pips=sl_pips,
-                    result=result,
-                )
+        )
+        summary_rows.append(
+            _comparison_summary_row(
+                comparison_label=comparison_label,
+                filter_label=filter_label,
+                tp_pips=tp_pips,
+                sl_pips=sl_pips,
+                input_pass_stability_gate=params.pass_stability_gate,
+                result=result,
             )
-            summary_rows.append(
-                _comparison_summary_row(
-                    comparison_label=comparison_label,
-                    filter_label=filter_label,
-                    tp_pips=tp_pips,
-                    sl_pips=sl_pips,
-                    input_pass_stability_gate=params.pass_stability_gate,
-                    result=result,
-                )
-            )
-            sanity_row = result.sanity.to_dict()
-            sanity_row["comparison_label"] = comparison_label
-            sanity_row["filter_label"] = filter_label
-            sanity_row["tp_pips"] = float(tp_pips)
-            sanity_row["sl_pips"] = float(sl_pips)
-            sanity_rows.append(sanity_row)
+        )
+        sanity_row = result.sanity.to_dict()
+        sanity_row["comparison_label"] = comparison_label
+        sanity_row["filter_label"] = filter_label
+        sanity_row["tp_pips"] = float(tp_pips)
+        sanity_row["sl_pips"] = float(sl_pips)
+        sanity_rows.append(sanity_row)
 
     trades_df = pd.concat(all_trade_frames, ignore_index=True) if all_trade_frames else pd.DataFrame()
     summary_df = build_e002_summary(summary_rows)

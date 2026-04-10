@@ -29,6 +29,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     params = load_e002_params(args.params_file)
+    print(f"[START] E002 params={args.params_file} out={args.out_dir}")
+    print(f"[YEARS] {' '.join(str(year) for year in args.years)}")
+    print(f"[COMPARISONS] {len(params.tp_values) * len(params.sl_values)} grids")
     result = run_e002(
         params=params,
         dataset_dir=args.dataset_dir,

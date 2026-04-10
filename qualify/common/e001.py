@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+from tqdm.auto import tqdm
 
 from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.features import compute_feature_row
@@ -216,7 +217,7 @@ def run_e001(
     summary_rows: list[dict[str, object]] = []
     sanity_rows: list[dict[str, object]] = []
 
-    for comparison_label in params.comparison_labels:
+    for comparison_label in tqdm(params.comparison_labels, desc="E001 comparisons", unit="label", mininterval=0.2):
         dynamic_filter_threshold = resolved_thresholds.get(comparison_label)
         pre_range_threshold = dynamic_filter_threshold if parse_volatility_filter_label(comparison_label) is not None else None
         setting = params.to_strategy_setting(

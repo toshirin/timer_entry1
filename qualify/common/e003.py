@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 
 import pandas as pd
+from tqdm.auto import tqdm
 
 from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.minute_data import load_trading_days
@@ -112,7 +113,7 @@ def run_e003(
     sanity_rows: list[dict[str, object]] = []
     filter_label = ",".join(params.baseline.filter_labels)
 
-    for forced_exit_clock_local in params.forced_exit_values:
+    for forced_exit_clock_local in tqdm(params.forced_exit_values, desc="E003 comparisons", unit="clock", mininterval=0.2):
         comparison_label = params.comparison_label(forced_exit_clock_local=forced_exit_clock_local)
         setting = params.to_strategy_setting(forced_exit_clock_local=forced_exit_clock_local)
         result = run_backtest_1m(
