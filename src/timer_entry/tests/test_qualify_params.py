@@ -6,7 +6,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from qualify.common.params import E001Params, E002Params, E003Params
+from qualify.common.params import E001Params, E002Params, E003Params, E004Params
 
 
 def test_e001_params_build_strategy_setting_with_dynamic_label() -> None:
@@ -84,3 +84,31 @@ def test_e003_params_build_strategy_setting_with_forced_exit_grid() -> None:
     assert setting.sl_pips == 5.0
     assert setting.forced_exit_clock_local == "10:45"
     assert params.comparison_label(forced_exit_clock_local="10:45") == "fx1045"
+
+
+def test_e004_params_build_strategy_setting_and_runtime_fields() -> None:
+    params = E004Params.from_dict(
+        {
+            "experiment_code": "E004",
+            "variant_code": None,
+            "slot_id": "lon08",
+            "side": "buy",
+            "baseline": {
+                "entry_clock_local": "08:40",
+                "forced_exit_clock_local": "09:45",
+                "tp_pips": 10,
+                "sl_pips": 30,
+                "filter_labels": ["vol_ge_p70"],
+            },
+            "pass_stability_gate": True,
+            "slippage_mode": "fixed",
+            "fixed_slippage_pips": 0.2,
+            "entry_delay_seconds": 1,
+        }
+    )
+    setting = params.to_strategy_setting()
+    assert setting.filter_labels == ("vol_ge_p70",)
+    assert setting.tp_pips == 10.0
+    assert setting.sl_pips == 30.0
+    assert setting.forced_exit_clock_local == "09:45"
+    assert params.comparison_label() == "buy0840_vol_ge_p70_tp10_sl30_fx0945"

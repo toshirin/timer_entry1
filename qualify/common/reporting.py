@@ -153,6 +153,47 @@ def build_e003_summary(summary_rows: list[dict[str, object]]) -> pd.DataFrame:
     return df.loc[:, [column for column in columns if column in df.columns]]
 
 
+def build_e004_summary(summary_rows: list[dict[str, object]]) -> pd.DataFrame:
+    columns = [
+        "comparison_label",
+        "filter_label",
+        "tp_pips",
+        "sl_pips",
+        "forced_exit_clock_local",
+        "slippage_mode",
+        "fixed_slippage_pips",
+        "entry_delay_seconds",
+        "input_pass_stability_gate",
+        "eligible_day_count",
+        "signal_day_count",
+        "trade_count",
+        "minute_trade_count",
+        "gross_pips",
+        "minute_gross_pips",
+        "delta_gross_pips",
+        "in_gross_pips",
+        "out_gross_pips",
+        "minute_in_gross_pips",
+        "minute_out_gross_pips",
+        "win_rate",
+        "minute_win_rate",
+        "profit_factor",
+        "minute_profit_factor",
+        "max_dd_pips",
+        "minute_max_dd_pips",
+        "annualized_pips",
+        "minute_annualized_pips",
+        "pass_stability_gate",
+        "tick_not_found_count",
+        "forced_exit_missing_count",
+        "entry_after_forced_exit_count",
+    ]
+    if not summary_rows:
+        return pd.DataFrame(columns=columns)
+    df = pd.DataFrame(summary_rows)
+    return df.loc[:, [column for column in columns if column in df.columns]]
+
+
 def build_split_summary(
     trades_df: pd.DataFrame,
     *,

@@ -260,6 +260,79 @@ class E003Params:
         return asdict(self)
 
 
+def _label_fragment(value: str) -> str:
+    return value.replace(":", "").replace(".", "_").replace(",", "_").replace(" ", "_")
+
+
+@dataclass(frozen=True)
+class E004Params:
+    experiment_code: str
+    variant_code: str | None
+    slot_id: str
+    side: str
+    baseline: BaselineSettingInput
+    pass_stability_gate: bool
+    slippage_mode: str = "none"
+    fixed_slippage_pips: float = 0.0
+    entry_delay_seconds: int = 0
+    notes: str | None = None
+    date_from: str | None = None
+    date_to: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "E004Params":
+        experiment_code = str(data["experiment_code"])
+        if experiment_code != "E004":
+            raise ValueError(f"Unsupported experiment_code for E004 runner: {experiment_code}")
+        return cls(
+            experiment_code=experiment_code,
+            variant_code=str(data["variant_code"]) if data.get("variant_code") is not None else None,
+            slot_id=str(data["slot_id"]),
+            side=str(data["side"]),
+            baseline=BaselineSettingInput.from_dict(dict(data["baseline"])),
+            pass_stability_gate=bool(data["pass_stability_gate"]),
+            slippage_mode=str(data.get("slippage_mode", "none")),
+            fixed_slippage_pips=float(data.get("fixed_slippage_pips", 0.0)),
+            entry_delay_seconds=int(data.get("entry_delay_seconds", 0)),
+            notes=str(data["notes"]) if data.get("notes") is not None else None,
+            date_from=str(data["date_from"]) if data.get("date_from") is not None else None,
+            date_to=str(data["date_to"]) if data.get("date_to") is not None else None,
+        )
+
+    @property
+    def market_tz(self) -> str:
+        return _market_tz_from_slot(self.slot_id)
+
+    @property
+    def run_label(self) -> str:
+        return self.variant_code or self.experiment_code
+
+    def comparison_label(self) -> str:
+        filter_fragment = "__".join(_label_fragment(label) for label in self.baseline.filter_labels)
+        return (
+            f"{self.side}{_label_fragment(self.baseline.entry_clock_local)}_"
+            f"{filter_fragment}_tp{self.baseline.tp_pips:g}_sl{self.baseline.sl_pips:g}_"
+            f"fx{_label_fragment(self.baseline.forced_exit_clock_local)}"
+        )
+
+    def to_strategy_setting(self) -> StrategySetting:
+        return StrategySetting(
+            setting_id=f"{self.slot_id}_{self.side}_{self.run_label}_tick_replay",
+            slot_id=self.slot_id,
+            side=self.side,  # type: ignore[arg-type]
+            market_tz=self.market_tz,  # type: ignore[arg-type]
+            entry_clock_local=self.baseline.entry_clock_local,
+            forced_exit_clock_local=self.baseline.forced_exit_clock_local,
+            tp_pips=self.baseline.tp_pips,
+            sl_pips=self.baseline.sl_pips,
+            filter_labels=self.baseline.filter_labels,
+            notes=self.notes,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 def load_e001_params(path: str | Path) -> E001Params:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -279,3 +352,10 @@ def load_e003_params(path: str | Path) -> E003Params:
     if not isinstance(payload, dict):
         raise ValueError("E003 params must be a JSON object")
     return E003Params.from_dict(payload)
+
+
+def load_e004_params(path: str | Path) -> E004Params:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("E004 params must be a JSON object")
+    return E004Params.from_dict(payload)

@@ -11,6 +11,7 @@ def ensure_run_layout(run_dir: str | Path) -> dict[str, Path]:
         "root": root,
         "metadata_json": root / "metadata.json",
         "params_json": root / "params.json",
+        "signal_days_csv": root / "signal_days.csv",
         "summary_csv": root / "summary.csv",
         "split_summary_csv": root / "split_summary.csv",
         "year_summary_csv": root / "year_summary.csv",

@@ -71,6 +71,21 @@ docker run --rm \
     --out-dir qualify/out/E003/latest
 ```
 
+E004:
+
+```bash
+docker run --rm \
+  -v "$PWD:/work" \
+  timer_entry1 \
+  python qualify/e004.py \
+    --params-file qualify/params/e004_example.json \
+    --years 2019 2020 2021 2022 2023 2024 2025 \
+    --dataset-dir dataset \
+    --ticks-dir dataset/ticks/USDJPY \
+    --out-dir qualify/out/E004/latest \
+    --jobs 4
+```
+
 ## 補足
 
 - `qualify` は `scan` のように自律探索するのではなく、ChatGPT 側で決めた JSON params を入力として実行します
