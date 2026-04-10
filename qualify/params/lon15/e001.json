@@ -1,0 +1,35 @@
+{
+  "experiment_code": "E001",
+  "variant_code": "E001A",
+  "slot_id": "lon15",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "15:40",
+    "forced_exit_clock_local": "16:35",
+    "tp_pips": 15,
+    "sl_pips": 20,
+    "filter_labels": ["all"]
+  },
+  "comparison_family": "right_strength_balance_quantile",
+  "comparison_labels": ["all", "rs_ge_q50", "rs_ge_q60", "rs_ge_q70", "rs_ge_q80"],
+  "tp_sl_candidates": [
+    { "tp_pips": 15, "sl_pips": 20 },
+    { "tp_pips": 15, "sl_pips": 25 },
+    { "tp_pips": 10, "sl_pips": 20 },
+    { "tp_pips": 20, "sl_pips": 20 }
+  ],
+  "pass_stability_gate": true,
+  "keep_all_in_comparison": true,
+  "same_bar_policy_note": "Top candidates have same_bar_conflict_count=0 and same_bar_unresolved_count=0 in scan; no extra execution restriction needed beyond core.",
+  "new_label_definition": {
+    "metric_name": "right_strength_balance",
+    "metric_formula": "right_strength_metric - left_strength_metric",
+    "labels": {
+      "rs_ge_q50": "right_strength_balance >= positive-side 50th percentile",
+      "rs_ge_q60": "right_strength_balance >= positive-side 60th percentile",
+      "rs_ge_q70": "right_strength_balance >= positive-side 70th percentile",
+      "rs_ge_q80": "right_strength_balance >= positive-side 80th percentile"
+    }
+  },
+  "notes": "First deepen right_stronger family at 15:40. Keep all only as comparator. Prioritize 15/20, then 15/25 and 10/20. Exclude pass_stability_gate false candidates."
+}

@@ -17,10 +17,10 @@
   - `qualify/Spec.md`
 - 監査結果
   - `qualify/docs/Audit_Result.md`
-- slot ごとの対話テンプレート
+- 運用フロー
+  - `qualify/docs/Ops.md`
+- experiment ごとの対話テンプレート
   - `qualify/prompts/slot_thread_template.md`
-
-実装コードはこれから追加します。入口は `qualify/e00N.py`、共通ロジックは `qualify/common/` に寄せる想定です。
 
 ## Docker 実行
 
@@ -39,7 +39,7 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e001.py \
-    --params-file qualify/params/e001_example.json \
+    --params-file qualify/params/{slot_id}/e001.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
     --out-dir qualify/out/E001/latest
@@ -52,7 +52,7 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e002.py \
-    --params-file qualify/params/e002_example.json \
+    --params-file qualify/params/{slot_id}/e002.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
     --out-dir qualify/out/E002/latest
@@ -65,7 +65,7 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e003.py \
-    --params-file qualify/params/e003_example.json \
+    --params-file qualify/params/{slot_id}/e003.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
     --out-dir qualify/out/E003/latest
@@ -78,7 +78,7 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e004.py \
-    --params-file qualify/params/e004_example.json \
+    --params-file qualify/params/{slot_id}/e004.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
     --ticks-dir dataset/ticks/USDJPY \

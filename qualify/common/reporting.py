@@ -32,6 +32,7 @@ def build_e001_summary(summary_rows: list[dict[str, object]]) -> pd.DataFrame:
         "comparison_family",
         "filter_label",
         "pre_range_threshold",
+        "resolved_threshold",
         "input_pass_stability_gate",
         "trade_count",
         "eligible_day_count",

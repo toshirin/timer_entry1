@@ -55,6 +55,7 @@ class FastFeatureRow:
     right_ret_pips: float
     left_abs_pips: float
     right_abs_pips: float
+    right_strength_balance_pips: float
     pre_range_pips: float
     net_move_pips: float
     trend_ratio: float
@@ -140,6 +141,7 @@ def _empty_feature_row(reason: str) -> FastFeatureRow:
         right_ret_pips=math.nan,
         left_abs_pips=math.nan,
         right_abs_pips=math.nan,
+        right_strength_balance_pips=math.nan,
         pre_range_pips=math.nan,
         net_move_pips=math.nan,
         trend_ratio=math.nan,
@@ -189,6 +191,7 @@ def compute_fast_feature_row(day: FastDay, *, entry_idx: int) -> FastFeatureRow:
     right_ret_pips = (end_close - mid_open) / PIP_SIZE
     left_abs_pips = abs(left_ret_pips)
     right_abs_pips = abs(right_ret_pips)
+    right_strength_balance_pips = right_abs_pips - left_abs_pips
     net_move_pips = (end_close - start_open) / PIP_SIZE
     trend_ratio = math.nan if pre_range_pips <= 0.0 else abs(net_move_pips) / pre_range_pips
     same_sign = left_ret_pips == 0.0 or right_ret_pips == 0.0 or (left_ret_pips > 0.0) == (right_ret_pips > 0.0)
@@ -202,6 +205,7 @@ def compute_fast_feature_row(day: FastDay, *, entry_idx: int) -> FastFeatureRow:
         right_ret_pips=float(right_ret_pips),
         left_abs_pips=float(left_abs_pips),
         right_abs_pips=float(right_abs_pips),
+        right_strength_balance_pips=float(right_strength_balance_pips),
         pre_range_pips=float(pre_range_pips),
         net_move_pips=float(net_move_pips),
         trend_ratio=float(trend_ratio) if not math.isnan(trend_ratio) else math.nan,

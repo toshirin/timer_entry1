@@ -238,7 +238,12 @@ def _simulate_trade_for_day(
         return None
 
     for label in setting.filter_labels:
-        if not evaluate_canonical_filter(label, feature_result, pre_range_median=setting.pre_range_threshold):
+        if not evaluate_canonical_filter(
+            label,
+            feature_result,
+            pre_range_median=setting.pre_range_threshold,
+            dynamic_threshold=setting.dynamic_filter_threshold,
+        ):
             counters.filter_skip_count += 1
             return None
 

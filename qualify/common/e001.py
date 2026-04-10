@@ -9,7 +9,7 @@ import pandas as pd
 
 from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.features import compute_feature_row
-from timer_entry.filters import parse_volatility_filter_label
+from timer_entry.filters import parse_right_strength_filter_label, parse_volatility_filter_label
 from timer_entry.minute_data import MinuteDataSummary, TradingDay, load_trading_days
 
 from .io import ensure_run_layout, write_json
@@ -74,6 +74,7 @@ def _eligible_feature_rows(days: list[TradingDay], params: E001Params) -> list[d
                 "session_date": day.session_date,
                 "year": int(day.year),
                 "pre_open_slope_pips": float(feature_result.pre_open_slope_pips),
+                "right_strength_balance_pips": float(feature_result.right_strength_balance_pips),
                 "pre_range_pips": float(feature_result.pre_range_pips),
                 "trend_ratio": float(feature_result.trend_ratio) if not math.isnan(feature_result.trend_ratio) else math.nan,
             }
@@ -92,7 +93,7 @@ def _eligible_days_by_segment(feature_rows: list[dict[str, object]]) -> dict[str
     }
 
 
-def _resolve_pre_range_thresholds(
+def _resolve_dynamic_thresholds(
     comparison_labels: tuple[str, ...],
     feature_rows: list[dict[str, object]],
 ) -> dict[str, float]:
@@ -106,13 +107,23 @@ def _resolve_pre_range_thresholds(
 
     for label in comparison_labels:
         vol_spec = parse_volatility_filter_label(label)
-        if vol_spec is None:
+        if vol_spec is not None:
+            _, raw_threshold = vol_spec
+            if raw_threshold == "med":
+                thresholds[label] = float(values.median())
+            else:
+                thresholds[label] = float(values.quantile(float(raw_threshold) / 100.0))
             continue
-        _, raw_threshold = vol_spec
-        if raw_threshold == "med":
-            thresholds[label] = float(values.median())
-        else:
-            thresholds[label] = float(values.quantile(float(raw_threshold) / 100.0))
+
+        rs_spec = parse_right_strength_filter_label(label)
+        if rs_spec is None:
+            continue
+        _, percentile = rs_spec
+        rs_values = pd.to_numeric(feature_df["right_strength_balance_pips"], errors="coerce").dropna()
+        rs_positive = rs_values.loc[rs_values > 0.0]
+        if rs_positive.empty:
+            continue
+        thresholds[label] = float(rs_positive.quantile(float(percentile) / 100.0))
     return thresholds
 
 
@@ -121,6 +132,7 @@ def _comparison_trade_frame(
     comparison_label: str,
     comparison_family: str,
     pre_range_threshold: float | None,
+    dynamic_filter_threshold: float | None,
     result: Any,
 ) -> pd.DataFrame:
     rows = []
@@ -130,6 +142,7 @@ def _comparison_trade_frame(
         row["comparison_family"] = comparison_family
         row["filter_label"] = comparison_label
         row["pre_range_threshold"] = pre_range_threshold
+        row["resolved_threshold"] = dynamic_filter_threshold
         row["year"] = int(str(trade.date_local)[:4])
         rows.append(row)
     return pd.DataFrame(rows)
@@ -140,6 +153,7 @@ def _comparison_summary_row(
     comparison_label: str,
     comparison_family: str,
     pre_range_threshold: float | None,
+    dynamic_filter_threshold: float | None,
     input_pass_stability_gate: bool,
     result: Any,
 ) -> dict[str, object]:
@@ -169,6 +183,7 @@ def _comparison_summary_row(
             "comparison_family": comparison_family,
             "filter_label": comparison_label,
             "pre_range_threshold": pre_range_threshold,
+            "resolved_threshold": dynamic_filter_threshold,
             "input_pass_stability_gate": input_pass_stability_gate,
             "in_gross_pips": round(in_gross_pips, 6),
             "out_gross_pips": round(out_gross_pips, 6),
@@ -195,17 +210,19 @@ def run_e001(
     filtered_days = _filter_days(days, date_from=params.date_from, date_to=params.date_to)
     feature_rows = _eligible_feature_rows(filtered_days, params)
     eligible_days_by_segment = _eligible_days_by_segment(feature_rows)
-    pre_range_thresholds = _resolve_pre_range_thresholds(params.comparison_labels, feature_rows)
+    resolved_thresholds = _resolve_dynamic_thresholds(params.comparison_labels, feature_rows)
 
     all_trade_frames: list[pd.DataFrame] = []
     summary_rows: list[dict[str, object]] = []
     sanity_rows: list[dict[str, object]] = []
 
     for comparison_label in params.comparison_labels:
-        pre_range_threshold = pre_range_thresholds.get(comparison_label)
+        dynamic_filter_threshold = resolved_thresholds.get(comparison_label)
+        pre_range_threshold = dynamic_filter_threshold if parse_volatility_filter_label(comparison_label) is not None else None
         setting = params.to_strategy_setting(
             comparison_label=comparison_label,
             pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
         )
         result = run_backtest_1m(
             filtered_days,
@@ -218,6 +235,7 @@ def run_e001(
                 comparison_label=comparison_label,
                 comparison_family=params.comparison_family,
                 pre_range_threshold=pre_range_threshold,
+                dynamic_filter_threshold=dynamic_filter_threshold,
                 result=result,
             )
         )
@@ -226,6 +244,7 @@ def run_e001(
                 comparison_label=comparison_label,
                 comparison_family=params.comparison_family,
                 pre_range_threshold=pre_range_threshold,
+                dynamic_filter_threshold=dynamic_filter_threshold,
                 input_pass_stability_gate=params.pass_stability_gate,
                 result=result,
             )
@@ -234,6 +253,7 @@ def run_e001(
         sanity_row["comparison_label"] = comparison_label
         sanity_row["comparison_family"] = params.comparison_family
         sanity_row["pre_range_threshold"] = pre_range_threshold
+        sanity_row["resolved_threshold"] = dynamic_filter_threshold
         sanity_rows.append(sanity_row)
 
     trades_df = pd.concat(all_trade_frames, ignore_index=True) if all_trade_frames else pd.DataFrame()
@@ -256,7 +276,7 @@ def run_e001(
         "date_from": params.date_from,
         "date_to": params.date_to,
         "eligible_days_by_segment": eligible_days_by_segment,
-        "pre_range_thresholds": pre_range_thresholds,
+        "resolved_thresholds": resolved_thresholds,
         "load_summary": asdict(load_summary),
         "notes": params.notes,
     }

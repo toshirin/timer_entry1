@@ -96,6 +96,7 @@ class E001Params:
         *,
         comparison_label: str,
         pre_range_threshold: float | None = None,
+        dynamic_filter_threshold: float | None = None,
     ) -> StrategySetting:
         setting_suffix = comparison_label.replace(".", "_")
         return StrategySetting(
@@ -109,6 +110,7 @@ class E001Params:
             sl_pips=self.baseline.sl_pips,
             filter_labels=(comparison_label,),
             pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
         )
 

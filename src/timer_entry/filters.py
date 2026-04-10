@@ -7,7 +7,14 @@ from typing import Literal
 from .features import FeatureComputationResult
 
 
-FilterFamily = Literal["all", "pre_open_slope", "shape_balance", "pre_range_regime", "trend_ratio"]
+FilterFamily = Literal[
+    "all",
+    "pre_open_slope",
+    "shape_balance",
+    "pre_range_regime",
+    "trend_ratio",
+    "right_strength_balance_quantile",
+]
 
 
 @dataclass(frozen=True)
@@ -75,6 +82,7 @@ SCAN_FILTERS: tuple[CanonicalFilter, ...] = (
 SCAN_FILTER_MAP: dict[str, CanonicalFilter] = {item.label: item for item in SCAN_FILTERS}
 _SLOPE_LABEL_RE = re.compile(r"^(ge|le)(-?\d+(?:[._]\d+)?)$")
 _VOL_PERCENTILE_LABEL_RE = re.compile(r"^vol_(ge|lt)_p(100|[1-9]?\d)$")
+_RIGHT_STRENGTH_LABEL_RE = re.compile(r"^rs_ge_q(100|[1-9]?\d)$")
 
 
 def canonical_filter_labels() -> list[str]:
@@ -108,6 +116,13 @@ def parse_volatility_filter_label(label: str) -> tuple[str, str | int] | None:
     return operator, int(percentile_text)
 
 
+def parse_right_strength_filter_label(label: str) -> tuple[str, int] | None:
+    match = _RIGHT_STRENGTH_LABEL_RE.fullmatch(label)
+    if match is None:
+        return None
+    return "ge", int(match.group(1))
+
+
 def get_filter_family(label: str) -> FilterFamily:
     canonical = SCAN_FILTER_MAP.get(label)
     if canonical is not None:
@@ -116,6 +131,8 @@ def get_filter_family(label: str) -> FilterFamily:
         return "pre_open_slope"
     if parse_volatility_filter_label(label) is not None:
         return "pre_range_regime"
+    if parse_right_strength_filter_label(label) is not None:
+        return "right_strength_balance_quantile"
     raise ValueError(f"Unsupported filter label: {label}")
 
 
@@ -125,6 +142,7 @@ def evaluate_canonical_filter(
     *,
     pre_range_median: float | None = None,
     pre_range_threshold: float | None = None,
+    dynamic_threshold: float | None = None,
 ) -> bool:
     # scan / qualify の DataFrame 側で使う簡易評価器。
     if not features.feature_available:
@@ -158,6 +176,11 @@ def evaluate_canonical_filter(
         if operator == "ge":
             return features.pre_range_pips >= resolved_pre_range_threshold
         return features.pre_range_pips < resolved_pre_range_threshold
+    rs_spec = parse_right_strength_filter_label(label)
+    if rs_spec is not None:
+        if dynamic_threshold is None:
+            raise ValueError(f"dynamic_threshold is required for {label}")
+        return features.right_strength_balance_pips >= dynamic_threshold
     if label == "trend_ge_0_5":
         return features.trend_ratio == features.trend_ratio and features.trend_ratio >= 0.5
     if label == "range_lt_0_3":
@@ -169,6 +192,7 @@ def to_runtime_filter_spec(
     label: str,
     *,
     pre_range_threshold: float | None = None,
+    dynamic_threshold: float | None = None,
 ) -> RuntimeFilterSpec | None:
     # runtime 側には family ベースの spec へ変換して渡す。
     # `all` は filter 無し運用と同義なので None を返す。
@@ -192,6 +216,16 @@ def to_runtime_filter_spec(
             raise ValueError(f"pre_range_threshold is required for {label}")
         operator, _ = vol_spec
         return RuntimeFilterSpec(filter_type="pre_range_regime", operator=operator, threshold=float(pre_range_threshold))
+    rs_spec = parse_right_strength_filter_label(label)
+    if rs_spec is not None:
+        if dynamic_threshold is None:
+            raise ValueError(f"dynamic_threshold is required for {label}")
+        return RuntimeFilterSpec(
+            filter_type="shape_balance",
+            operator="ge",
+            mode="right_strength_balance",
+            threshold=float(dynamic_threshold),
+        )
     if label == "trend_ge_0_5":
         return RuntimeFilterSpec(filter_type="trend_ratio", operator="ge", threshold=0.5)
     if label == "range_lt_0_3":
@@ -203,10 +237,15 @@ def runtime_filter_dicts(
     labels: list[str],
     *,
     pre_range_threshold: float | None = None,
+    dynamic_threshold: float | None = None,
 ) -> list[dict[str, object]]:
     specs: list[dict[str, object]] = []
     for label in labels:
-        spec = to_runtime_filter_spec(label, pre_range_threshold=pre_range_threshold)
+        spec = to_runtime_filter_spec(
+            label,
+            pre_range_threshold=pre_range_threshold,
+            dynamic_threshold=dynamic_threshold,
+        )
         if spec is not None:
             specs.append(spec.to_dict())
     return specs
@@ -223,6 +262,7 @@ __all__ = [
     "get_filter_family",
     "get_canonical_filter",
     "parse_slope_filter_label",
+    "parse_right_strength_filter_label",
     "parse_volatility_filter_label",
     "runtime_filter_dicts",
     "to_runtime_filter_spec",
