@@ -10,6 +10,7 @@ from timer_entry.backtest_1m import BacktestRunResult
 from timer_entry.minute_data import load_trading_days
 
 from .e001 import _eligible_days_by_segment, _eligible_feature_rows, _filter_days
+from .e001 import _concat_trade_frames
 from .io import ensure_run_layout, write_json
 from .params import E004Params
 from .reporting import (
@@ -308,10 +309,14 @@ def run_e004(
     else:
         tick_rows_df = pd.DataFrame()
 
-    minute_trade_df = _minute_trade_frame(
-        comparison_label=comparison_label,
-        filter_label=filter_label,
-        minute_result=minute_result,
+    minute_trade_df = _concat_trade_frames(
+        [
+            _minute_trade_frame(
+                comparison_label=comparison_label,
+                filter_label=filter_label,
+                minute_result=minute_result,
+            )
+        ]
     )
     if tick_rows_df.empty or "pnl_pips" not in tick_rows_df.columns:
         tick_trade_df = pd.DataFrame(columns=["comparison_label", "year", "pnl_pips"])

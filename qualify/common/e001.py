@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 
 from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.features import compute_feature_row
-from timer_entry.filters import parse_right_strength_filter_label, parse_volatility_filter_label
+from timer_entry.filters import parse_right_dominance_filter_label, parse_volatility_filter_label
 from timer_entry.minute_data import MinuteDataSummary, TradingDay, load_trading_days
 
 from .io import ensure_run_layout, write_json
@@ -116,15 +116,11 @@ def _resolve_dynamic_thresholds(
                 thresholds[label] = float(values.quantile(float(raw_threshold) / 100.0))
             continue
 
-        rs_spec = parse_right_strength_filter_label(label)
-        if rs_spec is None:
+        right_dom_spec = parse_right_dominance_filter_label(label)
+        if right_dom_spec is None:
             continue
-        _, percentile = rs_spec
-        rs_values = pd.to_numeric(feature_df["right_strength_balance_pips"], errors="coerce").dropna()
-        rs_positive = rs_values.loc[rs_values > 0.0]
-        if rs_positive.empty:
-            continue
-        thresholds[label] = float(rs_positive.quantile(float(percentile) / 100.0))
+        _, threshold = right_dom_spec
+        thresholds[label] = float(threshold)
     return thresholds
 
 
@@ -147,6 +143,13 @@ def _comparison_trade_frame(
         row["year"] = int(str(trade.date_local)[:4])
         rows.append(row)
     return pd.DataFrame(rows)
+
+
+def _concat_trade_frames(frames: list[pd.DataFrame]) -> pd.DataFrame:
+    non_empty_frames = [frame for frame in frames if not frame.empty]
+    if not non_empty_frames:
+        return pd.DataFrame()
+    return pd.concat(non_empty_frames, ignore_index=True)
 
 
 def _comparison_summary_row(
@@ -257,7 +260,7 @@ def run_e001(
         sanity_row["resolved_threshold"] = dynamic_filter_threshold
         sanity_rows.append(sanity_row)
 
-    trades_df = pd.concat(all_trade_frames, ignore_index=True) if all_trade_frames else pd.DataFrame()
+    trades_df = _concat_trade_frames(all_trade_frames)
     summary_df = build_e001_summary(summary_rows)
     split_df = build_split_summary(trades_df, eligible_days_by_segment=eligible_days_by_segment)
     year_df = build_year_summary(trades_df)

@@ -11,6 +11,7 @@ from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.minute_data import load_trading_days
 
 from .e001 import _eligible_days_by_segment, _eligible_feature_rows, _filter_days
+from .e001 import _concat_trade_frames
 from .io import ensure_run_layout, write_json
 from .params import E003Params
 from .reporting import (
@@ -151,7 +152,7 @@ def run_e003(
         sanity_row["forced_exit_clock_local"] = forced_exit_clock_local
         sanity_rows.append(sanity_row)
 
-    trades_df = pd.concat(all_trade_frames, ignore_index=True) if all_trade_frames else pd.DataFrame()
+    trades_df = _concat_trade_frames(all_trade_frames)
     summary_df = build_e003_summary(summary_rows)
     split_df = build_split_summary(trades_df, eligible_days_by_segment=eligible_days_by_segment)
     year_df = build_year_summary(trades_df)

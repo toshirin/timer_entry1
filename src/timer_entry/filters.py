@@ -13,7 +13,6 @@ FilterFamily = Literal[
     "shape_balance",
     "pre_range_regime",
     "trend_ratio",
-    "right_strength_balance_quantile",
 ]
 
 
@@ -82,7 +81,7 @@ SCAN_FILTERS: tuple[CanonicalFilter, ...] = (
 SCAN_FILTER_MAP: dict[str, CanonicalFilter] = {item.label: item for item in SCAN_FILTERS}
 _SLOPE_LABEL_RE = re.compile(r"^(ge|le)(-?\d+(?:[._]\d+)?)$")
 _VOL_PERCENTILE_LABEL_RE = re.compile(r"^vol_(ge|lt)_p(100|[1-9]?\d)$")
-_RIGHT_STRENGTH_LABEL_RE = re.compile(r"^rs_ge_q(100|[1-9]?\d)$")
+_RIGHT_DOMINANCE_LABEL_RE = re.compile(r"^right_dom_ge(-?\d+(?:[._]\d+)?)$")
 
 
 def canonical_filter_labels() -> list[str]:
@@ -116,11 +115,11 @@ def parse_volatility_filter_label(label: str) -> tuple[str, str | int] | None:
     return operator, int(percentile_text)
 
 
-def parse_right_strength_filter_label(label: str) -> tuple[str, int] | None:
-    match = _RIGHT_STRENGTH_LABEL_RE.fullmatch(label)
+def parse_right_dominance_filter_label(label: str) -> tuple[str, float] | None:
+    match = _RIGHT_DOMINANCE_LABEL_RE.fullmatch(label)
     if match is None:
         return None
-    return "ge", int(match.group(1))
+    return "ge", float(match.group(1).replace("_", "."))
 
 
 def get_filter_family(label: str) -> FilterFamily:
@@ -131,8 +130,8 @@ def get_filter_family(label: str) -> FilterFamily:
         return "pre_open_slope"
     if parse_volatility_filter_label(label) is not None:
         return "pre_range_regime"
-    if parse_right_strength_filter_label(label) is not None:
-        return "right_strength_balance_quantile"
+    if parse_right_dominance_filter_label(label) is not None:
+        return "shape_balance"
     raise ValueError(f"Unsupported filter label: {label}")
 
 
@@ -176,8 +175,8 @@ def evaluate_canonical_filter(
         if operator == "ge":
             return features.pre_range_pips >= resolved_pre_range_threshold
         return features.pre_range_pips < resolved_pre_range_threshold
-    rs_spec = parse_right_strength_filter_label(label)
-    if rs_spec is not None:
+    right_dom_spec = parse_right_dominance_filter_label(label)
+    if right_dom_spec is not None:
         if dynamic_threshold is None:
             raise ValueError(f"dynamic_threshold is required for {label}")
         return features.right_strength_balance_pips >= dynamic_threshold
@@ -216,8 +215,8 @@ def to_runtime_filter_spec(
             raise ValueError(f"pre_range_threshold is required for {label}")
         operator, _ = vol_spec
         return RuntimeFilterSpec(filter_type="pre_range_regime", operator=operator, threshold=float(pre_range_threshold))
-    rs_spec = parse_right_strength_filter_label(label)
-    if rs_spec is not None:
+    right_dom_spec = parse_right_dominance_filter_label(label)
+    if right_dom_spec is not None:
         if dynamic_threshold is None:
             raise ValueError(f"dynamic_threshold is required for {label}")
         return RuntimeFilterSpec(
@@ -262,7 +261,7 @@ __all__ = [
     "get_filter_family",
     "get_canonical_filter",
     "parse_slope_filter_label",
-    "parse_right_strength_filter_label",
+    "parse_right_dominance_filter_label",
     "parse_volatility_filter_label",
     "runtime_filter_dicts",
     "to_runtime_filter_spec",
