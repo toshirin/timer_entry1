@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 import pandas as pd
@@ -21,6 +22,17 @@ def _run_signal(request_dict: dict[str, object]) -> dict[str, object]:
     payload = {key: value for key, value in request_dict.items() if key != "ticks_dir"}
     request = TickReplayRequest(**payload)
     return execute_tick_replay(request, ticks)
+
+
+def _run_requests_sequentially(
+    requests: list[dict[str, object]],
+    *,
+    desc: str,
+) -> list[dict[str, object]]:
+    trades: list[dict[str, object]] = []
+    for request in tqdm(requests, desc=desc, unit="day", mininterval=0.5):
+        trades.append(_run_signal(request))
+    return trades
 
 
 def run_tick_replay_batch(
@@ -55,11 +67,20 @@ def run_tick_replay_batch(
 
     trades: list[dict[str, object]] = []
     if jobs == 1:
-        for request in tqdm(requests, desc="tick replay", unit="day", mininterval=0.5):
-            trades.append(_run_signal(request))
+        trades = _run_requests_sequentially(requests, desc="tick replay")
     else:
-        with ProcessPoolExecutor(max_workers=jobs) as pool:
-            futures = [pool.submit(_run_signal, request) for request in requests]
-            for future in tqdm(as_completed(futures), total=len(futures), desc="tick replay", unit="day", mininterval=0.5):
-                trades.append(future.result())
+        try:
+            with ProcessPoolExecutor(max_workers=jobs) as pool:
+                futures = [pool.submit(_run_signal, request) for request in requests]
+                for future in tqdm(
+                    as_completed(futures),
+                    total=len(futures),
+                    desc="tick replay",
+                    unit="day",
+                    mininterval=0.5,
+                ):
+                    trades.append(future.result())
+        except BrokenProcessPool:
+            print("[WARN] tick replay worker crashed; retrying sequentially with jobs=1")
+            trades = _run_requests_sequentially(requests, desc="tick replay fallback")
     return pd.DataFrame(trades)
