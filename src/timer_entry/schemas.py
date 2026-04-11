@@ -172,6 +172,7 @@ class StrategySetting:
     sl_pips: float
     filter_labels: tuple[str, ...] = ()
     pre_range_threshold: float | None = None
+    dynamic_filter_threshold: float | None = None
     enabled: bool = True
     strategy_id: str | None = None
     market_session: str | None = None
@@ -209,6 +210,7 @@ class StrategySetting:
         return runtime_filter_dicts(
             list(self.filter_labels),
             pre_range_threshold=self.pre_range_threshold,
+            dynamic_threshold=self.dynamic_filter_threshold,
         )
 
     def to_runtime_config(self) -> RuntimeConfig:
@@ -266,6 +268,7 @@ class ScanCandidate:
     sl_pips: float
     filter_labels: tuple[str, ...] = ()
     pre_range_threshold: float | None = None
+    dynamic_filter_threshold: float | None = None
     summary: BacktestSummary | None = None
     research_label: str | None = None
     notes: str | None = None
@@ -288,6 +291,7 @@ class ScanCandidate:
             sl_pips=self.sl_pips,
             filter_labels=self.filter_labels,
             pre_range_threshold=self.pre_range_threshold,
+            dynamic_filter_threshold=self.dynamic_filter_threshold,
             fixed_units=fixed_units,
             research_label=self.research_label,
             notes=self.notes,

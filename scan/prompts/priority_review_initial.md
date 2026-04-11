@@ -24,7 +24,12 @@
 1. `summary.csv` を読んで、`qualify` に回す優先 slot を順位付きで提案してください
 2. 各 slot について、`buy/sell` のどちらを先に見るべきか示してください
 3. 各 slot について、どの filter family を E001 で深掘るべきか示してください
-4. 理由は少なくとも以下を踏まえて説明してください
+4. 各推奨候補について、少なくとも以下を明示してください
+   - `entry_clock_local`
+   - `sl_pips`
+   - `tp_pips`
+   - `filter_label`
+5. 理由は少なくとも以下を踏まえて説明してください
    - `gross_pips`
    - `in_gross_pips`
    - `out_gross_pips`
@@ -37,7 +42,7 @@
    - `same_bar_conflict_count`
    - `same_bar_unresolved_count`
    - `forced_exit_count`
-5. 最後に、次スレへそのまま渡せる着手順序表を出してください
+6. 最後に、次スレへそのまま渡せる着手順序表を出してください
 
 ## 出力形式
 
@@ -46,6 +51,7 @@
 1. 全体の優先順位
 2. slot ごとの簡潔な理由
 3. `qualify/E001` の初手案
+   - 各候補で `entry_clock_local`、`sl_pips`、`tp_pips`、`filter_label` を併記してください
 4. 次スレ用の着手順序表
 
 ## 注意

@@ -251,6 +251,16 @@ qualify では `ge2` / `ge4` などの追加閾値を sweep してよい。
   - `left_ret_pips` と `right_ret_pips` の符号が逆
   - 0 を含む場合は不通過とする
 
+qualify では、必要に応じて `right_strength_balance` の threshold sweep を追加してよい。
+初版では以下を許容する。
+
+- `right_dom_ge2`
+- `right_dom_ge4`
+- `right_dom_ge6`
+
+ここで `right_strength_balance = abs(right_ret_pips) - abs(left_ret_pips)` とする。
+たとえば `right_dom_ge4` は `right_strength_balance >= 4.0` を意味する。
+
 ### 7.3 ボラ系
 
 `vol_ge_med` は標準偏差ボラではない。
