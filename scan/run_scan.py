@@ -130,6 +130,8 @@ def main() -> None:
         print(f"[MEDIAN] session={session_prefix} computing pre_range median", flush=True)
         pre_range_median = _compute_pre_range_median(prepared_days, entry_step_min=args.entry_step_min)
         print(f"[MEDIAN] session={session_prefix} pre_range median={pre_range_median}", flush=True)
+        if pre_range_median is None:
+            raise RuntimeError(f"pre_range median could not be computed for session={session_prefix}")
 
         total_slots = len(list(_hour_range_for_session(session_prefix))) * 2
         pbar = tqdm(total=total_slots, desc=f"scan {session_prefix}", unit="slot")

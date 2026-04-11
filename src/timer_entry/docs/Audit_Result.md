@@ -235,6 +235,30 @@
 - Sell の意味論は runtime 側
 - 監査時点では `lon12` を直接再確認できていないため、主要比較は `probe5 / jst09 / jst10 / jst12 / lon08 / runtime` ベースで行った
 
+## 4.2 Claude Code 監査への対応
+
+Claude Code による core 監査で、以下を追加対応した。
+
+- fast engine の forced exit を位置オフセットだけで決めず、entry からの実時刻差で forced exit バーを検索するよう修正
+- 欠損バーがあっても forced exit clock が存在する場合は、その clock を使うよう修正
+- fast engine の DirectionSpec ルーティングを `else` fallback ではなく、未知列で `ValueError` にする fail-fast へ修正
+- `backtest_1m.py` から `evaluate_canonical_filter()` へ `pre_range_threshold` を明示名で渡すよう修正
+- `BacktestTrade.exit_price_series` に、TP / SL / forced exit ごとの価格モデルを残すよう修正
+- `_get_row_at_or_before` という misleading な関数名を `_get_row_at` に修正
+- parity test に以下を追加
+  - Sell TP
+  - forced exit
+  - 欠損バーを含む forced exit clock 検索
+  - `vol_ge_med`
+  - London session
+
+一方で、以下は実データ仕様または qualify 側の責務確認が必要なため、未確定事項として残す。
+
+- event time 列の naive timestamp がどの timezone 由来か
+- `vol_ge_p60` など percentile label に対応する threshold は、呼び出し側が解決する設計でよいか
+- `right_dom_ge4` に `dynamic_threshold` を渡して label 閾値を上書きする設計を、最終仕様として許容するか
+- SL 保守モデルで entry spread を代替 spread として使う根拠を、どこまで実データで検証するか
+
 ## 5. 未検知だった論点
 
 今回の scan 結果と旧 `probe5` summary の比較により、以下は core / scan 初期監査では明示検知できていなかった。
