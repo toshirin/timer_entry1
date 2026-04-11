@@ -131,6 +131,15 @@ schema では、主に以下の対応を取る。
 - 1分足 backtest では entry バーの次バーから TP / SL 判定を始める
 - tick replay では entry 約定直後から監視する
 
+### 4.5 event time 列
+
+- `Bid_High_Time` / `Bid_Low_Time` / `Ask_High_Time` / `Ask_Low_Time` は same-bar 順序判定に使う
+- tz-aware の event time は対象 market timezone へ変換する
+- 現行実装では、naive の event time を `Europe/London` として localize する
+- ただし、naive event time の元 timezone はデータ仕様として未確定である
+- 実データが broker time `UTC+3` naive で格納されている場合は、same-bar 順序判定がずれる可能性がある
+- 実データ仕様確認後に本節を確定し、必要なら `minute_data.py` の localize 方針を変更する
+
 ## 5. DirectionSpec
 
 Bid / Ask 規約はコード上でも固定する。
@@ -260,6 +269,8 @@ qualify では、必要に応じて `right_strength_balance` の threshold sweep
 
 ここで `right_strength_balance = abs(right_ret_pips) - abs(left_ret_pips)` とする。
 たとえば `right_dom_ge4` は `right_strength_balance >= 4.0` を意味する。
+`dynamic_threshold` を渡した場合は、label から parse した閾値より `dynamic_threshold` を優先する。
+label と threshold の乖離を避けるため、出力には label と実際の threshold の両方を残す。
 
 ### 7.3 ボラ系
 
@@ -276,6 +287,10 @@ qualify では、必要に応じて `right_strength_balance` の threshold sweep
 
 scan では `vol_ge_med` / `vol_lt_med` のような基本二値だけを使う。
 qualify では percentile ベースの深掘りを追加してよいが、canonical 名と別名にするか、threshold を明示して区別する。
+
+初版の実装では、`vol_ge_p60` のような percentile label は percentile 値そのものを評価器内で再計算しない。
+呼び出し側が対象データから percentile に対応する `pre_range_threshold` を解決し、その threshold と label を対で渡す責務を持つ。
+つまり、label は記録・比較用 identity であり、評価は明示された threshold によって行う。
 
 ### 7.4 レンジ / トレンド状態
 
@@ -342,6 +357,9 @@ scan summary では少なくとも以下を計算する。
 - entry 価格は `DirectionSpec.entry_col`
 - forced exit 価格は `DirectionSpec.forced_exit_col`
 - TP / SL 判定は `DirectionSpec.tp_hit_col` と `DirectionSpec.sl_hit_col`
+- fast engine でも forced exit は位置オフセットだけで決めず、entry 時刻からの実時刻差で forced exit バーを検索する
+- 欠損バーがあっても forced exit clock が存在する場合は、その clock を forced exit として使う
+- forced exit clock が存在しない場合は当該日を skip する
 
 ### 9.2 entry バー内判定の禁止
 
@@ -369,6 +387,19 @@ scan summary では少なくとも以下を計算する。
 - `forced_exit_count`
 - `forced_exit_missing_count`
 - `feature_skip_count`
+
+### 9.5 exit price series の記録
+
+trade row の `exit_price_series` は、単なる `bid` / `ask` ではなく、exit reason ごとの価格モデルを残す。
+
+- TP
+  - `tp_level/<exit side>`
+- SL
+  - `conservative_sl_exit(<trigger series>,<exit side>,entry_spread)`
+- forced exit
+  - `DirectionSpec.forced_exit_col`
+
+SL は trigger 系列そのものではなく、trigger level に entry spread を加減した保守的計算値である。
 
 ## 10. schemas の責務
 

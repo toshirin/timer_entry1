@@ -47,7 +47,7 @@ def _safe_float(value: object) -> float | None:
     return float(value)
 
 
-def _get_row_at_or_before(day_df: pd.DataFrame, target_time: pd.Timestamp) -> pd.Series | None:
+def _get_row_at(day_df: pd.DataFrame, target_time: pd.Timestamp) -> pd.Series | None:
     matches = day_df.loc[day_df["Minute_Market"] == target_time]
     if matches.empty:
         return None
@@ -108,9 +108,9 @@ def compute_feature_row(
     mid_time = entry_time - pd.Timedelta(minutes=spec.left_end_min)
     end_time = entry_time - pd.Timedelta(minutes=spec.lookback_end_min)
 
-    start_row = _get_row_at_or_before(day_df, start_time)
-    mid_row = _get_row_at_or_before(day_df, mid_time)
-    end_row = _get_row_at_or_before(day_df, end_time)
+    start_row = _get_row_at(day_df, start_time)
+    mid_row = _get_row_at(day_df, mid_time)
+    end_row = _get_row_at(day_df, end_time)
     if start_row is None or mid_row is None or end_row is None:
         return FeatureComputationResult(
             feature_available=False,

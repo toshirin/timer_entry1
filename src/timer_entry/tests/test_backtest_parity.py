@@ -38,6 +38,8 @@ def _build_day_frame(
             {
                 "Clock_JST": minute_ts.strftime("%H:%M"),
                 "Minute_JST": minute_ts,
+                "Clock_London": minute_ts.strftime("%H:%M"),
+                "Minute_London": minute_ts,
                 "Clock_Market": minute_ts.strftime("%H:%M"),
                 "Minute_Market": minute_ts,
                 "Bid_Open": bid_open,
@@ -110,7 +112,7 @@ def _run_both(day: TradingDay, setting: StrategySetting) -> tuple[object, pd.Ser
         exit_after_minutes=int(exit_after_minutes.total_seconds() / 60.0),
         sl_grid_pips=[setting.sl_pips],
         tp_grid_pips=[setting.tp_pips],
-        pre_range_median=setting.pre_range_threshold,
+        pre_range_median=setting.pre_range_threshold if setting.pre_range_threshold is not None else 0.1,
     )
     fast_row = fast.daily_df.loc[
         (fast.daily_df["filter_label"] == "all")
@@ -131,8 +133,8 @@ def _assert_trade_matches(slow_result: object, fast_row: pd.Series, fast_summary
     trade = trades[0]
     assert trade.exit_reason == fast_row["exit_reason"]
     assert trade.hold_minutes == int(fast_row["hold_min"])
-    assert trade.filter_label == "all"
-    assert trade.notes == f"conflict_resolved_by={fast_row['conflict_resolved_by']}"
+    assert trade.filter_label == fast_row["filter_label"]
+    assert trade.notes.startswith(f"conflict_resolved_by={fast_row['conflict_resolved_by']}")
     assert trade.pnl_pips == pytest.approx(float(fast_row["pnl_pips"]), abs=1e-6)
 
     summary = slow_result.summary  # type: ignore[attr-defined]
@@ -235,3 +237,122 @@ def test_backtest_parity_sell_conservative_sl() -> None:
     assert fast_row["exit_reason"] == "sl"
     assert fast_row["conflict_resolved_by"] == "single_hit_sl"
     assert float(fast_row["pnl_pips"]) == pytest.approx(expected_pnl, abs=1e-6)
+
+
+def test_backtest_parity_sell_tp() -> None:
+    day = _build_trading_day()
+    setting = _build_setting(side="sell", tp_pips=3.0, sl_pips=5.0)
+
+    entry_bid = float(day.frame.loc["10:00", "Bid_Open"])
+    tp_price_ask = entry_bid - 3.0 * 0.01
+    _set_minute(day.frame, "10:01", Ask_Low=tp_price_ask - 0.01, Ask_Low_Time=pd.Timestamp("2024-01-10 10:01:05", tz="Asia/Tokyo"))
+
+    slow, fast_row, fast_summary_row = _run_both(day, setting)
+    _assert_trade_matches(slow, fast_row, fast_summary_row)
+    assert fast_row["exit_reason"] == "tp"
+    assert fast_row["conflict_resolved_by"] == "single_hit_tp"
+
+
+def test_backtest_parity_forced_exit() -> None:
+    day = _build_trading_day()
+    setting = _build_setting(side="buy", tp_pips=300.0, sl_pips=300.0)
+
+    slow, fast_row, fast_summary_row = _run_both(day, setting)
+    _assert_trade_matches(slow, fast_row, fast_summary_row)
+    assert fast_row["exit_reason"] == "forced_exit"
+    assert fast_row["conflict_resolved_by"] == "forced_exit"
+
+
+def test_backtest_fast_uses_clock_for_forced_exit_with_missing_inner_bar() -> None:
+    frame = _build_day_frame()
+    frame = frame.drop(index="10:30")
+    day = TradingDay(
+        session_date="2024-01-10",
+        session_tz="Asia/Tokyo",
+        year=2024,
+        weekday=2,
+        frame=frame,
+    )
+    setting = _build_setting(side="buy", tp_pips=300.0, sl_pips=300.0)
+
+    slow = run_backtest_1m([day], setting)
+    fast = run_scan_fast(
+        preprocess_fast_days([day]),
+        slot_id=setting.slot_id,
+        side=setting.side,
+        entry_clock_local=setting.normalized_entry_clock(),
+        exit_after_minutes=55,
+        sl_grid_pips=[setting.sl_pips],
+        tp_grid_pips=[setting.tp_pips],
+        pre_range_median=0.1,
+    )
+
+    fast_row = fast.daily_df.loc[
+        (fast.daily_df["filter_label"] == "all")
+        & (fast.daily_df["sl_pips"] == float(setting.sl_pips))
+        & (fast.daily_df["tp_pips"] == float(setting.tp_pips))
+    ].iloc[0]
+    fast_summary_row = fast.summary_df.loc[
+        (fast.summary_df["filter_label"] == "all")
+        & (fast.summary_df["sl_pips"] == float(setting.sl_pips))
+        & (fast.summary_df["tp_pips"] == float(setting.tp_pips))
+    ].iloc[0]
+    _assert_trade_matches(slow, fast_row, fast_summary_row)
+    assert int(fast_row["hold_min"]) == 55
+
+
+def test_backtest_parity_vol_ge_med_filter() -> None:
+    day = _build_trading_day()
+    setting = StrategySetting(
+        setting_id="test_buy_vol",
+        slot_id="tyo10",
+        side="buy",
+        market_tz="Asia/Tokyo",
+        entry_clock_local="10:00",
+        forced_exit_clock_local="10:55",
+        tp_pips=300.0,
+        sl_pips=300.0,
+        filter_labels=("vol_ge_med",),
+        pre_range_threshold=0.1,
+    )
+
+    slow = run_backtest_1m([day], setting)
+    prepared = preprocess_fast_days([day])
+    fast = run_scan_fast(
+        prepared,
+        slot_id=setting.slot_id,
+        side=setting.side,
+        entry_clock_local=setting.normalized_entry_clock(),
+        exit_after_minutes=55,
+        sl_grid_pips=[setting.sl_pips],
+        tp_grid_pips=[setting.tp_pips],
+        pre_range_median=setting.pre_range_threshold,
+    )
+    fast_row = fast.daily_df.loc[fast.daily_df["filter_label"] == "vol_ge_med"].iloc[0]
+    fast_summary_row = fast.summary_df.loc[fast.summary_df["filter_label"] == "vol_ge_med"].iloc[0]
+    _assert_trade_matches(slow, fast_row, fast_summary_row)
+
+
+def test_backtest_parity_london_session() -> None:
+    frame = _build_day_frame(session_tz="Europe/London", date_text="2024-01-10", start_clock="08:05", end_clock="09:55")
+    day = TradingDay(
+        session_date="2024-01-10",
+        session_tz="Europe/London",
+        year=2024,
+        weekday=2,
+        frame=frame.set_index("Clock_Market", drop=False),
+    )
+    setting = StrategySetting(
+        setting_id="test_london_buy",
+        slot_id="lon09",
+        side="buy",
+        market_tz="Europe/London",
+        entry_clock_local="09:00",
+        forced_exit_clock_local="09:55",
+        tp_pips=300.0,
+        sl_pips=300.0,
+        filter_labels=("all",),
+    )
+
+    slow, fast_row, fast_summary_row = _run_both(day, setting)
+    _assert_trade_matches(slow, fast_row, fast_summary_row)

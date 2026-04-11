@@ -219,45 +219,74 @@ def compute_fast_feature_row(day: FastDay, *, entry_idx: int) -> FastFeatureRow:
 def _feature_labels(features: FastFeatureRow, *, pre_range_median: float | None) -> list[str]:
     labels: list[str] = []
     for label in SCAN_LABELS:
-        if label in {"vol_ge_med", "vol_lt_med"} and pre_range_median is None:
-            continue
         if evaluate_canonical_filter(label, features, pre_range_median=pre_range_median):
             labels.append(label)
     return labels
 
 
 def _entry_array(day: FastDay, spec: DirectionSpec) -> np.ndarray:
-    return day.ask_open if spec.entry_col == "Ask_Open" else day.bid_open
+    if spec.entry_col == "Ask_Open":
+        return day.ask_open
+    if spec.entry_col == "Bid_Open":
+        return day.bid_open
+    raise ValueError(f"Unsupported entry_col for fast engine: {spec.entry_col}")
 
 
 def _tp_hit_array(day: FastDay, spec: DirectionSpec) -> np.ndarray:
     if spec.tp_hit_col == "Bid_High":
         return day.bid_high
-    return day.ask_low
+    if spec.tp_hit_col == "Ask_Low":
+        return day.ask_low
+    raise ValueError(f"Unsupported tp_hit_col for fast engine: {spec.tp_hit_col}")
 
 
 def _sl_hit_array(day: FastDay, spec: DirectionSpec) -> np.ndarray:
     if spec.sl_hit_col == "Ask_Low":
         return day.ask_low
-    return day.bid_high
+    if spec.sl_hit_col == "Bid_High":
+        return day.bid_high
+    raise ValueError(f"Unsupported sl_hit_col for fast engine: {spec.sl_hit_col}")
 
 
 def _forced_exit_array(day: FastDay, spec: DirectionSpec) -> np.ndarray:
     if spec.forced_exit_col == "Bid_Close":
         return day.bid_close
-    return day.ask_close
+    if spec.forced_exit_col == "Ask_Close":
+        return day.ask_close
+    raise ValueError(f"Unsupported forced_exit_col for fast engine: {spec.forced_exit_col}")
 
 
 def _tp_time_array(day: FastDay, spec: DirectionSpec) -> np.ndarray:
     if spec.tp_time_col == "Bid_High_Time":
         return day.bid_high_time_ns
-    return day.ask_low_time_ns
+    if spec.tp_time_col == "Ask_Low_Time":
+        return day.ask_low_time_ns
+    raise ValueError(f"Unsupported tp_time_col for fast engine: {spec.tp_time_col}")
 
 
 def _sl_time_array(day: FastDay, spec: DirectionSpec) -> np.ndarray:
     if spec.sl_time_col == "Ask_Low_Time":
         return day.ask_low_time_ns
-    return day.bid_high_time_ns
+    if spec.sl_time_col == "Bid_High_Time":
+        return day.bid_high_time_ns
+    raise ValueError(f"Unsupported sl_time_col for fast engine: {spec.sl_time_col}")
+
+
+def _exit_idx_after_minutes(day: FastDay, *, entry_idx: int, exit_after_minutes: int) -> int | None:
+    # 位置オフセットだけで forced exit を決めると、欠損バーで silent にずれる。
+    # fast engine でも entry からの実時刻で forced exit バーを検索する。
+    target_ns = int(day.minute_ns[entry_idx] + int(exit_after_minutes) * 60 * 1_000_000_000)
+    matches = np.flatnonzero(day.minute_ns == target_ns)
+    if len(matches) == 0:
+        return None
+    exit_idx = int(matches[0])
+    if exit_idx <= entry_idx:
+        return None
+    return exit_idx
+
+
+def _hold_minutes(day: FastDay, *, entry_idx: int, exit_idx: int) -> int:
+    return int((int(day.minute_ns[exit_idx]) - int(day.minute_ns[entry_idx])) / (60 * 1_000_000_000))
 
 
 def simulate_fast_matrix(
@@ -285,7 +314,7 @@ def simulate_fast_matrix(
     shape = (len(sl_grid_pips), len(tp_grid_pips))
     resolved = np.zeros(shape, dtype=bool)
     exits = np.full(shape, np.nan, dtype=np.float64)
-    holds = np.full(shape, exit_idx - entry_idx, dtype=np.int16)
+    holds = np.full(shape, _hold_minutes(day, entry_idx=entry_idx, exit_idx=exit_idx), dtype=np.int16)
     reason = np.full(shape, REASON_FORCED_EXIT, dtype=np.int8)
     resolve = np.full(shape, RESOLVE_FORCED_EXIT, dtype=np.int8)
     same_bar_unresolved = np.zeros(shape, dtype=bool)
@@ -314,7 +343,7 @@ def simulate_fast_matrix(
         sl_only = unresolved & sl_hit[:, None] & (~tp_hit[None, :])
         if sl_only.any():
             exits[sl_only] = sl_exit_grid[sl_only]
-            holds[sl_only] = idx - entry_idx
+            holds[sl_only] = _hold_minutes(day, entry_idx=entry_idx, exit_idx=idx)
             reason[sl_only] = REASON_SL
             resolve[sl_only] = RESOLVE_SINGLE_HIT_SL
             resolved[sl_only] = True
@@ -322,7 +351,7 @@ def simulate_fast_matrix(
         tp_only = unresolved & (~sl_hit[:, None]) & tp_hit[None, :]
         if tp_only.any():
             exits[tp_only] = tp_exit_grid[tp_only]
-            holds[tp_only] = idx - entry_idx
+            holds[tp_only] = _hold_minutes(day, entry_idx=entry_idx, exit_idx=idx)
             reason[tp_only] = REASON_TP
             resolve[tp_only] = RESOLVE_SINGLE_HIT_TP
             resolved[tp_only] = True
@@ -334,18 +363,18 @@ def simulate_fast_matrix(
             unresolved_time = sl_t == I64_NAT or tp_t == I64_NAT or sl_t == tp_t
             if unresolved_time:
                 exits[both] = sl_exit_grid[both]
-                holds[both] = idx - entry_idx
+                holds[both] = _hold_minutes(day, entry_idx=entry_idx, exit_idx=idx)
                 reason[both] = REASON_SL
                 resolve[both] = RESOLVE_UNFAVORABLE_SIDE
                 same_bar_unresolved[both] = True
             elif tp_t < sl_t:
                 exits[both] = tp_exit_grid[both]
-                holds[both] = idx - entry_idx
+                holds[both] = _hold_minutes(day, entry_idx=entry_idx, exit_idx=idx)
                 reason[both] = REASON_TP
                 resolve[both] = RESOLVE_EVENT_TIME_TP_FIRST
             else:
                 exits[both] = sl_exit_grid[both]
-                holds[both] = idx - entry_idx
+                holds[both] = _hold_minutes(day, entry_idx=entry_idx, exit_idx=idx)
                 reason[both] = REASON_SL
                 resolve[both] = RESOLVE_EVENT_TIME_SL_FIRST
             resolved[both] = True
@@ -479,8 +508,8 @@ def run_scan_fast(
         entry_idx = day.clock_to_idx.get(entry_clock_local)
         if entry_idx is None:
             continue
-        exit_idx = entry_idx + int(exit_after_minutes)
-        if exit_idx >= len(day.minute_ns) or exit_idx <= entry_idx:
+        exit_idx = _exit_idx_after_minutes(day, entry_idx=entry_idx, exit_after_minutes=exit_after_minutes)
+        if exit_idx is None:
             continue
 
         features = compute_fast_feature_row(day, entry_idx=entry_idx)

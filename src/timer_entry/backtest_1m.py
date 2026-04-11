@@ -241,7 +241,7 @@ def _simulate_trade_for_day(
         if not evaluate_canonical_filter(
             label,
             feature_result,
-            pre_range_median=setting.pre_range_threshold,
+            pre_range_threshold=setting.pre_range_threshold,
             dynamic_threshold=setting.dynamic_filter_threshold,
         ):
             counters.filter_skip_count += 1
@@ -318,7 +318,16 @@ def _simulate_trade_for_day(
             counters.entry_equals_exit_sl_count += 1
 
     hold_minutes = int((exit_time - entry_time).total_seconds() / 60.0)
-    notes = f"conflict_resolved_by={conflict_resolved_by}"
+    if exit_reason == "sl":
+        exit_price_series = f"conservative_sl_exit({spec.sl_hit_col},{spec.exit_price_side},entry_spread)"
+    elif exit_reason == "tp":
+        exit_price_series = f"tp_level/{spec.exit_price_side}"
+    else:
+        exit_price_series = spec.forced_exit_col
+    notes = (
+        f"conflict_resolved_by={conflict_resolved_by}, "
+        f"exit_price_model={exit_price_series}"
+    )
     return BacktestTrade(
         trade_id=_build_trade_id(setting, day),
         date_local=day.session_date,
@@ -331,7 +340,7 @@ def _simulate_trade_for_day(
         pnl_pips=float(_pnl_pips(entry_price, exit_price, spec.side)),
         hold_minutes=hold_minutes,
         entry_price_series=spec.entry_series_name,
-        exit_price_series=spec.exit_price_side,
+        exit_price_series=exit_price_series,
         tp_price_series=spec.tp_series_name,
         sl_price_series=spec.sl_series_name,
         forced_exit_price_series=spec.forced_exit_series_name,
