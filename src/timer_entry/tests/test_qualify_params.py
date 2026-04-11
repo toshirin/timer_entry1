@@ -6,7 +6,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from qualify.common.params import E001Params, E002Params, E003Params, E004Params
+from qualify.common.params import E001Params, E002Params, E003Params, E004Params, E005E008Params
 
 
 def test_e001_params_build_strategy_setting_with_dynamic_label() -> None:
@@ -112,3 +112,38 @@ def test_e004_params_build_strategy_setting_and_runtime_fields() -> None:
     assert setting.sl_pips == 30.0
     assert setting.forced_exit_clock_local == "09:45"
     assert params.comparison_label() == "buy0840_vol_ge_p70_tp10_sl30_fx0945"
+
+
+def test_e005_e008_params_convert_to_e004_baseline() -> None:
+    params = E005E008Params.from_dict(
+        {
+            "experiment_code": "E005-E008",
+            "variant_code": None,
+            "slot_id": "lon08",
+            "side": "buy",
+            "baseline": {
+                "entry_clock_local": "08:40",
+                "forced_exit_clock_local": "09:45",
+                "tp_pips": 10,
+                "sl_pips": 30,
+                "filter_labels": ["vol_ge_p70"],
+            },
+            "pass_stability_gate": True,
+            "selected_experiments": ["E005", "E007"],
+            "slippage_values": [0.0, 0.2, 0.3],
+            "entry_delay_values": [0, 30, 60],
+            "risk_fractions": [0.015, 0.03, 0.06],
+            "kill_switch_dd_pct": -0.2,
+            "initial_capital_jpy": 100000,
+            "slippage_mode": "none",
+            "fixed_slippage_pips": 0.0,
+            "entry_delay_seconds": 0,
+        }
+    )
+    baseline = params.to_e004_params()
+    assert params.selected_experiments == ("E005", "E007")
+    assert params.slippage_values == (0.0, 0.2, 0.3)
+    assert params.entry_delay_values == (0, 30, 60)
+    assert params.risk_fractions == (0.015, 0.03, 0.06)
+    assert baseline.experiment_code == "E004"
+    assert baseline.comparison_label() == "buy0840_vol_ge_p70_tp10_sl30_fx0945"

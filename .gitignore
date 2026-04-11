@@ -4,3 +4,5 @@ qualify/out/
 dataset/
 ticks/
 fx_260312/
+.pycache_tmp/
+source_docs/

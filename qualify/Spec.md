@@ -200,8 +200,9 @@ E005-E008 の運用原則は以下。
 - optional
   - 引数で E005 / E006 / E007 / E008 の単独実行を許容する
 - params
-  - 原則として E004 で確定した `e004.json` を入力として受ける
-  - E005-E008 専用の別 params を必須にはしない
+  - E004 で確定した baseline setting を `e005-e008.json` にコピーして固定する
+  - E005 / E007 / E008 の sweep 範囲は ChatGPT 側で決め、`e005-e008.json` から読み込む
+  - CLI 引数では sweep / risk 条件を受けない
 
 E005 と E007 では、以下を追加原則とする。
 
@@ -371,4 +372,4 @@ E004 の詳細な比較・旧資産との差分は `qualify/docs/Audit_Result.md
 5. E002 の監査結果を反映し、SL / TP sweep runner へ横展開する
 6. E003 の監査結果を反映し、forced exit sweep runner へ横展開する
 7. E004 の監査結果を反映し、tick replay engine を共通化する
-8. E005 以降へ進む
+8. E005-E008 suite を `e005-e008.json` 入力で実装する

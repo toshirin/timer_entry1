@@ -93,7 +93,7 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e005-e008.py \
-    --params-file qualify/params/{slot_id}/e004.json \
+    --params-file qualify/params/{slot_id}/e005-e008.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
     --ticks-dir ticks/USDJPY \
@@ -101,9 +101,12 @@ docker run --rm \
     --only E005 E008
 ```
 
+E005-E008 の sweep / risk 条件は `qualify/params/{slot_id}/e005-e008.json` に書きます。
+`--only` は部分再実行したい場合だけ使います。
+
 ## 補足
 
 - `qualify` は `scan` のように自律探索するのではなく、ChatGPT 側で決めた JSON params を入力として実行します
 - `pass_stability_gate == False` の候補を流す場合は、各 runner に `--allow-gate-fail` を明示してください
 - E004 は独立の tick replay 審査です
-- E005-E008 は `e005-e008.py` で一括実行を基本とし、入力は原則 `e004.json` を再利用します
+- E005-E008 は `e005-e008.py` で一括実行を基本とし、入力は `e005-e008.json` を使います

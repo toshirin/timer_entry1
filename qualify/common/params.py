@@ -335,6 +335,88 @@ class E004Params:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class E005E008Params:
+    experiment_code: str
+    variant_code: str | None
+    slot_id: str
+    side: str
+    baseline: BaselineSettingInput
+    pass_stability_gate: bool
+    selected_experiments: tuple[str, ...]
+    slippage_values: tuple[float, ...]
+    entry_delay_values: tuple[int, ...]
+    risk_fractions: tuple[float, ...]
+    kill_switch_dd_pct: float
+    initial_capital_jpy: float = 100_000.0
+    slippage_mode: str = "none"
+    fixed_slippage_pips: float = 0.0
+    entry_delay_seconds: int = 0
+    notes: str | None = None
+    date_from: str | None = None
+    date_to: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "E005E008Params":
+        experiment_code = str(data["experiment_code"])
+        if experiment_code != "E005-E008":
+            raise ValueError(f"Unsupported experiment_code for E005-E008 runner: {experiment_code}")
+        selected_experiments = tuple(str(value).upper() for value in data.get("selected_experiments", ["E005", "E006", "E007", "E008"]))
+        if not selected_experiments:
+            raise ValueError("selected_experiments must not be empty")
+        unsupported = [value for value in selected_experiments if value not in {"E005", "E006", "E007", "E008"}]
+        if unsupported:
+            raise ValueError(f"Unsupported selected_experiments: {unsupported}")
+        slippage_values = tuple(float(value) for value in data.get("slippage_values", []))
+        entry_delay_values = tuple(int(value) for value in data.get("entry_delay_values", []))
+        risk_fractions = tuple(float(value) for value in data.get("risk_fractions", []))
+        if not slippage_values:
+            raise ValueError("slippage_values must not be empty")
+        if not entry_delay_values:
+            raise ValueError("entry_delay_values must not be empty")
+        if not risk_fractions:
+            raise ValueError("risk_fractions must not be empty")
+        return cls(
+            experiment_code=experiment_code,
+            variant_code=str(data["variant_code"]) if data.get("variant_code") is not None else None,
+            slot_id=str(data["slot_id"]),
+            side=str(data["side"]),
+            baseline=BaselineSettingInput.from_dict(dict(data["baseline"])),
+            pass_stability_gate=bool(data["pass_stability_gate"]),
+            selected_experiments=selected_experiments,
+            slippage_values=slippage_values,
+            entry_delay_values=entry_delay_values,
+            risk_fractions=risk_fractions,
+            kill_switch_dd_pct=float(data["kill_switch_dd_pct"]),
+            initial_capital_jpy=float(data.get("initial_capital_jpy", 100_000.0)),
+            slippage_mode=str(data.get("slippage_mode", "none")),
+            fixed_slippage_pips=float(data.get("fixed_slippage_pips", 0.0)),
+            entry_delay_seconds=int(data.get("entry_delay_seconds", 0)),
+            notes=str(data["notes"]) if data.get("notes") is not None else None,
+            date_from=str(data["date_from"]) if data.get("date_from") is not None else None,
+            date_to=str(data["date_to"]) if data.get("date_to") is not None else None,
+        )
+
+    def to_e004_params(self) -> E004Params:
+        return E004Params(
+            experiment_code="E004",
+            variant_code=self.variant_code,
+            slot_id=self.slot_id,
+            side=self.side,
+            baseline=self.baseline,
+            pass_stability_gate=self.pass_stability_gate,
+            slippage_mode=self.slippage_mode,
+            fixed_slippage_pips=self.fixed_slippage_pips,
+            entry_delay_seconds=self.entry_delay_seconds,
+            notes=self.notes,
+            date_from=self.date_from,
+            date_to=self.date_to,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 def load_e001_params(path: str | Path) -> E001Params:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -361,3 +443,10 @@ def load_e004_params(path: str | Path) -> E004Params:
     if not isinstance(payload, dict):
         raise ValueError("E004 params must be a JSON object")
     return E004Params.from_dict(payload)
+
+
+def load_e005_e008_params(path: str | Path) -> E005E008Params:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("E005-E008 params must be a JSON object")
+    return E005E008Params.from_dict(payload)

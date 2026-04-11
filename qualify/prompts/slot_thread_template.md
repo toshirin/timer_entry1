@@ -21,12 +21,17 @@
   - `qualify/prompts/e005_e008_thread.md`
 - E008
   - `qualify/prompts/e005_e008_thread.md`
+- 結果分析
+  - `qualify/prompts/result_analysis_thread.md`
 
 ## 運用原則
 
 - E001 は scan の `summary_{slot_id}.csv` を読み、filter family 深掘りを決める
 - E002 以降は前段の `qualify/out/E00N/...` を読み、次段の JSON を決める
-- E005-E008 は `e005-e008.py` で一括実行を基本とし、入力は原則 `e004.json` を再利用する
+- E005-E008 は `e005-e008.py` で一括実行を基本とし、`e005-e008.json` を入力にする
+- JSON の出力は必ず `json` コードブロックにする
+- E001 の新規 filter 定義は Codex 宛の仕様書として `markdown` コードブロックにする
+- 実行後の CSV 分析は `result_analysis_thread.md` を使う
 - 現行 core 未実装の label や field が必要なら、ChatGPT 側は JSON と一緒に定義案を出す
 - Codex 側は、その定義案を実装してから実験を実行する
 

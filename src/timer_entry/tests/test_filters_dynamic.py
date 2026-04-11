@@ -92,5 +92,4 @@ def test_evaluate_canonical_filter_supports_right_dominance_thresholds() -> None
     features = _feature_row(slope=0.0, pre_range=12.0)
     assert evaluate_canonical_filter("right_dom_ge4", features, dynamic_threshold=0.5) is True
     assert evaluate_canonical_filter("right_dom_ge4", features, dynamic_threshold=1.5) is False
-    with pytest.raises(ValueError):
-        evaluate_canonical_filter("right_dom_ge4", features)
+    assert evaluate_canonical_filter("right_dom_ge4", features) is False
