@@ -234,7 +234,7 @@ def _summary_row(
     minute_in = _safe_gross_by_years(minute_trade_df, DEFAULT_IN_YEARS)
     minute_out = _safe_gross_by_years(minute_trade_df, DEFAULT_OUT_YEARS)
 
-    pass_stability_gate = bool(tick_in > 0.0 and tick_out > 0.0)
+    tick_pass_positive_inout_gate = bool(tick_in > 0.0 and tick_out > 0.0)
     return {
         "comparison_label": comparison_label,
         "filter_label": ",".join(params.baseline.filter_labels),
@@ -264,7 +264,8 @@ def _summary_row(
         "minute_max_dd_pips": float(_max_dd(minute_pnl)),
         "annualized_pips": float(_annualized(tick_trade_df)),
         "minute_annualized_pips": float(_annualized(minute_trade_df)),
-        "pass_stability_gate": pass_stability_gate,
+        "pass_stability_gate": params.pass_stability_gate,
+        "tick_pass_positive_inout_gate": tick_pass_positive_inout_gate,
         "tick_not_found_count": int(tick_rows["tick_not_found_flag"].fillna(False).sum()) if not tick_rows.empty else 0,
         "forced_exit_missing_count": int(tick_rows["forced_exit_missing_flag"].fillna(False).sum()) if not tick_rows.empty else 0,
         "entry_after_forced_exit_count": int(tick_rows["entry_after_forced_exit_flag"].fillna(False).sum())

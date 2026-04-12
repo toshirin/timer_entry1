@@ -185,6 +185,7 @@ def build_e004_summary(summary_rows: list[dict[str, object]]) -> pd.DataFrame:
         "annualized_pips",
         "minute_annualized_pips",
         "pass_stability_gate",
+        "tick_pass_positive_inout_gate",
         "tick_not_found_count",
         "forced_exit_missing_count",
         "entry_after_forced_exit_count",

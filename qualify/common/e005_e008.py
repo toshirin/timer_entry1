@@ -14,7 +14,9 @@ from .e001 import _concat_trade_frames
 from .e004 import _aggregate_tick_sanity
 from .io import ensure_run_layout, write_json
 from .params import E004Params, E005E008Params
-from .reporting import build_sanity_summary, build_split_summary, build_year_summary
+from .reporting import DEFAULT_OUT_YEARS, build_sanity_summary, build_split_summary, build_year_summary
+
+DEFAULT_WALKFORWARD_TEST_YEARS = tuple(range(2021, 2026))
 from .tick_replay import generate_e004_signal_days, run_tick_replay_batch
 
 
@@ -86,8 +88,7 @@ def _variant_summary_row(
     variant_col: str,
     variant_value: object,
 ) -> dict[str, object]:
-    out_years = (2023, 2024, 2025)
-    out_trades = trades_df.loc[trades_df["year"].isin(out_years)].copy() if not trades_df.empty else pd.DataFrame()
+    out_trades = trades_df.loc[trades_df["year"].isin(DEFAULT_OUT_YEARS)].copy() if not trades_df.empty else pd.DataFrame()
     pnl = pd.to_numeric(out_trades["pnl_pips"], errors="coerce") if not out_trades.empty else pd.Series(dtype=float)
     return {
         variant_col: variant_value,
@@ -126,7 +127,8 @@ def _build_walkforward_summary(trades_df: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     valid = trades_df.loc[pd.to_numeric(trades_df["pnl_pips"], errors="coerce").notna()].copy() if not trades_df.empty else trades_df.copy()
     valid["year"] = pd.to_numeric(valid["year"], errors="coerce")
-    for test_year in range(2021, 2026):
+    # E006 is a yearly out-sample stress summary; it does not re-optimize on train_years.
+    for test_year in DEFAULT_WALKFORWARD_TEST_YEARS:
         train_years = (test_year - 2, test_year - 1)
         test_trades = valid.loc[valid["year"] == test_year].copy()
         pnl = pd.to_numeric(test_trades["pnl_pips"], errors="coerce") if not test_trades.empty else pd.Series(dtype=float)
@@ -749,7 +751,7 @@ def run_e005_e008(
         "slippage_values": [float(value) for value in resolved_slippage_values],
         "entry_delay_values": [int(value) for value in resolved_entry_delay_values],
         "risk_fractions": [float(value) for value in resolved_risk_fractions],
-        "initial_capital_jpy": float(initial_capital_jpy),
+        "initial_capital_jpy": float(params.initial_capital_jpy),
         "kill_switch_dd_pct": float(params.kill_switch_dd_pct),
         "baseline_comparison_label": baseline_params.comparison_label(),
         "load_summary": asdict(baseline["load_summary"]),  # type: ignore[arg-type,index]
