@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .constants import OANDA_MARGIN_RATE
 from .models import AccountSnapshot, PriceSnapshot, SettingConfig, TradeComputation
-from .order_builder import requested_entry_from_snapshot
 
 
 def compute_units(
@@ -11,8 +10,8 @@ def compute_units(
     account: AccountSnapshot,
     price: PriceSnapshot,
 ) -> TradeComputation:
-    requested = requested_entry_from_snapshot(setting, price)
-    margin_price = requested.price
+    margin_price = price.ask
+    margin_price_side = "ask"
 
     if setting.fixed_units is not None:
         required_margin = setting.fixed_units * margin_price * OANDA_MARGIN_RATE
@@ -23,7 +22,7 @@ def compute_units(
             effective_margin_ratio=None,
             estimated_margin_ratio_after_entry=estimated,
             margin_price=margin_price,
-            margin_price_side=requested.price_side,
+            margin_price_side=margin_price_side,
         )
 
     if setting.margin_ratio_target is None:
@@ -50,6 +49,5 @@ def compute_units(
         effective_margin_ratio=effective_margin_ratio,
         estimated_margin_ratio_after_entry=estimated,
         margin_price=margin_price,
-        margin_price_side=requested.price_side,
+        margin_price_side=margin_price_side,
     )
-

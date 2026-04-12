@@ -41,6 +41,20 @@ def promote_qualify_params_to_runtime_config(
         raise ValueError("pass_stability_gate must be true before promotion")
 
     setting = params.to_strategy_setting()
+    if setting.tp_pips <= 0:
+        raise ValueError("tp_pips must be greater than zero before promotion")
+    if setting.sl_pips <= 0:
+        raise ValueError("sl_pips must be greater than zero before promotion")
+    if fixed_units is not None and fixed_units <= 0:
+        raise ValueError("fixed_units must be greater than zero when provided")
+    if fixed_units is None and margin_ratio_target is None:
+        raise ValueError("margin_ratio_target is required when fixed_units is not provided")
+    if margin_ratio_target is not None and margin_ratio_target <= 0:
+        raise ValueError("margin_ratio_target must be greater than zero when provided")
+    if size_scale_pct is not None and size_scale_pct <= 0:
+        raise ValueError("size_scale_pct must be greater than zero when provided")
+    if max_concurrent_positions is not None and max_concurrent_positions <= 0:
+        raise ValueError("max_concurrent_positions must be greater than zero when provided")
     resolved_setting = setting.__class__(
         **{
             **setting.__dict__,
@@ -74,12 +88,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out-file", required=True)
     parser.add_argument("--setting-id")
     parser.add_argument("--enabled", action="store_true")
+    parser.add_argument("--fixed-units", type=int, default=10)
+    parser.add_argument("--use-margin-ratio", action="store_true")
+    parser.add_argument("--margin-ratio-target", type=float)
+    parser.add_argument("--size-scale-pct", type=float)
+    parser.add_argument("--kill-switch-dd-pct", type=float, default=-0.2)
+    parser.add_argument("--kill-switch-reference-balance-jpy", type=float, default=100_000.0)
+    parser.add_argument("--min-maintenance-margin-pct", type=float, default=150.0)
+    parser.add_argument("--max-concurrent-positions", type=int, default=1)
     args = parser.parse_args(argv)
 
     runtime_config = promote_qualify_params_to_runtime_config(
         args.params_file,
         setting_id=args.setting_id,
         enabled=args.enabled,
+        fixed_units=(None if args.use_margin_ratio else args.fixed_units),
+        margin_ratio_target=args.margin_ratio_target,
+        size_scale_pct=args.size_scale_pct,
+        kill_switch_dd_pct=args.kill_switch_dd_pct,
+        kill_switch_reference_balance_jpy=args.kill_switch_reference_balance_jpy,
+        min_maintenance_margin_pct=args.min_maintenance_margin_pct,
+        max_concurrent_positions=args.max_concurrent_positions,
     )
     out_path = Path(args.out_file)
     out_path.parent.mkdir(parents=True, exist_ok=True)

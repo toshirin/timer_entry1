@@ -104,6 +104,15 @@ def _record_decision(
         emit_log("DECISION_LOG_ERROR", setting_id=setting.setting_id, error=str(exc))
 
 
+def _oanda_fill_time_iso(raw_response: dict[str, Any] | None, fallback: str) -> str:
+    if not raw_response:
+        return fallback
+    fill = raw_response.get("orderFillTransaction")
+    if isinstance(fill, dict) and fill.get("time"):
+        return str(fill["time"])
+    return fallback
+
+
 def _market_open_check(
     *,
     setting: SettingConfig,
@@ -241,6 +250,9 @@ def _create_entry_trade(
         )
         return {"setting_id": setting.setting_id, "status": "skipped_duplicate", "trade_id": trade_id}
 
+    market_order_created = False
+    entry_recorded = False
+    tp_sl_requested = False
     try:
         account = oanda_client.get_account_snapshot()
         sizing = compute_units(setting=setting, account=account, price=price_snapshot)
@@ -310,21 +322,17 @@ def _create_entry_trade(
         )
         if order_result.fill_price is None or order_result.trade_id is None:
             raise RuntimeError("entry market order did not return fill_price or trade_id")
+        market_order_created = True
 
         levels = protection_levels(setting, entry_fill_price=order_result.fill_price)
-        protection_result = oanda_client.set_trade_protection_orders(
-            trade_id=order_result.trade_id,
-            setting=setting,
-            entry_fill_price=order_result.fill_price,
-        )
         aws_runtime.update_execution_log(
             execution_id,
-            status="tp_sl_created",
+            status="order_created",
             oanda_order_id=order_result.order_id,
             oanda_trade_id=order_result.trade_id,
+            requested_entry_price=requested_entry.price,
+            requested_entry_price_side=requested_entry.price_side,
             entry_price_side=requested_entry.price_side,
-            tp_trigger_side=levels.tp_trigger_side,
-            sl_trigger_side=levels.sl_trigger_side,
             updated_at=now_utc.isoformat(),
         )
         aws_runtime.update_trade_state(
@@ -335,7 +343,7 @@ def _create_entry_trade(
             estimated_margin_ratio_after_entry=sizing.estimated_margin_ratio_after_entry,
             entry_order_id=order_result.order_id,
             entry_trade_id=order_result.trade_id,
-            entry_filled_at=now_utc.isoformat(),
+            entry_filled_at=_oanda_fill_time_iso(order_result.raw_response, now_utc.isoformat()),
             requested_entry_price=requested_entry.price,
             requested_entry_price_side=requested_entry.price_side,
             entry_price=order_result.fill_price,
@@ -345,6 +353,33 @@ def _create_entry_trade(
             sl_trigger_price=levels.sl_trigger_price,
             sl_trigger_side=levels.sl_trigger_side,
             scheduled_entry_at_utc=now_utc.isoformat(),
+            updated_at=now_utc.isoformat(),
+        )
+        entry_recorded = True
+
+        aws_runtime.update_execution_log(
+            execution_id,
+            status="tp_sl_requested",
+            updated_at=now_utc.isoformat(),
+        )
+        tp_sl_requested = True
+        protection_result = oanda_client.set_trade_protection_orders(
+            trade_id=order_result.trade_id,
+            setting=setting,
+            entry_fill_price=order_result.fill_price,
+        )
+        aws_runtime.update_execution_log(
+            execution_id,
+            status="tp_sl_created",
+            tp_trigger_side=levels.tp_trigger_side,
+            sl_trigger_side=levels.sl_trigger_side,
+            updated_at=now_utc.isoformat(),
+        )
+        aws_runtime.update_trade_state(
+            trade_id,
+            status="entered",
+            tp_trigger_side=levels.tp_trigger_side,
+            sl_trigger_side=levels.sl_trigger_side,
             updated_at=now_utc.isoformat(),
         )
         emit_log(
@@ -390,8 +425,20 @@ def _create_entry_trade(
             "requested_units": sizing.requested_units,
         }
     except Exception:
-        aws_runtime.update_execution_log(execution_id, status="order_failed", updated_at=now_utc.isoformat())
-        aws_runtime.update_trade_state(trade_id, status="entry_failed", updated_at=now_utc.isoformat())
+        if tp_sl_requested or entry_recorded:
+            aws_runtime.update_execution_log(execution_id, status="tp_sl_failed", updated_at=now_utc.isoformat())
+            decision = "tp_sl_failed"
+            reason = "tp_sl_exception"
+        elif market_order_created:
+            aws_runtime.update_execution_log(execution_id, status="entry_state_failed", updated_at=now_utc.isoformat())
+            aws_runtime.update_trade_state(trade_id, status="entry_state_failed", updated_at=now_utc.isoformat())
+            decision = "entry_state_failed"
+            reason = "state_update_exception"
+        else:
+            aws_runtime.update_execution_log(execution_id, status="order_failed", updated_at=now_utc.isoformat())
+            aws_runtime.update_trade_state(trade_id, status="entry_failed", updated_at=now_utc.isoformat())
+            decision = "entry_failed"
+            reason = "order_exception"
         _record_decision(
             aws_runtime=aws_runtime,
             setting=setting,
@@ -399,8 +446,8 @@ def _create_entry_trade(
             trigger_bucket=setting.trigger_bucket_entry,
             scheduled_local=scheduled_local,
             now_utc=now_utc,
-            decision="entry_failed",
-            reason="exception",
+            decision=decision,
+            reason=reason,
             extra={"trade_id": trade_id},
         )
         raise
@@ -564,7 +611,11 @@ def run_forced_exit_handler(event: dict[str, Any], context: Any) -> dict[str, An
                 trade_id,
                 status="exited",
                 exit_order_id=close_result.order_id if close_result else None,
-                exit_filled_at=now_utc.isoformat(),
+                exit_filled_at=(
+                    _oanda_fill_time_iso(close_result.raw_response, now_utc.isoformat())
+                    if close_result
+                    else now_utc.isoformat()
+                ),
                 exit_price=close_result.fill_price if close_result else None,
                 exit_price_side=exit_side,
                 exit_reason="forced_exit",
@@ -584,4 +635,3 @@ def run_forced_exit_handler(event: dict[str, Any], context: Any) -> dict[str, An
             results.append({"setting_id": setting.setting_id, "status": "error", "error": str(exc)})
 
     return HandlerResult(status="ok", message="forced exit handler processed", details={"trigger": asdict(trigger), "result_count": len(results), "results": results}).to_dict()
-

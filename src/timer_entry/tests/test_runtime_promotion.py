@@ -47,3 +47,32 @@ def test_promote_e004_params_to_runtime_config(tmp_path: Path) -> None:
     assert config["sl_pips"] == 25.0
     assert "right_strength_balance" in str(config["filter_spec_json"])
 
+
+def test_promote_rejects_non_positive_tp_sl(tmp_path: Path) -> None:
+    params_path = tmp_path / "e004_bad.json"
+    params_path.write_text(
+        json.dumps(
+            {
+                "experiment_code": "E004",
+                "variant_code": None,
+                "slot_id": "lon15",
+                "side": "buy",
+                "baseline": {
+                    "entry_clock_local": "15:40",
+                    "forced_exit_clock_local": "16:30",
+                    "tp_pips": 0,
+                    "sl_pips": 25,
+                    "filter_labels": ["right_dom_ge4"],
+                },
+                "pass_stability_gate": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        promote_qualify_params_to_runtime_config(params_path, setting_id="lon15_buy_runtime_v1")
+    except ValueError as exc:
+        assert "tp_pips" in str(exc)
+    else:
+        raise AssertionError("expected non-positive tp_pips to be rejected")

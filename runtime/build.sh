@@ -8,6 +8,12 @@ DIST_DIR="$ROOT_DIR/dist"
 SRC_DIR="$ROOT_DIR/src"
 CORE_SRC_DIR="$REPO_DIR/src/timer_entry"
 REQ_FILE="$ROOT_DIR/requirements.txt"
+CORE_RUNTIME_FILES=(
+  "direction.py"
+  "filters.py"
+  "schemas.py"
+  "time_utils.py"
+)
 
 has_runtime_requirements() {
   [[ -f "$REQ_FILE" ]] && grep -Eq '^[[:space:]]*[^#[:space:]]' "$REQ_FILE"
@@ -23,7 +29,10 @@ build_zip() {
   rm -rf "$staging_dir"
   mkdir -p "$staging_dir/timer_entry"
   cp -R "$SRC_DIR"/. "$staging_dir"/
-  cp -R "$CORE_SRC_DIR"/. "$staging_dir/timer_entry"/
+  : >"$staging_dir/timer_entry/__init__.py"
+  for core_file in "${CORE_RUNTIME_FILES[@]}"; do
+    cp "$CORE_SRC_DIR/$core_file" "$staging_dir/timer_entry/$core_file"
+  done
 
   if has_runtime_requirements; then
     python3 -m pip install \
@@ -58,4 +67,3 @@ build_zip "forced_exit_handler"
 echo "Built artifacts:"
 echo "  $DIST_DIR/entry_handler.zip"
 echo "  $DIST_DIR/forced_exit_handler.zip"
-

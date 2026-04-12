@@ -439,10 +439,11 @@ status 例:
 8. units を計算する
 9. kill switch 条件を確認する
 10. Oanda に成行発注する
-11. entry fill price を基準に TP / SL を設定する
-12. `trade_state` を `entered` または失敗状態で更新する
-13. `execution_log` を requested / order_created / order_failed で更新する
-14. 発注有無にかかわらず `decision_log` を記録する
+11. market order が fill したら、TP / SL 設定前に `trade_state` を `entered` へ更新する
+12. entry fill price を基準に TP / SL を設定する
+13. TP / SL 設定に失敗しても、open trade を forced exit 対象に残すため `trade_state.status=entered` は維持する
+14. `execution_log` を requested / order_created / tp_sl_requested / tp_sl_created / order_failed / tp_sl_failed で更新する
+15. 発注有無にかかわらず `decision_log` を記録する
 
 ### 10.1 Bid / Ask と TP / SL
 
@@ -473,6 +474,8 @@ Oanda API へ trigger side を指定できる注文では、runtime は `trigger
 4. Oanda の対象ポジションまたは trade をクローズする
 5. 成功時は `trade_state` を `exited` に更新する
 6. 失敗時は再取得のうえ再試行する
+
+forced exit は `setting.enabled=false` でも未決済 `trade_state` があれば実行する。これは setting を down した後でも、既存 open trade を安全に閉じるためである。
 
 保険リトライ:
 
