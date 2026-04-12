@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 
 import pandas as pd
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -77,3 +78,55 @@ def test_tick_executor_sell_uses_bid_entry_and_ask_exit() -> None:
     assert result["pnl_pips"] == 21.0
     assert result["entry_price_series"] == "bid_tick"
     assert result["exit_price_series"] == "ask_tick"
+
+
+def test_tick_executor_includes_forced_cutoff_tick_in_tp_sl_monitoring() -> None:
+    ticks = pd.DataFrame(
+        [
+            {"epoch_us": _epoch_us("2024-01-02 09:25:01", "Asia/Tokyo"), "bid": 99.99, "ask": 100.00},
+            {"epoch_us": _epoch_us("2024-01-02 09:45:00", "Asia/Tokyo"), "bid": 100.06, "ask": 100.07},
+        ]
+    )
+    request = TickReplayRequest(
+        trade_id="t3",
+        date_local="2024-01-02",
+        year=2024,
+        comparison_label="buy0925_all_tp5_sl15_fx0945",
+        side="buy",
+        market_tz="Asia/Tokyo",
+        filter_label="all",
+        entry_time_local="2024-01-02 09:25:00",
+        forced_exit_time_local="2024-01-02 09:45:00",
+        tp_pips=5.0,
+        sl_pips=15.0,
+    )
+
+    result = execute_tick_replay(request, ticks)
+
+    assert result["exit_reason"] == "tp"
+    assert result["exit_time"] == "2024-01-02 09:45:00"
+    assert result["exit_price"] == 100.06
+
+
+def test_tick_executor_rejects_missing_tick_schema_columns() -> None:
+    ticks = pd.DataFrame(
+        [
+            {"epoch_us": _epoch_us("2024-01-02 09:25:01", "Asia/Tokyo"), "bid": 99.99},
+        ]
+    )
+    request = TickReplayRequest(
+        trade_id="t4",
+        date_local="2024-01-02",
+        year=2024,
+        comparison_label="buy0925_all_tp5_sl15_fx0945",
+        side="buy",
+        market_tz="Asia/Tokyo",
+        filter_label="all",
+        entry_time_local="2024-01-02 09:25:00",
+        forced_exit_time_local="2024-01-02 09:45:00",
+        tp_pips=5.0,
+        sl_pips=15.0,
+    )
+
+    with pytest.raises(ValueError, match="missing required tick columns"):
+        execute_tick_replay(request, ticks)

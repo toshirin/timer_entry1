@@ -7,6 +7,11 @@ import pandas as pd
 from timer_entry.direction import get_direction_spec
 from timer_entry.features import PIP_SIZE
 
+TICK_BID_COL = "bid"
+TICK_ASK_COL = "ask"
+TICK_EPOCH_COL = "epoch_us"
+REQUIRED_TICK_COLUMNS = (TICK_EPOCH_COL, TICK_BID_COL, TICK_ASK_COL)
+
 
 @dataclass(frozen=True)
 class TickReplayRequest:
@@ -55,6 +60,36 @@ def _forced_exit_series_name(side: str) -> str:
     return _exit_series_name(side)
 
 
+def _tick_price_col(side_name: str) -> str:
+    if side_name == "bid":
+        return TICK_BID_COL
+    if side_name == "ask":
+        return TICK_ASK_COL
+    raise ValueError(f"unsupported tick price side: {side_name}")
+
+
+def _tick_tp_hit_col(side: str) -> str:
+    if side == "buy":
+        return TICK_BID_COL
+    if side == "sell":
+        return TICK_ASK_COL
+    raise ValueError(f"unsupported side: {side}")
+
+
+def _tick_sl_hit_col(side: str) -> str:
+    if side == "buy":
+        return TICK_ASK_COL
+    if side == "sell":
+        return TICK_BID_COL
+    raise ValueError(f"unsupported side: {side}")
+
+
+def _validate_tick_columns(ticks: pd.DataFrame) -> None:
+    missing = [column for column in REQUIRED_TICK_COLUMNS if column not in ticks.columns]
+    if missing:
+        raise ValueError(f"missing required tick columns: {missing}")
+
+
 def _epoch_us(local_ts: pd.Timestamp, market_tz: str) -> int:
     return int(pd.Timestamp(local_ts, tz=market_tz).tz_convert("UTC").value // 1_000)
 
@@ -91,6 +126,7 @@ def _build_base_result(request: TickReplayRequest) -> dict[str, object]:
 
 
 def execute_tick_replay(request: TickReplayRequest, ticks: pd.DataFrame) -> dict[str, object]:
+    _validate_tick_columns(ticks)
     spec = get_direction_spec(request.side)
     scheduled_entry = pd.Timestamp(request.entry_time_local)
     scheduled_forced_exit = pd.Timestamp(request.forced_exit_time_local)
@@ -99,14 +135,14 @@ def execute_tick_replay(request: TickReplayRequest, ticks: pd.DataFrame) -> dict
     forced_cutoff = _epoch_us(scheduled_forced_exit, request.market_tz)
 
     result = _build_base_result(request)
-    post_entry = ticks.loc[ticks["epoch_us"] >= entry_cutoff].reset_index(drop=True)
+    post_entry = ticks.loc[ticks[TICK_EPOCH_COL] >= entry_cutoff].reset_index(drop=True)
     if post_entry.empty:
         result["exit_reason"] = "tick_not_found"
         result["tick_not_found_flag"] = True
         return result
 
     entry_tick = post_entry.iloc[0]
-    entry_epoch_us = int(entry_tick["epoch_us"])
+    entry_epoch_us = int(entry_tick[TICK_EPOCH_COL])
     if entry_epoch_us >= forced_cutoff:
         result["exit_reason"] = "entry_after_forced_exit"
         result["entry_after_forced_exit_flag"] = True
@@ -116,7 +152,7 @@ def execute_tick_replay(request: TickReplayRequest, ticks: pd.DataFrame) -> dict
         )
         return result
 
-    raw_entry_price = float(entry_tick[spec.entry_price_side])
+    raw_entry_price = float(entry_tick[_tick_price_col(spec.entry_price_side)])
     entry_price = apply_slippage(
         raw_entry_price,
         side=spec.side,
@@ -129,8 +165,8 @@ def execute_tick_replay(request: TickReplayRequest, ticks: pd.DataFrame) -> dict
     tp_level = entry_price + spec.tp_sign * request.tp_pips * PIP_SIZE
     sl_level = entry_price + spec.sl_sign * request.sl_pips * PIP_SIZE
 
-    monitoring = post_entry.loc[post_entry["epoch_us"] >= monitor_start_epoch_us].reset_index(drop=True)
-    forced_ticks = monitoring.loc[monitoring["epoch_us"] >= forced_cutoff]
+    monitoring = post_entry.loc[post_entry[TICK_EPOCH_COL] >= monitor_start_epoch_us].reset_index(drop=True)
+    forced_ticks = monitoring.loc[monitoring[TICK_EPOCH_COL] >= forced_cutoff]
 
     exit_reason = "forced_exit"
     exit_epoch_us: int | None = None
@@ -138,11 +174,13 @@ def execute_tick_replay(request: TickReplayRequest, ticks: pd.DataFrame) -> dict
     tp_sl_same_tick_flag = False
 
     for _, tick in monitoring.iterrows():
-        epoch_us = int(tick["epoch_us"])
-        if epoch_us >= forced_cutoff:
+        epoch_us = int(tick[TICK_EPOCH_COL])
+        if epoch_us > forced_cutoff:
             break
-        tp_hit = float(tick["bid"]) >= tp_level if spec.side == "buy" else float(tick["ask"]) <= tp_level
-        sl_hit = float(tick["ask"]) <= sl_level if spec.side == "buy" else float(tick["bid"]) >= sl_level
+        tp_price = float(tick[_tick_tp_hit_col(spec.side)])
+        sl_price = float(tick[_tick_sl_hit_col(spec.side)])
+        tp_hit = tp_price >= tp_level if spec.side == "buy" else tp_price <= tp_level
+        sl_hit = sl_price <= sl_level if spec.side == "buy" else sl_price >= sl_level
         if not tp_hit and not sl_hit:
             continue
         if tp_hit and sl_hit:
@@ -152,7 +190,7 @@ def execute_tick_replay(request: TickReplayRequest, ticks: pd.DataFrame) -> dict
             exit_reason = "tp"
         else:
             exit_reason = "sl"
-        raw_exit_price = float(tick[spec.exit_price_side])
+        raw_exit_price = float(tick[_tick_price_col(spec.exit_price_side)])
         exit_price = apply_slippage(
             raw_exit_price,
             side="sell" if spec.side == "buy" else "buy",
@@ -176,8 +214,8 @@ def execute_tick_replay(request: TickReplayRequest, ticks: pd.DataFrame) -> dict
             )
             return result
         forced_tick = forced_ticks.iloc[0]
-        exit_epoch_us = int(forced_tick["epoch_us"])
-        raw_exit_price = float(forced_tick[spec.exit_price_side])
+        exit_epoch_us = int(forced_tick[TICK_EPOCH_COL])
+        raw_exit_price = float(forced_tick[_tick_price_col(spec.exit_price_side)])
         exit_price = apply_slippage(
             raw_exit_price,
             side="sell" if spec.side == "buy" else "buy",

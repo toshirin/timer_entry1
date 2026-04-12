@@ -435,3 +435,28 @@ short の canonical 規約は以下である。
 - E006 と E007 は tick replay 後段集計として実装できる
 - `common/safety_checks.py` 相当の helper 群を `qualify/common/e005_e008.py` に集約するのが自然
 - suite 入口は共通でよいが、summary / sanity / report は experiment ごとに分けるべき
+
+## 12. Claude Code 監査結果と対応
+
+Claude Code による `qualify/` 監査で、以下を確認した。
+
+### 12.1 false positive
+
+- `tick_executor.py` の exit slippage で `side="sell" if spec.side == "buy" else "buy"` としている点は、誤りではない
+- Buy の bid exit は sell 側に滑らせて下方向へ不利化し、Sell の ask exit は buy 側に滑らせて上方向へ不利化するため、意図どおり
+
+### 12.2 修正済み
+
+- `qualify/common/e005_e008.py` の `suite_metadata` で未定義の `initial_capital_jpy` を参照していた問題を、`params.initial_capital_jpy` 参照へ修正した
+- `qualify/common/tick_replay/tick_executor.py` の forced exit 境界を、1分足 engine と同じく cutoff ちょうどの tick まで TP/SL 監視対象へ含める形へ修正した
+- tick replay の必須 schema を `epoch_us` / `bid` / `ask` として検証し、欠けている場合は fail-fast するようにした
+- tick replay の TP/SL 判定列は helper 経由に寄せ、`bid` / `ask` の直書き分散を減らした
+- `qualify/common/e004.py` の `pass_stability_gate` は前段候補の gate 状態を保持する意味へ戻した
+- E004 tick 後の簡易 in/out 陽性判定は `tick_pass_positive_inout_gate` として別列に分離した
+- `qualify/common/e005_e008.py` の out-sample 年は `reporting.DEFAULT_OUT_YEARS` を参照するようにした
+- E006 の test year 範囲は `DEFAULT_WALKFORWARD_TEST_YEARS` に定数化し、train 側再最適化を行わない yearly out-sample stress summary であることをコメント化した
+
+### 12.3 残留メモ
+
+- tick replay で同一 tick に TP/SL が同時成立した場合は、tick 内 event time がないため SL 優先とする
+- このケースは Bid/Ask の異常や極端な spread 状況を示す可能性があるため、`tp_sl_same_tick_flag` の sanity count として監視する

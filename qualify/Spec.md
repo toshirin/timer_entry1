@@ -323,9 +323,13 @@ E004 の原則は以下。
 - signal 生成と tick 執行を分離する
 - 1分足段階で signal day を確定してから、tick で entry / TP / SL / forced exit を再現する
 - `tick_executor` は side 主語の価格系列規約を厳守する
+- tick schema は `epoch_us` / `bid` / `ask` を必須とし、欠けている場合は fail-fast する
+- forced exit cutoff ちょうどの tick は TP/SL 監視対象に含める
+- cutoff ちょうどの tick で TP/SL が成立しない場合は、その tick を forced exit 約定候補として扱う
 - 全 tick 一括ロードは禁止し、対象日・対象時間帯だけを読む
 - `ProcessPoolExecutor` などによる日次並列化を許容する
 - `pass_stability_gate` は前段候補の前提メタデータとして保持する
+- tick replay 後の簡易 in/out 陽性判定を出す場合は、`pass_stability_gate` とは別名で出す
 
 `qualify` における E004 は、旧 `*_exhaustive1/common/tick_runner.py` の高速・省メモリな枠組みを継承してよい。
 ただし、`tick_executor.py` はそのまま流用せず、side ごとの Bid/Ask 規約を監査済みの共通実装へ再構成する。
