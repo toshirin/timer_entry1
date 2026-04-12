@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-import pandas as pd
+try:
+    import pandas as pd
+except ModuleNotFoundError:  # pragma: no cover - runtime config tooling can run without pandas.
+    pd = None  # type: ignore[assignment]
 
 
 BROKER_TZ = "Etc/GMT-3"

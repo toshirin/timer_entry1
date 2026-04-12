@@ -42,7 +42,7 @@ docker run --rm \
     --params-file qualify/params/{slot_id}/e001.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
-    --out-dir qualify/out/E001/latest
+    --out-dir qualify/out/{slot_id}/E001/latest
 ```
 
 E002:
@@ -55,7 +55,7 @@ docker run --rm \
     --params-file qualify/params/{slot_id}/e002.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
-    --out-dir qualify/out/E002/latest
+    --out-dir qualify/out/{slot_id}/E002/latest
 ```
 
 E003:
@@ -68,7 +68,7 @@ docker run --rm \
     --params-file qualify/params/{slot_id}/e003.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
-    --out-dir qualify/out/E003/latest
+    --out-dir qualify/out/{slot_id}/E003/latest
 ```
 
 E004:
@@ -82,7 +82,7 @@ docker run --rm \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
     --ticks-dir ticks/USDJPY \
-    --out-dir qualify/out/E004/latest \
+    --out-dir qualify/out/{slot_id}/E004/latest \
     --jobs 4
 ```
 
@@ -97,7 +97,7 @@ docker run --rm \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
     --ticks-dir ticks/USDJPY \
-    --out-dir qualify/out \
+    --out-dir qualify/out/{slot_id} \
     --only E005 E008
 ```
 

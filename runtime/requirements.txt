@@ -1,0 +1,3 @@
+# Keep the runtime package stdlib-only by default.
+# boto3 is available in AWS Lambda Python runtimes.
+

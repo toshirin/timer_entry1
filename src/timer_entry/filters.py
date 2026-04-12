@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from .features import FeatureComputationResult
+if TYPE_CHECKING:
+    from .features import FeatureComputationResult
 
 
 FilterFamily = Literal[

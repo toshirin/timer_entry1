@@ -7,11 +7,11 @@
     "entry_clock_local": "15:40",
     "forced_exit_clock_local": "16:35",
     "tp_pips": 15,
-    "sl_pips": 25,
-    "filter_labels": ["right_dom_ge4"]
+    "sl_pips": 20,
+    "filter_labels": ["right_stronger"]
   },
   "tp_values": [10, 15, 20],
-  "sl_values": [20, 25, 30],
+  "sl_values": [15, 20, 25],
   "pass_stability_gate": true,
-  "notes": "E001でshape_balance(right_dom_ge4)が確定。TP15/SL25中心の近傍のみを確認し、過剰最適化を避けてロバスト性を見る。"
+  "notes": "Fix the E001 winner right_stronger and run a small local TP/SL sweep around baseline 15/20. The purpose is robustness check of the nearby neighborhood, not broad re-optimization."
 }
