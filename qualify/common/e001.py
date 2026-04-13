@@ -11,7 +11,11 @@ from tqdm.auto import tqdm
 
 from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.features import compute_feature_row
-from timer_entry.filters import parse_right_dominance_filter_label, parse_volatility_filter_label
+from timer_entry.filters import (
+    parse_opposite_right_dominance_filter_label,
+    parse_right_dominance_filter_label,
+    parse_volatility_filter_label,
+)
 from timer_entry.minute_data import MinuteDataSummary, TradingDay, load_trading_days
 
 from .io import ensure_run_layout, write_json
@@ -139,9 +143,11 @@ def _resolve_threshold_metadata(
             continue
 
         right_dom_spec = parse_right_dominance_filter_label(label)
-        if right_dom_spec is None:
+        opp_right_dom_spec = parse_opposite_right_dominance_filter_label(label)
+        threshold_spec = right_dom_spec or opp_right_dom_spec
+        if threshold_spec is None:
             continue
-        _, threshold = right_dom_spec
+        _, threshold = threshold_spec
         threshold = float(threshold)
         metadata[label] = {
             "resolved_threshold": threshold,

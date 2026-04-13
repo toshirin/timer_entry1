@@ -92,6 +92,24 @@ def _shape_balance(spec: dict[str, Any], local_map: dict[datetime, Candle], entr
             passed=_compare(operator, balance, threshold),
             values={"right_strength_balance_pips": balance, "operator": operator, "threshold": threshold, "mode": mode},
         )
+    elif mode == "opposite_sign_right_strength_balance":
+        operator = str(spec.get("operator", "ge"))
+        threshold = float(spec.get("threshold", 0.0))
+        opposite = left_ret != 0 and right_ret != 0 and (left_ret > 0) != (right_ret > 0)
+        balance = (abs(right_ret) - abs(left_ret)) / PIP_SIZE
+        return FilterDecision(
+            filter_type="shape_balance",
+            passed=opposite and _compare(operator, balance, threshold),
+            values={
+                "left_ret_pips": left_ret / PIP_SIZE,
+                "right_ret_pips": right_ret / PIP_SIZE,
+                "right_strength_balance_pips": balance,
+                "opposite_sign": opposite,
+                "operator": operator,
+                "threshold": threshold,
+                "mode": mode,
+            },
+        )
     else:
         raise ValueError(f"Unsupported shape_balance mode: {mode}")
     return FilterDecision(

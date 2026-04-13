@@ -266,9 +266,13 @@ qualify では、必要に応じて `right_strength_balance` の threshold sweep
 - `right_dom_ge2`
 - `right_dom_ge4`
 - `right_dom_ge6`
+- `opp_right_dom_ge2`
+- `opp_right_dom_ge4`
+- `opp_right_dom_ge6`
 
 ここで `right_strength_balance = abs(right_ret_pips) - abs(left_ret_pips)` とする。
 たとえば `right_dom_ge4` は `right_strength_balance >= 4.0` を意味する。
+`opp_right_dom_ge4` は、`opposite_sign == True` かつ `right_strength_balance >= 4.0` を意味する。
 `dynamic_threshold` を渡した場合は、label から parse した閾値より `dynamic_threshold` を優先する。
 label と threshold の乖離を避けるため、出力には label と実際の threshold の両方を残す。
 

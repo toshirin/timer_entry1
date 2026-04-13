@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
 from pathlib import Path
 import sys
 
@@ -8,7 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "runtime" / "src"))
 
-from timer_entry_runtime.models import PriceSnapshot, SettingConfig
+from timer_entry_runtime.filtering import evaluate_filters
+from timer_entry_runtime.models import Candle, PriceSnapshot, SettingConfig
 from timer_entry_runtime.models import AccountSnapshot, OrderResult
 from timer_entry_runtime.order_builder import (
     protection_levels,
@@ -103,6 +105,61 @@ def test_margin_price_uses_ask_for_buy_and_sell() -> None:
     assert buy_sizing.margin_price == 150.005
     assert sell_sizing.margin_price_side == "ask"
     assert sell_sizing.margin_price == 150.005
+
+
+def test_runtime_filter_supports_opposite_sign_right_strength_balance() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "filter_spec_json": json.dumps(
+                [
+                    {
+                        "filter_type": "shape_balance",
+                        "mode": "opposite_sign_right_strength_balance",
+                        "operator": "ge",
+                        "threshold": 4.0,
+                    }
+                ],
+                separators=(",", ":"),
+            ),
+        }
+    )
+    candles = [
+        Candle(
+            time_utc=datetime(2024, 1, 1, 23, 30, tzinfo=timezone.utc),
+            bid_open=150.00,
+            bid_high=150.00,
+            bid_low=149.99,
+            bid_close=149.99,
+            complete=True,
+        ),
+        Candle(
+            time_utc=datetime(2024, 1, 1, 23, 55, tzinfo=timezone.utc),
+            bid_open=150.00,
+            bid_high=150.05,
+            bid_low=149.99,
+            bid_close=149.99,
+            complete=True,
+        ),
+        Candle(
+            time_utc=datetime(2024, 1, 2, 0, 20, tzinfo=timezone.utc),
+            bid_open=150.00,
+            bid_high=150.05,
+            bid_low=150.00,
+            bid_close=150.05,
+            complete=True,
+        ),
+    ]
+
+    decisions = evaluate_filters(
+        setting=setting,
+        now_utc=datetime(2024, 1, 2, 0, 25, tzinfo=timezone.utc),
+        candles=candles,
+    )
+
+    assert decisions[0].passed is True
+    assert decisions[0].values["opposite_sign"] is True
+    assert round(float(decisions[0].values["right_strength_balance_pips"]), 6) == 4.0
 
 
 def test_tp_sl_failure_keeps_trade_state_entered_for_forced_exit() -> None:
