@@ -193,6 +193,7 @@ docker run --rm \
 
 ```bash
 docker run --rm \
+  --entrypoint /bin/bash \
   -p 3000:3000 \
   -v "$PWD/ops/web:/app" \
   -v "$HOME/.aws:/root/.aws:ro" \

@@ -1,4 +1,5 @@
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
 
-// This file is generated conventionally for Next.js TypeScript projects.
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/building-your-application/configuring/typescript for more information.
