@@ -1,0 +1,17 @@
+{
+  "experiment_code": "E001",
+  "variant_code": null,
+  "slot_id": "tyo13",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "13:00",
+    "forced_exit_clock_local": "13:55",
+    "tp_pips": 15,
+    "sl_pips": 10,
+    "filter_labels": ["ge0"]
+  },
+  "comparison_family": "pre_open_slope",
+  "comparison_labels": ["ge0", "ge2", "ge4", "ge6"],
+  "pass_stability_gate": true,
+  "notes": "Primary E001 lane for tyo13. buy side only; sell excluded because no gate-pass candidates in scan. all removed from mainline because same entry band is gate-fail and materially weaker than ge0. Baseline uses 13:00 ge0 TP15/SL10 as the most robust starting point by out_gross, ex_top10, and drawdown balance."
+}

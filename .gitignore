@@ -16,4 +16,6 @@ ops/dist/
 ops/cdk/cdk.out/
 ops/cdk/node_modules/
 ops/cdk/*.tsbuildinfo
+ops/web/.next/
+ops/web/node_modules/
 **/__pycache__/

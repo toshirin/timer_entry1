@@ -187,6 +187,29 @@ docker run --rm \
 5. 必要なら `ops/sql/demo_seed.sql` を適用する
 6. EventBridge の日次実行、または Lambda 手動実行で cursor 初期化と import を確認する
 
+## ローカル Web
+
+初期表示は UI 確認用の `ops_demo` schema です。
+
+```bash
+docker run --rm \
+  -p 3000:3000 \
+  -v "$PWD/ops/web:/app" \
+  -v "$HOME/.aws:/root/.aws:ro" \
+  -w /app \
+  -e AWS_PROFILE \
+  -e AWS_REGION=ap-northeast-1 \
+  -e OPS_DB_CLUSTER_ARN='...' \
+  -e OPS_DB_SECRET_ARN='...' \
+  -e OPS_DB_NAME=timer_entry_ops \
+  -e OPS_WEB_SCHEMA=ops_demo \
+  node:22-bullseye \
+  -lc "npm install && npm run dev"
+```
+
+起動後に `http://localhost:3000` を開きます。
+本番 schema を見る場合は `OPS_WEB_SCHEMA=ops_main` に変更します。
+
 ## 補足
 
 - 本番用 schema は `ops_main`、UI 確認用 schema は `ops_demo` を初期値とします
