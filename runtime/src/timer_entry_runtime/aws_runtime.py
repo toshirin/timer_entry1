@@ -146,6 +146,7 @@ class RuntimeAws:
         self,
         *,
         execution_id: str,
+        correlation_id: str,
         trade_id: str,
         setting: SettingConfig,
         units: int | None,
@@ -157,6 +158,7 @@ class RuntimeAws:
     ) -> dict[str, Any]:
         return {
             "execution_id": execution_id,
+            "correlation_id": correlation_id,
             "trade_id": trade_id,
             "setting_id": setting.setting_id,
             "strategy_id": setting.strategy_id,
@@ -180,6 +182,7 @@ class RuntimeAws:
         self,
         *,
         decision_id: str,
+        correlation_id: str,
         setting: SettingConfig,
         handler_name: str,
         trigger_bucket: str | None,
@@ -193,6 +196,7 @@ class RuntimeAws:
     ) -> dict[str, Any]:
         return {
             "decision_id": decision_id,
+            "correlation_id": correlation_id,
             "setting_id": setting.setting_id,
             "strategy_id": setting.strategy_id,
             "slot_id": setting.slot_id,

@@ -12,4 +12,8 @@ runtime/out/
 runtime/cdk/cdk.out/
 runtime/cdk/node_modules/
 runtime/cdk/*.tsbuildinfo
+ops/dist/
+ops/cdk/cdk.out/
+ops/cdk/node_modules/
+ops/cdk/*.tsbuildinfo
 **/__pycache__/

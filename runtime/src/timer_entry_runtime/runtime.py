@@ -82,12 +82,20 @@ def _record_decision(
     now_utc: datetime,
     decision: str,
     reason: str | None,
+    correlation_id: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> None:
     try:
+        decision_id = _decision_id(setting, handler_name, now_utc)
+        effective_correlation_id = (
+            correlation_id
+            or (str(extra["trade_id"]) if extra and extra.get("trade_id") is not None else None)
+            or decision_id
+        )
         aws_runtime.create_decision_log(
             aws_runtime.build_decision_log_seed(
-                decision_id=_decision_id(setting, handler_name, now_utc),
+                decision_id=decision_id,
+                correlation_id=effective_correlation_id,
                 setting=setting,
                 handler_name=handler_name,
                 trigger_bucket=trigger_bucket,
@@ -226,6 +234,7 @@ def _create_entry_trade(
     price_snapshot: Any,
 ) -> dict[str, Any]:
     trade_id = f"{setting.setting_id}#{trade_date_local(now_utc, setting.market_tz)}"
+    correlation_id = trade_id
     execution_id = f"{trade_id}#{int(now_utc.timestamp())}"
     scheduled_local = scheduled_clock_iso_for_date(now_utc, setting.market_tz, setting.entry_clock_local)
     seed = aws_runtime.build_trade_state_seed(
@@ -303,6 +312,7 @@ def _create_entry_trade(
         aws_runtime.create_execution_log(
             aws_runtime.build_execution_log_seed(
                 execution_id=execution_id,
+                correlation_id=correlation_id,
                 trade_id=trade_id,
                 setting=setting,
                 units=sizing.requested_units,
@@ -415,6 +425,7 @@ def _create_entry_trade(
             now_utc=now_utc,
             decision="entered",
             reason=None,
+            correlation_id=correlation_id,
             extra={"trade_id": trade_id, "entry_trade_id": order_result.trade_id},
         )
         return {
@@ -448,6 +459,7 @@ def _create_entry_trade(
             now_utc=now_utc,
             decision=decision,
             reason=reason,
+            correlation_id=correlation_id,
             extra={"trade_id": trade_id},
         )
         raise
