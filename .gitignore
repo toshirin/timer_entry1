@@ -6,3 +6,6 @@ ticks/
 fx_260312/
 .pycache_tmp/
 source_docs/
+runtime/.build/
+runtime/dist/
+runtime/out/

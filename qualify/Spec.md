@@ -212,12 +212,30 @@ E005 と E007 では、以下を追加原則とする。
   - report でも `round_trip_slip_pips` を併記できるようにする
 - E007
   - risk grid は `SL5 -> risk_fraction 0.5%` を基準点として組む
-  - center は `risk_fraction_center = 0.5% * (sl_pips / 5)` としてよい
+  - center は `risk_fraction_center = 0.5% * (sl_pips / 5)` とする
   - 比較はこの center と、その前後の保守側 / 攻め側で行う
-  - summary には少なくとも `min_maintenance_margin_pct`, `annualized_pips`, `trade_rate`, `win_rate`, `CAGR` を出す
+  - summary には少なくとも `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_150_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct` を出す
+  - `annualized_pips` は `10 pips ≒ 1%/年` を目安として `cagr` と照合する
+  - `min_maintenance_margin_pct` が 150% 目安から見て不自然に高い / 低い場合は、採用前に列定義または計算仕様を確認する
+  - 採用判断は CAGR 最大ではなく、`min_maintenance_margin_pct >= 150` を満たす安全側を優先する
 
 派生実験は `E001A` のように扱ってよい。
 ただし、派生は experiment code の意味を壊さず、主実験の補助目的に留める。
+
+E008 合格後は、params ではなく最終昇格結果 JSON を作る。
+これは `QualifyPromotionResult` schema に従い、`qualify/results/{slot_id}/{result_id}.json` に保存する。
+
+最終昇格結果 JSON には少なくとも以下を含める。
+
+- 採用 setting
+- `pass_stability_gate`
+- E004-E008 の合格状態
+- E005 の slippage 耐性確認結果
+- E007 の risk / kill-switch / 維持率確認結果
+- E008 の entry delay 耐性確認結果
+- runtime へ昇格してよいかを示す `approved_for_runtime`
+
+runtime promotion は `qualify/params/*.json` ではなく、この最終昇格結果 JSON を入力の主経路にする。
 
 ## 11. stability gate
 
@@ -259,6 +277,10 @@ E001 は `scan` の後段であり、mission は次のいずれかである。
 - filter 多重組み合わせは行わない
 - rolling 分位や年別分位は使わない
 - threshold sweep は代表点に限る
+
+`pre_range_regime` の percentile label を試す場合は、`vol_ge_p60` / `vol_ge_p70` / `vol_ge_p80` のような label を比較用 identity として扱う。
+実際の判定 threshold は、E001 の対象期間全体かつ feature 利用可能日の `pre_range_pips` から解決し、summary / trades / sanity / metadata に `resolved_pre_range_threshold`, `resolved_percentile`, `threshold_source` を残す。
+年別 percentile、rolling percentile、side 別 percentile、entry 時刻別 percentile は使わない。
 
 E001 でも `pass_stability_gate` を適用する。
 したがって、初手の baseline 候補は原則として `pass_stability_gate == True` のものから選ぶ。
@@ -323,9 +345,13 @@ E004 の原則は以下。
 - signal 生成と tick 執行を分離する
 - 1分足段階で signal day を確定してから、tick で entry / TP / SL / forced exit を再現する
 - `tick_executor` は side 主語の価格系列規約を厳守する
+- tick schema は `epoch_us` / `bid` / `ask` を必須とし、欠けている場合は fail-fast する
+- forced exit cutoff ちょうどの tick は TP/SL 監視対象に含める
+- cutoff ちょうどの tick で TP/SL が成立しない場合は、その tick を forced exit 約定候補として扱う
 - 全 tick 一括ロードは禁止し、対象日・対象時間帯だけを読む
 - `ProcessPoolExecutor` などによる日次並列化を許容する
 - `pass_stability_gate` は前段候補の前提メタデータとして保持する
+- tick replay 後の簡易 in/out 陽性判定を出す場合は、`pass_stability_gate` とは別名で出す
 
 `qualify` における E004 は、旧 `*_exhaustive1/common/tick_runner.py` の高速・省メモリな枠組みを継承してよい。
 ただし、`tick_executor.py` はそのまま流用せず、side ごとの Bid/Ask 規約を監査済みの共通実装へ再構成する。

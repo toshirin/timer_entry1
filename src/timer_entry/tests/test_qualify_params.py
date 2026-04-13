@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from qualify.common.params import E001Params, E002Params, E003Params, E004Params, E005E008Params
+from qualify.common.e001 import _resolve_threshold_metadata
 
 
 def test_e001_params_build_strategy_setting_with_dynamic_label() -> None:
@@ -32,6 +33,23 @@ def test_e001_params_build_strategy_setting_with_dynamic_label() -> None:
     assert setting.filter_labels == ("ge2",)
     assert setting.tp_pips == 5.0
     assert setting.sl_pips == 15.0
+
+
+def test_e001_resolves_pre_range_percentile_threshold_metadata() -> None:
+    metadata = _resolve_threshold_metadata(
+        ("all", "vol_ge_p60", "vol_ge_p70"),
+        [
+            {"pre_range_pips": 10.0},
+            {"pre_range_pips": 20.0},
+            {"pre_range_pips": 30.0},
+            {"pre_range_pips": 40.0},
+            {"pre_range_pips": 50.0},
+        ],
+    )
+    assert metadata["vol_ge_p60"]["resolved_pre_range_threshold"] == 34.0
+    assert metadata["vol_ge_p60"]["resolved_percentile"] == 60
+    assert metadata["vol_ge_p60"]["threshold_source"] == "global_pre_range_percentile"
+    assert metadata["vol_ge_p70"]["resolved_pre_range_threshold"] == 38.0
 
 
 def test_e002_params_build_strategy_setting_with_baseline_filter() -> None:

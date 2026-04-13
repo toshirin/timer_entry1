@@ -7,19 +7,11 @@
     "entry_clock_local": "15:40",
     "forced_exit_clock_local": "16:35",
     "tp_pips": 15,
-    "sl_pips": 25,
+    "sl_pips": 20,
     "filter_labels": ["right_stronger"]
   },
   "comparison_family": "shape_balance",
-  "comparison_labels": [
-    "all",
-    "right_stronger",
-    "same_sign",
-    "left_stronger",
-    "right_dom_ge2",
-    "right_dom_ge4",
-    "right_dom_ge6"
-  ],
+  "comparison_labels": ["all", "right_stronger", "right_dom_ge2", "right_dom_ge4", "right_dom_ge6"],
   "pass_stability_gate": true,
-  "notes": "lon15 buyは15:40/right_strongerが最強帯。allは対照群。forced_exit依存が強いためE003優先度高。"
+  "notes": "Assumed slot thread target is lon15. Buy is the only clear mainline. Start from 15:40 right_stronger because scan shows the strongest and most stable gated cluster in lon15 buy. Keep all only as control anchor, not as promotion mainline. TP15/SL20 is preferred over SL25 for slightly lower gross but better drawdown discipline."
 }

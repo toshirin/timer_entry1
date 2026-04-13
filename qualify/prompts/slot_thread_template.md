@@ -23,6 +23,8 @@
   - `qualify/prompts/e005_e008_thread.md`
 - 結果分析
   - `qualify/prompts/result_analysis_thread.md`
+- 最終昇格結果 JSON
+  - `qualify/prompts/final_promotion_result_thread.md`
 
 ## 運用原則
 
@@ -32,6 +34,7 @@
 - JSON の出力は必ず `json` コードブロックにする
 - E001 の新規 filter 定義は Codex 宛の仕様書として `markdown` コードブロックにする
 - 実行後の CSV 分析は `result_analysis_thread.md` を使う
+- E008 合格後の runtime 昇格判断は `final_promotion_result_thread.md` を使い、`qualify/results/{slot_id}/{result_id}.json` に保存する
 - 現行 core 未実装の label や field が必要なら、ChatGPT 側は JSON と一緒に定義案を出す
 - Codex 側は、その定義案を実装してから実験を実行する
 

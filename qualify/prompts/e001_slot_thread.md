@@ -20,6 +20,8 @@
 - Bid/Ask、same-bar、保守的 SL exit、event time の扱いは core で固定済みです
 - `strategy / slot / setting` の意味は添付資料に従ってください
 - 現行 core 未実装の `comparison_labels` を使いたい場合は、JSON と一緒に定義案も出してください
+- `pre_range_regime` では `vol_ge_med`, `vol_lt_med`, `vol_ge_p60`, `vol_ge_p70`, `vol_ge_p80` を使えます
+- `vol_ge_pXX` / `vol_lt_pXX` の threshold は Codex 側 E001 runner が対象期間全体の `pre_range_pips` から解決します
 
 ## あなたに依頼したいこと
 
