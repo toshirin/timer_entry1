@@ -286,7 +286,7 @@ AWS_ACCESS_KEY_ID=xxx \
 AWS_SECRET_ACCESS_KEY=xxx \
 AWS_REGION=ap-northeast-1 \
 bash runtime/apply_setting.sh \
-  runtime/out/{slot_id}_runtime.json
+  runtime/config/{slot_id}/{result_id}.json
 ```
 
 無効化:
@@ -296,7 +296,7 @@ AWS_ACCESS_KEY_ID=xxx \
 AWS_SECRET_ACCESS_KEY=xxx \
 AWS_REGION=ap-northeast-1 \
 bash runtime/disable_setting.sh \
-  {slot_id}_{side}_runtime_v1
+  {result_id}
 ```
 
 補足:
@@ -316,7 +316,7 @@ docker run --rm \
   -e AWS_REGION=ap-northeast-1 \
   -w /work \
   python:3.12-slim \
-  -lc "pip install --no-cache-dir awscli && bash runtime/apply_setting.sh runtime/out/{slot_id}_runtime.json"
+  -lc "pip install --no-cache-dir awscli && bash runtime/apply_setting.sh runtime/config/{slot_id}/{result_id}.json"
 ```
 
 Docker で無効化:
@@ -330,7 +330,7 @@ docker run --rm \
   -e AWS_REGION=ap-northeast-1 \
   -w /work \
   python:3.12-slim \
-  -lc "pip install --no-cache-dir awscli && bash runtime/disable_setting.sh {slot_id}_{side}_runtime_v1"
+  -lc "pip install --no-cache-dir awscli && bash runtime/disable_setting.sh {result_id}"
 ```
 
 ## trigger_bucket
