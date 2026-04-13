@@ -1,0 +1,16 @@
+{
+  "experiment_code": "E003",
+  "variant_code": null,
+  "slot_id": "tyo09",
+  "side": "sell",
+  "baseline": {
+    "entry_clock_local": "09:35",
+    "forced_exit_clock_local": "10:30",
+    "tp_pips": 25,
+    "sl_pips": 25,
+    "filter_labels": ["vol_ge_p60"]
+  },
+  "forced_exit_values": ["10:20", "10:30", "10:40"],
+  "pass_stability_gate": true,
+  "notes": "E002で確定したtp25/sl25を固定し、forced exitのみ±10分で小規模sweep。out依存構造のため保持時間のロバスト性を確認する。"
+}

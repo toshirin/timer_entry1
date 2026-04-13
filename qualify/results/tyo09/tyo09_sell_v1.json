@@ -1,0 +1,239 @@
+{
+  "result_type": "qualify_promotion_result",
+  "schema_version": 1,
+  "result_id": "tyo09_sell_v1",
+  "slot_id": "tyo09",
+  "side": "sell",
+  "market_tz": "Asia/Tokyo",
+  "entry_clock_local": "09:35",
+  "forced_exit_clock_local": "10:20",
+  "tp_pips": 25.0,
+  "sl_pips": 25.0,
+  "filter_labels": ["vol_ge_p60"],
+  "pass_stability_gate": true,
+  "e004_passed": true,
+  "e005_passed": true,
+  "e006_passed": true,
+  "e007_passed": true,
+  "e008_passed": true,
+  "approved_for_runtime": true,
+  "selected_risk_fraction": 0.015,
+  "kill_switch_dd_pct": -0.2,
+  "min_maintenance_margin_pct": 150.0,
+  "initial_capital_jpy": 100000.0,
+  "final_equity_jpy": 174873.212858,
+  "annualized_pips": 141.842857,
+  "cagr": 0.083115,
+  "trade_rate": 0.400659,
+  "gross_pips": 992.9,
+  "in_gross_pips": 163.5,
+  "out_gross_pips": 829.4,
+  "win_rate": 0.517808,
+  "source_params_files": {
+    "E004": "qualify/params/tyo09/e004.json",
+    "E005-E008": "qualify/params/tyo09/e005-e008.json"
+  },
+  "source_output_dirs": {
+    "E004": "qualify/out/tyo09/E004/latest",
+    "E005-E008": "qualify/out/tyo09"
+  },
+  "evidence": {
+    "E004": {
+      "summary": "tick replay passed with tick_pass_positive_inout_gate=true, tick_not_found_count=0, forced_exit_missing_count=0, entry_after_forced_exit_count=0",
+      "gross_pips": 992.9,
+      "minute_gross_pips": 932.691956,
+      "delta_gross_pips": 60.208044,
+      "profit_factor": 1.214923,
+      "max_dd_pips": -332.3,
+      "in_gross_pips": 163.5,
+      "out_gross_pips": 829.4,
+      "win_rate": 0.517808
+    },
+    "E005": {
+      "max_one_way_slip_pips_passed": 0.3,
+      "max_round_trip_slip_pips_passed": 0.6,
+      "slippage_sweep": [
+        {
+          "slip_pips": 0.0,
+          "round_trip_slip_pips": 0.0,
+          "gross_pips": 829.4,
+          "annualized_pips": 276.466667,
+          "profit_factor": 1.269469,
+          "max_dd_pips": -206.5,
+          "win_rate": 0.540816
+        },
+        {
+          "slip_pips": 0.1,
+          "round_trip_slip_pips": 0.2,
+          "gross_pips": 680.7,
+          "annualized_pips": 226.9,
+          "profit_factor": 1.216164,
+          "max_dd_pips": -216.0,
+          "win_rate": 0.538776
+        },
+        {
+          "slip_pips": 0.2,
+          "round_trip_slip_pips": 0.4,
+          "gross_pips": 600.3,
+          "annualized_pips": 200.1,
+          "profit_factor": 1.188111,
+          "max_dd_pips": -225.2,
+          "win_rate": 0.534694
+        },
+        {
+          "slip_pips": 0.3,
+          "round_trip_slip_pips": 0.6,
+          "gross_pips": 509.3,
+          "annualized_pips": 169.766667,
+          "profit_factor": 1.157634,
+          "max_dd_pips": -233.9,
+          "win_rate": 0.530612
+        }
+      ]
+    },
+    "E006": {
+      "summary": "walk-forward accepted with caution; 4 of 5 test years positive, 2021 test negative, structure improves materially from 2022 onward",
+      "walk_forward_rows": [
+        {
+          "train_years": "2019-2020",
+          "test_year": 2021,
+          "trade_count": 8,
+          "out_pnl": -32.0,
+          "pf": 0.327731,
+          "max_dd_pips": -39.4,
+          "win_rate": 0.25,
+          "annualized_pips": -32.0
+        },
+        {
+          "train_years": "2020-2021",
+          "test_year": 2022,
+          "trade_count": 166,
+          "out_pnl": 302.7,
+          "pf": 1.293941,
+          "max_dd_pips": -264.4,
+          "win_rate": 0.512048,
+          "annualized_pips": 302.7
+        },
+        {
+          "train_years": "2021-2022",
+          "test_year": 2023,
+          "trade_count": 137,
+          "out_pnl": 116.1,
+          "pf": 1.137952,
+          "max_dd_pips": -160.4,
+          "win_rate": 0.532847,
+          "annualized_pips": 116.1
+        },
+        {
+          "train_years": "2022-2023",
+          "test_year": 2024,
+          "trade_count": 157,
+          "out_pnl": 318.3,
+          "pf": 1.310506,
+          "max_dd_pips": -134.4,
+          "win_rate": 0.55414,
+          "annualized_pips": 318.3
+        },
+        {
+          "train_years": "2023-2024",
+          "test_year": 2025,
+          "trade_count": 196,
+          "out_pnl": 395.0,
+          "pf": 1.326123,
+          "max_dd_pips": -206.5,
+          "win_rate": 0.535714,
+          "annualized_pips": 395.0
+        }
+      ]
+    },
+    "E007": {
+      "min_maintenance_margin_pct": 257.943632,
+      "annualized_pips": 141.842857,
+      "trade_rate": 0.400659,
+      "win_rate": 0.517808,
+      "cagr": 0.083115,
+      "risk_sweep": [
+        {
+          "risk_fraction": 0.015,
+          "final_equity_jpy": 174873.212858,
+          "total_return_pct": 0.748732,
+          "cagr": 0.083115,
+          "annualized_pips": 141.842857,
+          "trade_rate": 0.400659,
+          "win_rate": 0.517808,
+          "max_dd_pct": -0.185359,
+          "min_maintenance_margin_pct": 257.943632,
+          "maintenance_below_150_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false
+        },
+        {
+          "risk_fraction": 0.025,
+          "final_equity_jpy": 81900.362606,
+          "total_return_pct": -0.180996,
+          "cagr": -0.048691,
+          "annualized_pips": -46.05,
+          "trade_rate": 0.066959,
+          "win_rate": 0.393443,
+          "max_dd_pct": -0.203378,
+          "min_maintenance_margin_pct": 190.951934,
+          "maintenance_below_150_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": true
+        },
+        {
+          "risk_fraction": 0.035,
+          "final_equity_jpy": 82602.357333,
+          "total_return_pct": -0.173976,
+          "cagr": -0.091142,
+          "annualized_pips": -64.25,
+          "trade_rate": 0.0236,
+          "win_rate": 0.372093,
+          "max_dd_pct": -0.204747,
+          "min_maintenance_margin_pct": 159.987303,
+          "maintenance_below_150_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": true
+        }
+      ]
+    },
+    "E008": {
+      "max_entry_delay_seconds_passed": 60,
+      "entry_delay_sweep": [
+        {
+          "entry_delay_seconds": 0,
+          "gross_pips": 829.4,
+          "annualized_pips": 276.466667,
+          "profit_factor": 1.269469,
+          "max_dd_pips": -206.5,
+          "win_rate": 0.540816
+        },
+        {
+          "entry_delay_seconds": 10,
+          "gross_pips": 801.1,
+          "annualized_pips": 267.033333,
+          "profit_factor": 1.25802,
+          "max_dd_pips": -209.5,
+          "win_rate": 0.542857
+        },
+        {
+          "entry_delay_seconds": 30,
+          "gross_pips": 717.5,
+          "annualized_pips": 239.166667,
+          "profit_factor": 1.229644,
+          "max_dd_pips": -232.6,
+          "win_rate": 0.540816
+        },
+        {
+          "entry_delay_seconds": 60,
+          "gross_pips": 601.5,
+          "annualized_pips": 200.5,
+          "profit_factor": 1.190053,
+          "max_dd_pips": -209.7,
+          "win_rate": 0.538776
+        }
+      ]
+    }
+  },
+  "notes": "E004-E008 passed for runtime promotion. Core setting is tyo09 sell 09:35-10:20 with tp/sl 25/25 and vol_ge_p60. E006 is accepted with caution because the edge is materially stronger from 2022 onward, but E004, E005, E007, and E008 support deployability. Selected risk_fraction is the safety-first 0.015 because higher risks triggered kill-switch despite maintenance staying above 150%."
+}
