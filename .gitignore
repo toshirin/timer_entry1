@@ -9,3 +9,7 @@ source_docs/
 runtime/.build/
 runtime/dist/
 runtime/out/
+runtime/cdk/cdk.out/
+runtime/cdk/node_modules/
+runtime/cdk/*.tsbuildinfo
+**/__pycache__/
