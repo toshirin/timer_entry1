@@ -30,7 +30,8 @@
 3. E005 では one-way slip と往復 penalty の読み替えを明記してください
 4. E007 では維持率と CAGR を含めて安全性を判断してください
 5. 問題がなければ次 experiment へ進む結論を出してください
-6. 問題があれば、派生実験として再実験 JSON を `json` コードブロックで出してください
+6. E008 まで合格した場合は、次に `qualify/prompts/final_promotion_result_thread.md` で最終結果 JSON を作るよう指示してください
+7. 問題があれば、派生実験として再実験 JSON を `json` コードブロックで出してください
 
 ## 出力形式
 

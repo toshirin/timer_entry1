@@ -45,6 +45,10 @@ def _json_text_or_none(value: dict[str, Any] | list[dict[str, Any]] | None) -> s
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
+def _optional_float(data: dict[str, Any], key: str) -> float | None:
+    return float(data[key]) if data.get(key) is not None else None
+
+
 @dataclass(frozen=True)
 class BacktestTrade:
     # 1 trade を scan / qualify / ops で共通に扱える最小単位。
@@ -328,10 +332,154 @@ class QualifyScenario:
         return data
 
 
+@dataclass(frozen=True)
+class QualifyPromotionResult:
+    # E008 合格後に runtime 昇格判断を固定する成果物。
+    # params は実験入力、こちらは安全性確認済みの結果として扱う。
+    result_type: str
+    schema_version: int
+    result_id: str
+    slot_id: str
+    side: Side
+    market_tz: MarketTz
+    entry_clock_local: str
+    forced_exit_clock_local: str
+    tp_pips: float
+    sl_pips: float
+    filter_labels: tuple[str, ...]
+    pass_stability_gate: bool
+    e004_passed: bool
+    e005_passed: bool
+    e006_passed: bool
+    e007_passed: bool
+    e008_passed: bool
+    approved_for_runtime: bool
+    selected_risk_fraction: float | None = None
+    kill_switch_dd_pct: float | None = -0.2
+    min_maintenance_margin_pct: float | None = 150.0
+    initial_capital_jpy: float | None = 100000.0
+    final_equity_jpy: float | None = None
+    annualized_pips: float | None = None
+    cagr: float | None = None
+    trade_rate: float | None = None
+    gross_pips: float | None = None
+    in_gross_pips: float | None = None
+    out_gross_pips: float | None = None
+    win_rate: float | None = None
+    source_params_files: dict[str, str] = field(default_factory=dict)
+    source_output_dirs: dict[str, str] = field(default_factory=dict)
+    evidence: dict[str, Any] = field(default_factory=dict)
+    notes: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "QualifyPromotionResult":
+        result_type = str(data["result_type"])
+        if result_type != "qualify_promotion_result":
+            raise ValueError(f"Unsupported qualify promotion result_type: {result_type}")
+        filter_labels = tuple(str(label) for label in data.get("filter_labels", []))
+        if not filter_labels:
+            raise ValueError("filter_labels must not be empty")
+        return cls(
+            result_type=result_type,
+            schema_version=int(data["schema_version"]),
+            result_id=str(data["result_id"]),
+            slot_id=str(data["slot_id"]),
+            side=str(data["side"]),  # type: ignore[arg-type]
+            market_tz=str(data["market_tz"]),  # type: ignore[arg-type]
+            entry_clock_local=str(data["entry_clock_local"]),
+            forced_exit_clock_local=str(data["forced_exit_clock_local"]),
+            tp_pips=float(data["tp_pips"]),
+            sl_pips=float(data["sl_pips"]),
+            filter_labels=filter_labels,
+            pass_stability_gate=bool(data["pass_stability_gate"]),
+            e004_passed=bool(data["e004_passed"]),
+            e005_passed=bool(data["e005_passed"]),
+            e006_passed=bool(data["e006_passed"]),
+            e007_passed=bool(data["e007_passed"]),
+            e008_passed=bool(data["e008_passed"]),
+            approved_for_runtime=bool(data["approved_for_runtime"]),
+            selected_risk_fraction=_optional_float(data, "selected_risk_fraction"),
+            kill_switch_dd_pct=_optional_float(data, "kill_switch_dd_pct"),
+            min_maintenance_margin_pct=_optional_float(data, "min_maintenance_margin_pct"),
+            initial_capital_jpy=_optional_float(data, "initial_capital_jpy"),
+            final_equity_jpy=_optional_float(data, "final_equity_jpy"),
+            annualized_pips=_optional_float(data, "annualized_pips"),
+            cagr=_optional_float(data, "cagr"),
+            trade_rate=_optional_float(data, "trade_rate"),
+            gross_pips=_optional_float(data, "gross_pips"),
+            in_gross_pips=_optional_float(data, "in_gross_pips"),
+            out_gross_pips=_optional_float(data, "out_gross_pips"),
+            win_rate=_optional_float(data, "win_rate"),
+            source_params_files=dict(data.get("source_params_files", {})),
+            source_output_dirs=dict(data.get("source_output_dirs", {})),
+            evidence=dict(data.get("evidence", {})),
+            notes=str(data["notes"]) if data.get("notes") is not None else None,
+        )
+
+    def assert_promotable(self) -> None:
+        if not self.approved_for_runtime:
+            raise ValueError("approved_for_runtime must be true before promotion")
+        if not self.pass_stability_gate:
+            raise ValueError("pass_stability_gate must be true before promotion")
+        failed = [
+            code
+            for code, passed in (
+                ("E004", self.e004_passed),
+                ("E005", self.e005_passed),
+                ("E006", self.e006_passed),
+                ("E007", self.e007_passed),
+                ("E008", self.e008_passed),
+            )
+            if not passed
+        ]
+        if failed:
+            raise ValueError(f"qualify checks must pass before promotion: {failed}")
+        if self.kill_switch_dd_pct is None:
+            raise ValueError("kill_switch_dd_pct must be set before promotion")
+        if self.min_maintenance_margin_pct is None:
+            raise ValueError("min_maintenance_margin_pct must be set before promotion")
+        if self.initial_capital_jpy is None:
+            raise ValueError("initial_capital_jpy must be set before promotion")
+        required_metric_names = (
+            "selected_risk_fraction",
+            "final_equity_jpy",
+            "min_maintenance_margin_pct",
+            "annualized_pips",
+            "cagr",
+            "trade_rate",
+            "gross_pips",
+            "in_gross_pips",
+            "out_gross_pips",
+            "win_rate",
+        )
+        missing_metrics = [name for name in required_metric_names if getattr(self, name) is None]
+        if missing_metrics:
+            raise ValueError(f"promotion result metrics must be set before promotion: {missing_metrics}")
+
+    def to_strategy_setting(self) -> StrategySetting:
+        return StrategySetting(
+            setting_id=f"{self.slot_id}_{self.side}_runtime_v1",
+            slot_id=self.slot_id,
+            side=self.side,
+            market_tz=self.market_tz,
+            entry_clock_local=self.entry_clock_local,
+            forced_exit_clock_local=self.forced_exit_clock_local,
+            tp_pips=self.tp_pips,
+            sl_pips=self.sl_pips,
+            filter_labels=self.filter_labels,
+            research_label=self.result_id,
+            notes=self.notes,
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
 __all__ = [
     "BacktestSummary",
     "BacktestTrade",
     "MarketTz",
+    "QualifyPromotionResult",
     "QualifyScenario",
     "RuntimeConfig",
     "SanitySummary",

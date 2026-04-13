@@ -104,6 +104,8 @@ docker run --rm \
 E005-E008 の sweep / risk 条件は `qualify/params/{slot_id}/e005-e008.json` に書きます。
 `--only` は部分再実行したい場合だけ使います。
 
+E008 合格後は `qualify/prompts/final_promotion_result_thread.md` を使い、最終昇格結果を `qualify/results/{slot_id}/{result_id}.json` に保存します。
+
 ## 補足
 
 - `qualify` は `scan` のように自律探索するのではなく、ChatGPT 側で決めた JSON params を入力として実行します

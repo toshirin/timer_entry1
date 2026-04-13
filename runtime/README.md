@@ -192,16 +192,16 @@ filter 設定:
 
 ## qualify から setting_config を作る
 
-qualify の最終結果 JSON から runtime setting_config JSON を作成します。
+qualify の最終昇格結果 JSON から runtime setting_config JSON を作成します。
 初期状態では `enabled=false` で出力されます。
-既定では `fixed_units=10`、`max_concurrent_positions=1`、`kill_switch_dd_pct=-0.2`、`kill_switch_reference_balance_jpy=100000`、`min_maintenance_margin_pct=150` を補完します。必要に応じて `--fixed-units`、`--use-margin-ratio --margin-ratio-target`、`--size-scale-pct`、`--kill-switch-dd-pct`、`--kill-switch-reference-balance-jpy`、`--min-maintenance-margin-pct`、`--max-concurrent-positions` で上書きします。
+既定では `fixed_units=10`、`max_concurrent_positions=1` を補完します。`kill_switch_dd_pct`、`kill_switch_reference_balance_jpy`、`min_maintenance_margin_pct` は最終昇格結果 JSON の値を優先します。必要に応じて `--fixed-units`、`--use-margin-ratio --margin-ratio-target`、`--size-scale-pct`、`--kill-switch-dd-pct`、`--kill-switch-reference-balance-jpy`、`--min-maintenance-margin-pct`、`--max-concurrent-positions` で上書きします。
 
 ```bash
 PYTHONPATH="$PWD/src:$PWD/runtime/src:$PWD" \
 python3 -m timer_entry_runtime.promotion \
-  --params-file qualify/params/lon15/e004.json \
-  --out-file runtime/out/lon15_e004_runtime.json \
-  --setting-id lon15_e004_runtime_v1
+  --result-file qualify/results/{slot_id}/{result_id}.json \
+  --out-file runtime/out/{slot_id}_runtime.json \
+  --setting-id {slot_id}_{side}_runtime_v1
 ```
 
 Docker 実行:
@@ -213,9 +213,9 @@ docker run --rm \
   -e PYTHONPATH=/work/src:/work/runtime/src:/work \
   python:3.12-slim \
   python -m timer_entry_runtime.promotion \
-    --params-file qualify/params/lon15/e004.json \
-    --out-file runtime/out/lon15_e004_runtime.json \
-    --setting-id lon15_e004_runtime_v1
+    --result-file qualify/results/{slot_id}/{result_id}.json \
+    --out-file runtime/out/{slot_id}_runtime.json \
+    --setting-id {slot_id}_{side}_runtime_v1
 ```
 
 有効化済み JSON として出す場合:
@@ -223,9 +223,9 @@ docker run --rm \
 ```bash
 PYTHONPATH="$PWD/src:$PWD/runtime/src:$PWD" \
 python3 -m timer_entry_runtime.promotion \
-  --params-file qualify/params/lon15/e004.json \
-  --out-file runtime/out/lon15_e004_runtime_enabled.json \
-  --setting-id lon15_e004_runtime_v1 \
+  --result-file qualify/results/{slot_id}/{result_id}.json \
+  --out-file runtime/out/{slot_id}_runtime_enabled.json \
+  --setting-id {slot_id}_{side}_runtime_v1 \
   --enabled
 ```
 
@@ -238,9 +238,9 @@ docker run --rm \
   -e PYTHONPATH=/work/src:/work/runtime/src:/work \
   python:3.12-slim \
   python -m timer_entry_runtime.promotion \
-    --params-file qualify/params/lon15/e004.json \
-    --out-file runtime/out/lon15_e004_runtime_enabled.json \
-    --setting-id lon15_e004_runtime_v1 \
+    --result-file qualify/results/{slot_id}/{result_id}.json \
+    --out-file runtime/out/{slot_id}_runtime_enabled.json \
+    --setting-id {slot_id}_{side}_runtime_v1 \
     --enabled
 ```
 
@@ -251,7 +251,7 @@ AWS_ACCESS_KEY_ID=xxx \
 AWS_SECRET_ACCESS_KEY=xxx \
 AWS_REGION=ap-northeast-1 \
 bash runtime/apply_setting.sh \
-  runtime/out/lon15_e004_runtime.json
+  runtime/out/{slot_id}_runtime.json
 ```
 
 無効化:
@@ -261,7 +261,7 @@ AWS_ACCESS_KEY_ID=xxx \
 AWS_SECRET_ACCESS_KEY=xxx \
 AWS_REGION=ap-northeast-1 \
 bash runtime/disable_setting.sh \
-  lon15_e004_runtime_v1
+  {slot_id}_{side}_runtime_v1
 ```
 
 補足:
@@ -281,7 +281,7 @@ docker run --rm \
   -e AWS_REGION=ap-northeast-1 \
   -w /work \
   python:3.12-slim \
-  -lc "pip install --no-cache-dir awscli && bash runtime/apply_setting.sh runtime/out/lon15_e004_runtime.json"
+  -lc "pip install --no-cache-dir awscli && bash runtime/apply_setting.sh runtime/out/{slot_id}_runtime.json"
 ```
 
 Docker で無効化:
@@ -295,7 +295,7 @@ docker run --rm \
   -e AWS_REGION=ap-northeast-1 \
   -w /work \
   python:3.12-slim \
-  -lc "pip install --no-cache-dir awscli && bash runtime/disable_setting.sh lon15_e004_runtime_v1"
+  -lc "pip install --no-cache-dir awscli && bash runtime/disable_setting.sh {slot_id}_{side}_runtime_v1"
 ```
 
 ## trigger_bucket

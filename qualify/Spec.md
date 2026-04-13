@@ -219,6 +219,21 @@ E005 と E007 では、以下を追加原則とする。
 派生実験は `E001A` のように扱ってよい。
 ただし、派生は experiment code の意味を壊さず、主実験の補助目的に留める。
 
+E008 合格後は、params ではなく最終昇格結果 JSON を作る。
+これは `QualifyPromotionResult` schema に従い、`qualify/results/{slot_id}/{result_id}.json` に保存する。
+
+最終昇格結果 JSON には少なくとも以下を含める。
+
+- 採用 setting
+- `pass_stability_gate`
+- E004-E008 の合格状態
+- E005 の slippage 耐性確認結果
+- E007 の risk / kill-switch / 維持率確認結果
+- E008 の entry delay 耐性確認結果
+- runtime へ昇格してよいかを示す `approved_for_runtime`
+
+runtime promotion は `qualify/params/*.json` ではなく、この最終昇格結果 JSON を入力の主経路にする。
+
 ## 11. stability gate
 
 `qualify` は `scan` から渡された stability 情報を昇格ゲートとして使う。

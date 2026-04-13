@@ -653,7 +653,7 @@ CloudWatch 上で setting ごとの判定経緯を追跡できるように、検
 - core は filter label から runtime filter spec への変換など、共通変換ロジックを提供する
 - runtime は deploy 可能な `setting_config` JSON への変換、default 値補完、運用 risk 値補完、schema validation を担当する
 
-runtime 側には `qualify` の最終候補を読み、`setting_config` JSON を生成する promotion tool を置く。
+runtime 側には `qualify/results/{slot_id}/{result_id}.json` の最終昇格結果を読み、`setting_config` JSON を生成する promotion tool を置く。
 
 promotion tool は少なくとも以下を検証する。
 
