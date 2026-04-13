@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from timer_entry.minute_data import load_trading_days
 
-from .e001 import _eligible_days_by_segment, _eligible_feature_rows, _filter_days
+from .e001 import _baseline_threshold_context, _eligible_days_by_segment, _eligible_feature_rows, _filter_days
 from .e001 import _concat_trade_frames
 from .e004 import _aggregate_tick_sanity
 from .io import ensure_run_layout, write_json
@@ -291,9 +291,19 @@ def _prepare_e004_baseline(
     filtered_days = _filter_days(days, date_from=params.date_from, date_to=params.date_to)
     feature_rows = _eligible_feature_rows(filtered_days, params)  # type: ignore[arg-type]
     eligible_days_by_segment = _eligible_days_by_segment(feature_rows)
+    pre_range_threshold, dynamic_filter_threshold, threshold_metadata = _baseline_threshold_context(
+        params.baseline.filter_labels,
+        feature_rows,
+    )
 
     print(f"[SIGNALS] building E004 baseline from {len(filtered_days)} filtered days")
-    signals, minute_result = generate_e004_signal_days(filtered_days, params=params, load_summary=load_summary)
+    signals, minute_result = generate_e004_signal_days(
+        filtered_days,
+        params=params,
+        load_summary=load_summary,
+        pre_range_threshold=pre_range_threshold,
+        dynamic_filter_threshold=dynamic_filter_threshold,
+    )
     signals_df = pd.DataFrame([signal.to_dict() for signal in signals])
     print(f"[SIGNALS] baseline signal days={len(signals_df)}")
 
@@ -321,6 +331,9 @@ def _prepare_e004_baseline(
         "tick_rows_df": tick_rows_df,
         "tick_trades_df": _base_tick_trades(tick_rows_df),
         "eligible_days_by_segment": eligible_days_by_segment,
+        "pre_range_threshold": pre_range_threshold,
+        "dynamic_filter_threshold": dynamic_filter_threshold,
+        "threshold_metadata": threshold_metadata,
     }
 
 
@@ -754,6 +767,9 @@ def run_e005_e008(
         "initial_capital_jpy": float(params.initial_capital_jpy),
         "kill_switch_dd_pct": float(params.kill_switch_dd_pct),
         "baseline_comparison_label": baseline_params.comparison_label(),
+        "pre_range_threshold": baseline["pre_range_threshold"],
+        "dynamic_filter_threshold": baseline["dynamic_filter_threshold"],
+        "threshold_metadata": baseline["threshold_metadata"],
         "load_summary": asdict(baseline["load_summary"]),  # type: ignore[arg-type,index]
         "signal_day_count": int(len(baseline["signals_df"])),  # type: ignore[arg-type,index]
         "tick_trade_count": int(len(baseline["tick_trades_df"])),  # type: ignore[arg-type,index]

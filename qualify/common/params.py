@@ -173,6 +173,8 @@ class E002Params:
         *,
         tp_pips: float,
         sl_pips: float,
+        pre_range_threshold: float | None = None,
+        dynamic_filter_threshold: float | None = None,
     ) -> StrategySetting:
         comparison_label = self.comparison_label(tp_pips=tp_pips, sl_pips=sl_pips)
         setting_suffix = comparison_label.replace(".", "_")
@@ -186,6 +188,8 @@ class E002Params:
             tp_pips=float(tp_pips),
             sl_pips=float(sl_pips),
             filter_labels=self.baseline.filter_labels,
+            pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
         )
 
@@ -242,6 +246,8 @@ class E003Params:
         self,
         *,
         forced_exit_clock_local: str,
+        pre_range_threshold: float | None = None,
+        dynamic_filter_threshold: float | None = None,
     ) -> StrategySetting:
         comparison_label = self.comparison_label(forced_exit_clock_local=forced_exit_clock_local)
         setting_suffix = comparison_label.replace(".", "_")
@@ -255,6 +261,8 @@ class E003Params:
             tp_pips=self.baseline.tp_pips,
             sl_pips=self.baseline.sl_pips,
             filter_labels=self.baseline.filter_labels,
+            pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
         )
 
@@ -317,7 +325,12 @@ class E004Params:
             f"fx{_label_fragment(self.baseline.forced_exit_clock_local)}"
         )
 
-    def to_strategy_setting(self) -> StrategySetting:
+    def to_strategy_setting(
+        self,
+        *,
+        pre_range_threshold: float | None = None,
+        dynamic_filter_threshold: float | None = None,
+    ) -> StrategySetting:
         return StrategySetting(
             setting_id=f"{self.slot_id}_{self.side}_{self.run_label}_tick_replay",
             slot_id=self.slot_id,
@@ -328,6 +341,8 @@ class E004Params:
             tp_pips=self.baseline.tp_pips,
             sl_pips=self.baseline.sl_pips,
             filter_labels=self.baseline.filter_labels,
+            pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
         )
 

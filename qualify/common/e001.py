@@ -152,6 +152,25 @@ def _resolve_threshold_metadata(
     return metadata
 
 
+def _baseline_threshold_context(
+    filter_labels: tuple[str, ...],
+    feature_rows: list[dict[str, object]],
+) -> tuple[float | None, float | None, dict[str, dict[str, object]]]:
+    threshold_metadata = _resolve_threshold_metadata(filter_labels, feature_rows)
+    pre_range_thresholds = {
+        float(meta["resolved_pre_range_threshold"])
+        for meta in threshold_metadata.values()
+        if meta.get("resolved_pre_range_threshold") is not None
+    }
+    if len(pre_range_thresholds) > 1:
+        raise ValueError(
+            "multiple pre_range percentile thresholds in one baseline are not supported: "
+            f"{sorted(pre_range_thresholds)}"
+        )
+    pre_range_threshold = next(iter(pre_range_thresholds), None)
+    return pre_range_threshold, None, threshold_metadata
+
+
 def _comparison_trade_frame(
     *,
     comparison_label: str,

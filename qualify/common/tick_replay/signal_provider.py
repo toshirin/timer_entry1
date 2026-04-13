@@ -38,8 +38,13 @@ def generate_e004_signal_days(
     *,
     params: E004Params,
     load_summary: MinuteDataSummary,
+    pre_range_threshold: float | None = None,
+    dynamic_filter_threshold: float | None = None,
 ) -> tuple[list[TickSignalDay], BacktestRunResult]:
-    setting = params.to_strategy_setting()
+    setting = params.to_strategy_setting(
+        pre_range_threshold=pre_range_threshold,
+        dynamic_filter_threshold=dynamic_filter_threshold,
+    )
     minute_result = run_backtest_1m(
         days,
         setting,

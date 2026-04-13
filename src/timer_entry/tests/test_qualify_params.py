@@ -71,10 +71,11 @@ def test_e002_params_build_strategy_setting_with_baseline_filter() -> None:
             "pass_stability_gate": True,
         }
     )
-    setting = params.to_strategy_setting(tp_pips=15.0, sl_pips=10.0)
+    setting = params.to_strategy_setting(tp_pips=15.0, sl_pips=10.0, pre_range_threshold=12.5)
     assert setting.filter_labels == ("vol_ge_p70",)
     assert setting.tp_pips == 15.0
     assert setting.sl_pips == 10.0
+    assert setting.pre_range_threshold == 12.5
     assert params.comparison_label(tp_pips=15.0, sl_pips=10.0) == "tp15_sl10"
 
 
@@ -96,11 +97,12 @@ def test_e003_params_build_strategy_setting_with_forced_exit_grid() -> None:
             "pass_stability_gate": True,
         }
     )
-    setting = params.to_strategy_setting(forced_exit_clock_local="10:45")
+    setting = params.to_strategy_setting(forced_exit_clock_local="10:45", pre_range_threshold=8.0)
     assert setting.filter_labels == ("all",)
     assert setting.tp_pips == 20.0
     assert setting.sl_pips == 5.0
     assert setting.forced_exit_clock_local == "10:45"
+    assert setting.pre_range_threshold == 8.0
     assert params.comparison_label(forced_exit_clock_local="10:45") == "fx1045"
 
 
@@ -124,11 +126,12 @@ def test_e004_params_build_strategy_setting_and_runtime_fields() -> None:
             "entry_delay_seconds": 1,
         }
     )
-    setting = params.to_strategy_setting()
+    setting = params.to_strategy_setting(pre_range_threshold=15.0)
     assert setting.filter_labels == ("vol_ge_p70",)
     assert setting.tp_pips == 10.0
     assert setting.sl_pips == 30.0
     assert setting.forced_exit_clock_local == "09:45"
+    assert setting.pre_range_threshold == 15.0
     assert params.comparison_label() == "buy0840_vol_ge_p70_tp10_sl30_fx0945"
 
 

@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.minute_data import load_trading_days
 
-from .e001 import _eligible_days_by_segment, _eligible_feature_rows, _filter_days
+from .e001 import _baseline_threshold_context, _eligible_days_by_segment, _eligible_feature_rows, _filter_days
 from .e001 import _concat_trade_frames
 from .io import ensure_run_layout, write_json
 from .params import E002Params
@@ -104,6 +104,10 @@ def run_e002(
     filtered_days = _filter_days(days, date_from=params.date_from, date_to=params.date_to)
     feature_rows = _eligible_feature_rows(filtered_days, params)  # type: ignore[arg-type]
     eligible_days_by_segment = _eligible_days_by_segment(feature_rows)
+    pre_range_threshold, dynamic_filter_threshold, threshold_metadata = _baseline_threshold_context(
+        params.baseline.filter_labels,
+        feature_rows,
+    )
 
     all_trade_frames: list[pd.DataFrame] = []
     summary_rows: list[dict[str, object]] = []
@@ -113,7 +117,12 @@ def run_e002(
 
     for sl_pips, tp_pips in tqdm(comparisons, desc="E002 comparisons", unit="grid", mininterval=0.2):
         comparison_label = params.comparison_label(tp_pips=tp_pips, sl_pips=sl_pips)
-        setting = params.to_strategy_setting(tp_pips=tp_pips, sl_pips=sl_pips)
+        setting = params.to_strategy_setting(
+            tp_pips=tp_pips,
+            sl_pips=sl_pips,
+            pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
+        )
         result = run_backtest_1m(
             filtered_days,
             setting,
@@ -167,6 +176,9 @@ def run_e002(
         "date_from": params.date_from,
         "date_to": params.date_to,
         "eligible_days_by_segment": eligible_days_by_segment,
+        "pre_range_threshold": pre_range_threshold,
+        "dynamic_filter_threshold": dynamic_filter_threshold,
+        "threshold_metadata": threshold_metadata,
         "load_summary": asdict(load_summary),
         "notes": params.notes,
     }
