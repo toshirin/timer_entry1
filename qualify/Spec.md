@@ -275,6 +275,10 @@ E001 は `scan` の後段であり、mission は次のいずれかである。
 - rolling 分位や年別分位は使わない
 - threshold sweep は代表点に限る
 
+`pre_range_regime` の percentile label を試す場合は、`vol_ge_p60` / `vol_ge_p70` / `vol_ge_p80` のような label を比較用 identity として扱う。
+実際の判定 threshold は、E001 の対象期間全体かつ feature 利用可能日の `pre_range_pips` から解決し、summary / trades / sanity / metadata に `resolved_pre_range_threshold`, `resolved_percentile`, `threshold_source` を残す。
+年別 percentile、rolling percentile、side 別 percentile、entry 時刻別 percentile は使わない。
+
 E001 でも `pass_stability_gate` を適用する。
 したがって、初手の baseline 候補は原則として `pass_stability_gate == True` のものから選ぶ。
 `False` の候補を試す場合は、通常線ではなく例外的な監査や派生実験として扱う。

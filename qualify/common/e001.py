@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
@@ -98,30 +99,57 @@ def _resolve_dynamic_thresholds(
     comparison_labels: tuple[str, ...],
     feature_rows: list[dict[str, object]],
 ) -> dict[str, float]:
-    thresholds: dict[str, float] = {}
+    return {
+        label: float(meta["resolved_threshold"])
+        for label, meta in _resolve_threshold_metadata(comparison_labels, feature_rows).items()
+    }
+
+
+def _resolve_threshold_metadata(
+    comparison_labels: tuple[str, ...],
+    feature_rows: list[dict[str, object]],
+) -> dict[str, dict[str, object]]:
+    metadata: dict[str, dict[str, object]] = {}
+    needs_pre_range = any(parse_volatility_filter_label(label) is not None for label in comparison_labels)
     if not feature_rows:
-        return thresholds
+        if needs_pre_range:
+            raise ValueError("feature rows are required to resolve pre_range percentile thresholds")
+        return metadata
     feature_df = pd.DataFrame(feature_rows)
-    values = pd.to_numeric(feature_df["pre_range_pips"], errors="coerce").dropna()
-    if values.empty:
-        return thresholds
+    values = (
+        pd.to_numeric(feature_df["pre_range_pips"], errors="coerce").dropna()
+        if needs_pre_range and "pre_range_pips" in feature_df.columns
+        else pd.Series(dtype=float)
+    )
+    if values.empty and needs_pre_range:
+        raise ValueError("valid pre_range_pips values are required to resolve pre_range percentile thresholds")
 
     for label in comparison_labels:
         vol_spec = parse_volatility_filter_label(label)
         if vol_spec is not None:
             _, raw_threshold = vol_spec
-            if raw_threshold == "med":
-                thresholds[label] = float(values.median())
-            else:
-                thresholds[label] = float(values.quantile(float(raw_threshold) / 100.0))
+            percentile = 50 if raw_threshold == "med" else int(raw_threshold)
+            threshold = float(np.nanpercentile(values.to_numpy(dtype=float), percentile))
+            metadata[label] = {
+                "resolved_threshold": threshold,
+                "resolved_pre_range_threshold": threshold,
+                "resolved_percentile": percentile,
+                "threshold_source": "global_pre_range_percentile",
+            }
             continue
 
         right_dom_spec = parse_right_dominance_filter_label(label)
         if right_dom_spec is None:
             continue
         _, threshold = right_dom_spec
-        thresholds[label] = float(threshold)
-    return thresholds
+        threshold = float(threshold)
+        metadata[label] = {
+            "resolved_threshold": threshold,
+            "resolved_pre_range_threshold": None,
+            "resolved_percentile": None,
+            "threshold_source": "label_threshold",
+        }
+    return metadata
 
 
 def _comparison_trade_frame(
@@ -130,6 +158,7 @@ def _comparison_trade_frame(
     comparison_family: str,
     pre_range_threshold: float | None,
     dynamic_filter_threshold: float | None,
+    threshold_meta: dict[str, object],
     result: Any,
 ) -> pd.DataFrame:
     rows = []
@@ -140,6 +169,9 @@ def _comparison_trade_frame(
         row["filter_label"] = comparison_label
         row["pre_range_threshold"] = pre_range_threshold
         row["resolved_threshold"] = dynamic_filter_threshold
+        row["resolved_pre_range_threshold"] = threshold_meta.get("resolved_pre_range_threshold")
+        row["resolved_percentile"] = threshold_meta.get("resolved_percentile")
+        row["threshold_source"] = threshold_meta.get("threshold_source")
         row["year"] = int(str(trade.date_local)[:4])
         rows.append(row)
     return pd.DataFrame(rows)
@@ -162,6 +194,7 @@ def _comparison_summary_row(
     comparison_family: str,
     pre_range_threshold: float | None,
     dynamic_filter_threshold: float | None,
+    threshold_meta: dict[str, object],
     input_pass_stability_gate: bool,
     result: Any,
 ) -> dict[str, object]:
@@ -192,6 +225,9 @@ def _comparison_summary_row(
             "filter_label": comparison_label,
             "pre_range_threshold": pre_range_threshold,
             "resolved_threshold": dynamic_filter_threshold,
+            "resolved_pre_range_threshold": threshold_meta.get("resolved_pre_range_threshold"),
+            "resolved_percentile": threshold_meta.get("resolved_percentile"),
+            "threshold_source": threshold_meta.get("threshold_source"),
             "input_pass_stability_gate": input_pass_stability_gate,
             "in_gross_pips": round(in_gross_pips, 6),
             "out_gross_pips": round(out_gross_pips, 6),
@@ -218,7 +254,12 @@ def run_e001(
     filtered_days = _filter_days(days, date_from=params.date_from, date_to=params.date_to)
     feature_rows = _eligible_feature_rows(filtered_days, params)
     eligible_days_by_segment = _eligible_days_by_segment(feature_rows)
-    resolved_thresholds = _resolve_dynamic_thresholds(params.comparison_labels, feature_rows)
+    threshold_metadata = _resolve_threshold_metadata(params.comparison_labels, feature_rows)
+    resolved_thresholds = {
+        label: float(meta["resolved_threshold"])
+        for label, meta in threshold_metadata.items()
+        if meta.get("resolved_threshold") is not None
+    }
 
     all_trade_frames: list[pd.DataFrame] = []
     summary_rows: list[dict[str, object]] = []
@@ -226,6 +267,7 @@ def run_e001(
 
     for comparison_label in tqdm(params.comparison_labels, desc="E001 comparisons", unit="label", mininterval=0.2):
         dynamic_filter_threshold = resolved_thresholds.get(comparison_label)
+        threshold_meta = threshold_metadata.get(comparison_label, {})
         pre_range_threshold = dynamic_filter_threshold if parse_volatility_filter_label(comparison_label) is not None else None
         setting = params.to_strategy_setting(
             comparison_label=comparison_label,
@@ -244,6 +286,7 @@ def run_e001(
                 comparison_family=params.comparison_family,
                 pre_range_threshold=pre_range_threshold,
                 dynamic_filter_threshold=dynamic_filter_threshold,
+                threshold_meta=threshold_meta,
                 result=result,
             )
         )
@@ -253,6 +296,7 @@ def run_e001(
                 comparison_family=params.comparison_family,
                 pre_range_threshold=pre_range_threshold,
                 dynamic_filter_threshold=dynamic_filter_threshold,
+                threshold_meta=threshold_meta,
                 input_pass_stability_gate=params.pass_stability_gate,
                 result=result,
             )
@@ -262,6 +306,9 @@ def run_e001(
         sanity_row["comparison_family"] = params.comparison_family
         sanity_row["pre_range_threshold"] = pre_range_threshold
         sanity_row["resolved_threshold"] = dynamic_filter_threshold
+        sanity_row["resolved_pre_range_threshold"] = threshold_meta.get("resolved_pre_range_threshold")
+        sanity_row["resolved_percentile"] = threshold_meta.get("resolved_percentile")
+        sanity_row["threshold_source"] = threshold_meta.get("threshold_source")
         sanity_rows.append(sanity_row)
 
     trades_df = _concat_trade_frames(all_trade_frames)
@@ -285,6 +332,7 @@ def run_e001(
         "date_to": params.date_to,
         "eligible_days_by_segment": eligible_days_by_segment,
         "resolved_thresholds": resolved_thresholds,
+        "threshold_metadata": threshold_metadata,
         "load_summary": asdict(load_summary),
         "notes": params.notes,
     }

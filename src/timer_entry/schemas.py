@@ -417,6 +417,10 @@ class QualifyPromotionResult:
         )
 
     def assert_promotable(self) -> None:
+        if self.tp_pips <= 0:
+            raise ValueError("tp_pips must be greater than zero before promotion")
+        if self.sl_pips <= 0:
+            raise ValueError("sl_pips must be greater than zero before promotion")
         if not self.approved_for_runtime:
             raise ValueError("approved_for_runtime must be true before promotion")
         if not self.pass_stability_gate:

@@ -45,7 +45,9 @@ def test_parse_slope_filter_label_supports_extended_thresholds() -> None:
 
 def test_parse_volatility_filter_label_supports_percentiles() -> None:
     assert parse_volatility_filter_label("vol_ge_med") == ("ge", "med")
+    assert parse_volatility_filter_label("vol_ge_p60") == ("ge", 60)
     assert parse_volatility_filter_label("vol_lt_p40") == ("lt", 40)
+    assert parse_volatility_filter_label("vol_lt_p30") == ("lt", 30)
 
 
 def test_parse_right_dominance_filter_label_supports_thresholds() -> None:

@@ -291,6 +291,8 @@ qualify では percentile ベースの深掘りを追加してよいが、canoni
 初版の実装では、`vol_ge_p60` のような percentile label は percentile 値そのものを評価器内で再計算しない。
 呼び出し側が対象データから percentile に対応する `pre_range_threshold` を解決し、その threshold と label を対で渡す責務を持つ。
 つまり、label は記録・比較用 identity であり、評価は明示された threshold によって行う。
+E001 で percentile label を使う場合、対象実験期間全体の `feature_available == True` な `pre_range_pips` から `np.nanpercentile` 相当で threshold を解決する。
+出力には少なくとも `resolved_pre_range_threshold`, `resolved_percentile`, `threshold_source` を残し、`threshold_source` は `global_pre_range_percentile` とする。
 
 ### 7.4 レンジ / トレンド状態
 
