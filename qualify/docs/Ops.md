@@ -181,8 +181,10 @@ E001 の新規 filter 定義は、Codex 宛の実装仕様書として `markdown
   - `slip_pips` は one-way 表示で扱う
   - ChatGPT 側の評価文でも、実質往復 penalty は `2 * slip_pips` と明記する
 - E007
-  - risk grid は `SL5 -> 0.5%` を基準に、現在の stop 幅へ換算して決める
-  - summary では `min_maintenance_margin_pct`, `annualized_pips`, `trade_rate`, `win_rate`, `CAGR` を必須確認項目とする
+  - risk grid は `SL5 -> 0.5%` を基準に、中心値 `0.5% * (sl_pips / 5)` とその前後で決める
+  - summary では `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_150_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct` を必須確認項目とする
+  - `annualized_pips` は `10 pips ≒ 1%/年` を目安として `cagr` と照合する
+  - `min_maintenance_margin_pct` が 150% 目安から見て不自然に高い / 低い場合は、採用前に列定義または計算仕様を確認する
 
 注意:
 
