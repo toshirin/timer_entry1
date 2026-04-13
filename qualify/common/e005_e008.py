@@ -534,7 +534,7 @@ def _run_e007(
         "side": params.side,
         "baseline_comparison_label": params.comparison_label(),
         "risk_fractions": [float(value) for value in risk_fractions],
-        "initial_capital_jpy": float(params.initial_capital_jpy),
+        "initial_capital_jpy": float(initial_capital_jpy),
         "kill_switch_dd_pct": float(kill_switch_dd_pct),
         "risk_fraction_center": 0.005 * (float(params.baseline.sl_pips) / 5.0),
     }
