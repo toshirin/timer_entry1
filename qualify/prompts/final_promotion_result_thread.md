@@ -13,6 +13,8 @@
 - E005 の `slip_pips` は one-way 表示で、実質往復 penalty は `2 * slip_pips` です
 - E007 では `selected_risk_fraction`, `kill_switch_dd_pct`, `min_maintenance_margin_pct`, `initial_capital_jpy` を明示してください
 - 結果 JSON では、後から取り出したい主要指標を `evidence` の中だけでなく top-level にも入れてください
+- E005 / E007 / E008 の sweep 成績は、top-level ではなく `evidence` に要約転記してください
+- `evidence` には全 trade や全 equity curve を貼らず、採用判断に使った summary row の主要列だけを入れてください
 
 ## 添付する資料
 
@@ -30,7 +32,8 @@
 3. 採用する setting 条件を固定してください
 4. 採用する risk / kill-switch 条件を固定してください
 5. 根拠となる主要指標を top-level に入れ、補足を `evidence` に短くまとめてください
-6. 最後に Codex 保存用 JSON を必ず `json` コードブロックで出してください
+6. `evidence.E005.slippage_sweep`, `evidence.E007.risk_sweep`, `evidence.E008.entry_delay_sweep` に、比較した候補の主要数値を配列で転記してください
+7. 最後に Codex 保存用 JSON を必ず `json` コードブロックで出してください
 
 ## 保存先
 
@@ -86,7 +89,27 @@ Codex 側では以下に保存します。
     },
     "E005": {
       "max_one_way_slip_pips_passed": 0.3,
-      "max_round_trip_slip_pips_passed": 0.6
+      "max_round_trip_slip_pips_passed": 0.6,
+      "slippage_sweep": [
+        {
+          "slip_pips": 0.0,
+          "round_trip_slip_pips": 0.0,
+          "gross_pips": 0.0,
+          "annualized_pips": 0.0,
+          "profit_factor": 0.0,
+          "max_dd_pips": 0.0,
+          "win_rate": 0.0
+        },
+        {
+          "slip_pips": 0.3,
+          "round_trip_slip_pips": 0.6,
+          "gross_pips": 0.0,
+          "annualized_pips": 0.0,
+          "profit_factor": 0.0,
+          "max_dd_pips": 0.0,
+          "win_rate": 0.0
+        }
+      ]
     },
     "E006": {
       "summary": "walk-forward accepted"
@@ -96,10 +119,44 @@ Codex 側では以下に保存します。
       "annualized_pips": 0.0,
       "trade_rate": 0.0,
       "win_rate": 0.0,
-      "cagr": 0.0
+      "cagr": 0.0,
+      "risk_sweep": [
+        {
+          "risk_fraction": 0.02,
+          "final_equity_jpy": 100000.0,
+          "total_return_pct": 0.0,
+          "cagr": 0.0,
+          "annualized_pips": 0.0,
+          "trade_rate": 0.0,
+          "win_rate": 0.0,
+          "max_dd_pct": 0.0,
+          "min_maintenance_margin_pct": 150.0,
+          "maintenance_below_150_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false
+        }
+      ]
     },
     "E008": {
-      "max_entry_delay_seconds_passed": 15
+      "max_entry_delay_seconds_passed": 15,
+      "entry_delay_sweep": [
+        {
+          "entry_delay_seconds": 0,
+          "gross_pips": 0.0,
+          "annualized_pips": 0.0,
+          "profit_factor": 0.0,
+          "max_dd_pips": 0.0,
+          "win_rate": 0.0
+        },
+        {
+          "entry_delay_seconds": 15,
+          "gross_pips": 0.0,
+          "annualized_pips": 0.0,
+          "profit_factor": 0.0,
+          "max_dd_pips": 0.0,
+          "win_rate": 0.0
+        }
+      ]
     }
   },
   "notes": "short rationale"

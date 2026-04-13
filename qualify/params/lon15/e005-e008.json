@@ -17,7 +17,7 @@
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 5, 10, 15],
-  "risk_fractions": [0.001, 0.0015, 0.002],
+  "risk_fractions": [0.01, 0.02, 0.03],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
   "notes": "Run the full post-E004 robustness suite on the promoted lon15 buy setting. E005 slippage_values are one-way slips, so round-trip penalty is 2x each value. E007 risk grid is centered around the SL-adjusted reference from SL5->0.5%, which implies about 0.125% for SL20, then tested with a small conservative-to-slightly-aggressive grid."
