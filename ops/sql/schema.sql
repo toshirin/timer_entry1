@@ -44,6 +44,7 @@ create table if not exists ops_main.runtime_oanda_event_fact (
   setting_id text not null,
   strategy_id text,
   slot_id text,
+  setting_labels jsonb not null default '[]'::jsonb,
   trade_date_local text,
   market_tz text,
   instrument text,
@@ -79,6 +80,9 @@ create table if not exists ops_main.runtime_oanda_event_fact (
   synced_at timestamptz not null default now()
 );
 
+alter table ops_main.runtime_oanda_event_fact
+  add column if not exists setting_labels jsonb not null default '[]'::jsonb;
+
 create index if not exists idx_ops_fact_setting_created
   on ops_main.runtime_oanda_event_fact (setting_id, created_at);
 
@@ -91,6 +95,7 @@ create index if not exists idx_ops_fact_correlation
 create or replace view ops_main.daily_setting_summary as
 select
   setting_id,
+  setting_labels,
   trade_date_local,
   count(*) as decision_count,
   count(*) filter (where decision = 'entered') as entered_count,
@@ -104,16 +109,20 @@ select
   avg(expected_win_rate) as expected_win_rate,
   avg(actual_win_rate) as actual_win_rate
 from ops_main.runtime_oanda_event_fact
-group by setting_id, trade_date_local;
+group by setting_id, setting_labels, trade_date_local;
 
 create table if not exists ops_demo.import_cursor (like ops_main.import_cursor including all);
 create table if not exists ops_demo.oanda_transactions_raw (like ops_main.oanda_transactions_raw including all);
 create table if not exists ops_demo.oanda_transactions_normalized (like ops_main.oanda_transactions_normalized including all);
 create table if not exists ops_demo.runtime_oanda_event_fact (like ops_main.runtime_oanda_event_fact including all);
 
+alter table ops_demo.runtime_oanda_event_fact
+  add column if not exists setting_labels jsonb not null default '[]'::jsonb;
+
 create or replace view ops_demo.daily_setting_summary as
 select
   setting_id,
+  setting_labels,
   trade_date_local,
   count(*) as decision_count,
   count(*) filter (where decision = 'entered') as entered_count,
@@ -127,4 +136,4 @@ select
   avg(expected_win_rate) as expected_win_rate,
   avg(actual_win_rate) as actual_win_rate
 from ops_demo.runtime_oanda_event_fact
-group by setting_id, trade_date_local;
+group by setting_id, setting_labels, trade_date_local;

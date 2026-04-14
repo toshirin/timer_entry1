@@ -131,6 +131,27 @@ h2 {
   margin-bottom: 18px;
 }
 
+.compact-band {
+  align-items: end;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.compact-band .section-heading {
+  margin-bottom: 0;
+}
+
+.compact-band select {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  font: inherit;
+  min-width: 220px;
+  padding: 10px 12px;
+}
+
 .chart-grid,
 .split {
   display: grid;
@@ -208,6 +229,7 @@ tr:last-child td {
 @media (max-width: 900px) {
   .topbar,
   .header-meta,
+  .compact-band,
   .chart-grid,
   .split {
     align-items: stretch;
@@ -216,7 +238,8 @@ tr:last-child td {
   }
 
   .topbar,
-  .header-meta {
+  .header-meta,
+  .compact-band {
     display: grid;
   }
 

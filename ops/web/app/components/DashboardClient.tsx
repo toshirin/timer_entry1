@@ -98,10 +98,20 @@ function Shell({
 }
 
 function DashboardContent({ data }: { data: DashboardResponse }) {
-  const metrics = useMemo(() => aggregateMetrics(data.summary), [data.summary]);
-  const chartRows = useMemo(() => chartData(data.summary), [data.summary]);
-  const highConflict = data.summary.filter((row) => (row.conflict_rate ?? 0) >= 0.2);
-  const driftRows = data.summary
+  const [selectedLabel, setSelectedLabel] = useState("all");
+  const labelOptions = useMemo(() => uniqueLabels(data), [data]);
+  const filteredSummary = useMemo(
+    () => filterByLabel(data.summary, selectedLabel),
+    [data.summary, selectedLabel]
+  );
+  const filteredEvents = useMemo(
+    () => filterByLabel(data.events, selectedLabel),
+    [data.events, selectedLabel]
+  );
+  const metrics = useMemo(() => aggregateMetrics(filteredSummary), [filteredSummary]);
+  const chartRows = useMemo(() => chartData(filteredSummary), [filteredSummary]);
+  const highConflict = filteredSummary.filter((row) => (row.conflict_rate ?? 0) >= 0.2);
+  const driftRows = filteredSummary
     .map((row) => ({
       ...row,
       tradeDrift: diff(row.actual_trade_rate, row.expected_trade_rate),
@@ -117,6 +127,21 @@ function DashboardContent({ data }: { data: DashboardResponse }) {
         <Metric label="entered" value={formatInt(metrics.entered)} note="broker attempts" />
         <Metric label="conflict rate" value={formatPct(metrics.conflictRate)} note="concurrency skips" tone={metrics.conflictRate > 0.15 ? "warn" : "ok"} />
         <Metric label="pnl pips" value={formatNumber(metrics.pnlPips)} note="matched rows" tone={metrics.pnlPips < 0 ? "bad" : "ok"} />
+      </section>
+
+      <section className="band compact-band">
+        <div className="section-heading">
+          <h2>Label Filter</h2>
+          <p>Filter dashboard rows by runtime setting labels.</p>
+        </div>
+        <select value={selectedLabel} onChange={(event) => setSelectedLabel(event.target.value)}>
+          <option value="all">all labels</option>
+          {labelOptions.map((label) => (
+            <option key={label} value={label}>
+              {label}
+            </option>
+          ))}
+        </select>
       </section>
 
       <section className="band">
@@ -157,7 +182,7 @@ function DashboardContent({ data }: { data: DashboardResponse }) {
             <h2>Conflict Watch</h2>
             <p>Concurrency and lock-driven skips that can hide real demand.</p>
           </div>
-          <SummaryTable rows={highConflict.length ? highConflict : data.summary.slice(0, 6)} compact />
+          <SummaryTable rows={highConflict.length ? highConflict : filteredSummary.slice(0, 6)} compact />
         </div>
         <div>
           <div className="section-heading">
@@ -173,7 +198,7 @@ function DashboardContent({ data }: { data: DashboardResponse }) {
           <h2>Recent Events</h2>
           <p>Decision-level feed with match status and skip reasons.</p>
         </div>
-        <EventTable rows={data.events} />
+        <EventTable rows={filteredEvents} />
       </section>
     </>
   );
@@ -206,6 +231,7 @@ function SummaryTable({ rows, compact = false }: { rows: DashboardSummary[]; com
         <thead>
           <tr>
             <th>setting</th>
+            <th>labels</th>
             <th>date</th>
             <th>entered</th>
             <th>skipped</th>
@@ -217,6 +243,7 @@ function SummaryTable({ rows, compact = false }: { rows: DashboardSummary[]; com
           {rows.map((row) => (
             <tr key={`${row.setting_id}-${row.trade_date_local}`}>
               <td>{row.setting_id}</td>
+              <td>{formatLabels(row.setting_labels)}</td>
               <td>{row.trade_date_local}</td>
               <td>{formatInt(row.entered_count)}</td>
               <td>{formatInt(row.skipped_count)}</td>
@@ -237,6 +264,7 @@ function DriftTable({ rows }: { rows: Array<DashboardSummary & { tradeDrift: num
         <thead>
           <tr>
             <th>setting</th>
+            <th>labels</th>
             <th>date</th>
             <th>trade</th>
             <th>win</th>
@@ -246,6 +274,7 @@ function DriftTable({ rows }: { rows: Array<DashboardSummary & { tradeDrift: num
           {rows.map((row) => (
             <tr key={`drift-${row.setting_id}-${row.trade_date_local}`}>
               <td>{row.setting_id}</td>
+              <td>{formatLabels(row.setting_labels)}</td>
               <td>{row.trade_date_local}</td>
               <td>{formatSignedPct(row.tradeDrift)}</td>
               <td>{formatSignedPct(row.winDrift)}</td>
@@ -265,6 +294,7 @@ function EventTable({ rows }: { rows: DashboardEvent[] }) {
           <tr>
             <th>time</th>
             <th>setting</th>
+            <th>labels</th>
             <th>slot</th>
             <th>decision</th>
             <th>reason</th>
@@ -277,6 +307,7 @@ function EventTable({ rows }: { rows: DashboardEvent[] }) {
             <tr key={row.fact_event_id}>
               <td>{compactDate(row.created_at)}</td>
               <td>{row.setting_id}</td>
+              <td>{formatLabels(row.setting_labels)}</td>
               <td>{row.slot_id ?? "-"}</td>
               <td>{row.decision ?? "-"}</td>
               <td>{row.reason ?? "-"}</td>
@@ -303,6 +334,27 @@ function aggregateMetrics(rows: DashboardSummary[]) {
     conflictRate: decisions === 0 ? 0 : conflicts / decisions,
     pnlPips
   };
+}
+
+function uniqueLabels(data: DashboardResponse) {
+  return Array.from(
+    new Set(
+      [...data.summary, ...data.events]
+        .flatMap((row) => row.setting_labels ?? [])
+        .filter((label) => label.trim() !== "")
+    )
+  ).sort();
+}
+
+function filterByLabel<T extends { setting_labels: string[] }>(rows: T[], selectedLabel: string) {
+  if (selectedLabel === "all") {
+    return rows;
+  }
+  return rows.filter((row) => row.setting_labels.includes(selectedLabel));
+}
+
+function formatLabels(labels: string[]) {
+  return labels.length ? labels.join(", ") : "-";
 }
 
 function chartData(rows: DashboardSummary[]) {

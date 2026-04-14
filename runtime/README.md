@@ -201,6 +201,7 @@ runtime は DynamoDB の `setting_config` を参照して動作します。
 - `sl_pips`
 - `market_open_check_seconds`
 - `max_concurrent_positions`
+- `labels`
 
 サイズ設定:
 
@@ -224,6 +225,12 @@ kill switch 設定:
 filter 設定:
 
 - `filter_spec_json`
+
+ops 用ラベル:
+
+- `labels`
+- 文字列配列として指定する
+- runtime の売買判定には使わず、ops dashboard のフィルタ用に使う
 
 ## qualify から setting_config を作る
 

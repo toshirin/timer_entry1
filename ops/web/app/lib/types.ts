@@ -1,5 +1,6 @@
 export type DashboardSummary = {
   setting_id: string;
+  setting_labels: string[];
   trade_date_local: string;
   decision_count: number;
   entered_count: number;
@@ -17,6 +18,7 @@ export type DashboardSummary = {
 export type DashboardEvent = {
   fact_event_id: string;
   setting_id: string;
+  setting_labels: string[];
   slot_id: string | null;
   trade_date_local: string | null;
   decision: string | null;

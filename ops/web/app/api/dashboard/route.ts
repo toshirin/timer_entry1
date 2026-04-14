@@ -11,6 +11,7 @@ export async function GET() {
       queryRows(`
         select
           setting_id,
+          setting_labels::text as setting_labels,
           trade_date_local,
           decision_count,
           entered_count,
@@ -31,6 +32,7 @@ export async function GET() {
         select
           fact_event_id,
           setting_id,
+          setting_labels::text as setting_labels,
           slot_id,
           trade_date_local,
           decision,
@@ -51,8 +53,8 @@ export async function GET() {
     return NextResponse.json({
       schema,
       generatedAt: new Date().toISOString(),
-      summary: summaryRows as DashboardSummary[],
-      events: eventRows as DashboardEvent[]
+      summary: summaryRows.map(withParsedLabels) as unknown as DashboardSummary[],
+      events: eventRows.map(withParsedLabels) as unknown as DashboardEvent[]
     });
   } catch (error) {
     return NextResponse.json(
@@ -61,5 +63,27 @@ export async function GET() {
       },
       { status: 500 }
     );
+  }
+}
+
+function withParsedLabels<T extends { setting_labels?: unknown }>(row: T): T & { setting_labels: string[] } {
+  return {
+    ...row,
+    setting_labels: parseLabels(row.setting_labels)
+  };
+}
+
+function parseLabels(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(String);
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
   }
 }

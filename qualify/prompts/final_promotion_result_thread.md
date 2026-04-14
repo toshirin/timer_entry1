@@ -12,6 +12,7 @@
 - E008 entry delay 耐性が合格済みであること
 - E005 の `slip_pips` は one-way 表示で、実質往復 penalty は `2 * slip_pips` です
 - E007 では `selected_risk_fraction`, `kill_switch_dd_pct`, `min_maintenance_margin_pct`, `initial_capital_jpy` を明示してください
+- ops dashboard でフィルタしたい分類は `labels` に文字列配列として入れてください
 - 結果 JSON では、後から取り出したい主要指標を `evidence` の中だけでなく top-level にも入れてください
 - E005 / E007 / E008 の sweep 成績は、top-level ではなく `evidence` に要約転記してください
 - `evidence` には全 trade や全 equity curve を貼らず、採用判断に使った summary row の主要列だけを入れてください
@@ -56,6 +57,7 @@ Codex 側では以下に保存します。
   "tp_pips": 15,
   "sl_pips": 20,
   "filter_labels": ["right_stronger"],
+  "labels": ["london", "news_sensitive"],
   "pass_stability_gate": true,
   "e004_passed": true,
   "e005_passed": true,

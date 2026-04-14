@@ -27,6 +27,7 @@ def test_promote_qualify_result_to_runtime_config(tmp_path: Path) -> None:
                 "tp_pips": 15,
                 "sl_pips": 25,
                 "filter_labels": ["right_dom_ge4"],
+                "labels": ["news_sensitive", "london"],
                 "pass_stability_gate": True,
                 "e004_passed": True,
                 "e005_passed": True,
@@ -69,6 +70,7 @@ def test_promote_qualify_result_to_runtime_config(tmp_path: Path) -> None:
     assert config["trigger_bucket_exit"] == "EXIT#Europe/London#1630"
     assert config["tp_pips"] == 15.0
     assert config["sl_pips"] == 25.0
+    assert config["labels"] == ("news_sensitive", "london")
     assert config["kill_switch_dd_pct"] == -0.2
     assert config["kill_switch_reference_balance_jpy"] == 100000.0
     assert config["min_maintenance_margin_pct"] == 150.0

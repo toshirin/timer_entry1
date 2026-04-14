@@ -49,6 +49,16 @@ def _optional_float(data: dict[str, Any], key: str) -> float | None:
     return float(data[key]) if data.get(key) is not None else None
 
 
+def _string_tuple(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, (list, tuple)):
+        return tuple(str(item) for item in value)
+    raise ValueError(f"string array is required: {value!r}")
+
+
 @dataclass(frozen=True)
 class BacktestTrade:
     # 1 trade を scan / qualify / ops で共通に扱える最小単位。
@@ -146,6 +156,7 @@ class RuntimeConfig:
     tp_pips: float
     sl_pips: float
     research_label: str | None
+    labels: tuple[str, ...]
     market_open_check_seconds: int
     max_concurrent_positions: int | None
     kill_switch_dd_pct: float | None
@@ -186,6 +197,7 @@ class StrategySetting:
     margin_ratio_target: float | None = None
     size_scale_pct: float | None = None
     research_label: str | None = None
+    labels: tuple[str, ...] = ()
     market_open_check_seconds: int = 10
     max_concurrent_positions: int | None = 1
     kill_switch_dd_pct: float | None = -0.2
@@ -244,6 +256,7 @@ class StrategySetting:
             tp_pips=float(self.tp_pips),
             sl_pips=float(self.sl_pips),
             research_label=self.research_label,
+            labels=self.labels,
             market_open_check_seconds=int(self.market_open_check_seconds),
             max_concurrent_positions=self.max_concurrent_positions,
             kill_switch_dd_pct=self.kill_switch_dd_pct,
@@ -366,6 +379,7 @@ class QualifyPromotionResult:
     in_gross_pips: float | None = None
     out_gross_pips: float | None = None
     win_rate: float | None = None
+    labels: tuple[str, ...] = ()
     source_params_files: dict[str, str] = field(default_factory=dict)
     source_output_dirs: dict[str, str] = field(default_factory=dict)
     evidence: dict[str, Any] = field(default_factory=dict)
@@ -379,6 +393,7 @@ class QualifyPromotionResult:
         filter_labels = tuple(str(label) for label in data.get("filter_labels", []))
         if not filter_labels:
             raise ValueError("filter_labels must not be empty")
+        labels = _string_tuple(data.get("labels"))
         return cls(
             result_type=result_type,
             schema_version=int(data["schema_version"]),
@@ -410,6 +425,7 @@ class QualifyPromotionResult:
             in_gross_pips=_optional_float(data, "in_gross_pips"),
             out_gross_pips=_optional_float(data, "out_gross_pips"),
             win_rate=_optional_float(data, "win_rate"),
+            labels=labels,
             source_params_files=dict(data.get("source_params_files", {})),
             source_output_dirs=dict(data.get("source_output_dirs", {})),
             evidence=dict(data.get("evidence", {})),
@@ -472,6 +488,7 @@ class QualifyPromotionResult:
             sl_pips=self.sl_pips,
             filter_labels=self.filter_labels,
             research_label=self.result_id,
+            labels=self.labels,
             notes=self.notes,
         )
 

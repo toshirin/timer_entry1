@@ -192,6 +192,24 @@ docker run --rm \
   -lc "pip install boto3 && PYTHONPATH=ops/src python ops/scripts/apply_sql.py --statement \"insert into ops_main.import_cursor (cursor_name, cursor_value, updated_at) values ('oanda_last_transaction_id', 'YOUR_TRANSACTION_ID', now()) on conflict (cursor_name) do update set cursor_value = excluded.cursor_value, updated_at = excluded.updated_at\""
 ```
 
+## 取込データの現状
+
+`daily_transaction_import` の初版では、Oanda transaction を `ops_main.oanda_transactions_raw` へ raw JSON として保存し、runtime の `decision_log` を `ops_main.runtime_oanda_event_fact` へ `decision_only` として取り込みます。
+
+`runtime_oanda_event_fact` には約定単価、実現損益、Oanda trade id、Oanda transaction id、units などを検索しやすい形で持つ列を用意しています。ただし現時点では、Oanda transaction の正規化、`execution_log` との突合、資金情報 snapshot の fact 化は未実装です。つまり、Oanda の実約定金額や口座資金推移をすぐ SQL / dashboard で検索する段階にはまだ達していません。
+
+## setting labels
+
+runtime の `setting_config.labels` は、ops dashboard での分類・絞り込み用の文字列配列です。売買判定には使いません。
+
+流れ:
+
+1. qualify 最終結果 JSON の `labels` に分類を入れる
+2. runtime promotion が `setting_config.labels` として出力する
+3. runtime が `trade_state` / `execution_log` / `decision_log` に `setting_labels` として記録する
+4. ops import が `decision_log.setting_labels` を `runtime_oanda_event_fact.setting_labels` に JSONB で保存する
+5. ops dashboard が `setting_labels` を配列として読み、Label Filter で絞り込む
+
 ## 手順まとめ
 
 1. runtime 側を build / deploy し、`correlation_id` を反映する

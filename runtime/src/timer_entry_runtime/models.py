@@ -28,6 +28,16 @@ def _to_str(value: Any) -> str | None:
     return str(value)
 
 
+def _to_str_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return []
+
+
 @dataclass(frozen=True)
 class HandlerResult:
     status: str
@@ -65,6 +75,7 @@ class SettingConfig:
     tp_pips: float
     sl_pips: float
     research_label: str | None
+    labels: list[str]
     market_open_check_seconds: int
     max_concurrent_positions: int | None
     kill_switch_dd_pct: float | None
@@ -95,6 +106,7 @@ class SettingConfig:
             tp_pips=float(item.get("tp_pips", 0)),
             sl_pips=float(item.get("sl_pips", 0)),
             research_label=_to_str(item.get("research_label")),
+            labels=_to_str_list(item.get("labels")),
             market_open_check_seconds=int(item.get("market_open_check_seconds", 10)),
             max_concurrent_positions=(
                 int(item["max_concurrent_positions"])

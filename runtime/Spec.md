@@ -197,6 +197,7 @@ GSI:
 - `tp_pips`
 - `sl_pips`
 - `research_label`
+- `labels`
 - `market_open_check_seconds`
 - `max_concurrent_positions`
 - `kill_switch_dd_pct`
@@ -216,6 +217,7 @@ GSI:
 - 検索・判定に使う項目はトップレベル属性に置く
 - 将来増える setting 詳細は JSON 文字列または Map 属性で持つ
 - `instrument` は初版では `USD_JPY` 固定だが、属性としては保持する
+- `labels` は ops dashboard のフィルタ用に使う文字列配列とし、runtime の売買判定には使わない
 - 初期運用では `max_concurrent_positions=1` を基本値とし、口座上の open trade が 1 本でも残っていれば新規 entry を見送る
 
 ### 7.2 `trigger_bucket`

@@ -41,6 +41,7 @@ def _setting(side: str, *, tp_pips: float = 10.0, sl_pips: float = 30.0) -> Sett
         tp_pips=tp_pips,
         sl_pips=sl_pips,
         research_label=None,
+        labels=[],
         market_open_check_seconds=10,
         max_concurrent_positions=1,
         kill_switch_dd_pct=-0.2,

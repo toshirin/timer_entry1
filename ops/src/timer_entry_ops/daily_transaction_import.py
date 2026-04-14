@@ -138,6 +138,7 @@ insert into {schema}.runtime_oanda_event_fact (
   setting_id,
   strategy_id,
   slot_id,
+  setting_labels,
   trade_date_local,
   market_tz,
   instrument,
@@ -158,6 +159,7 @@ values (
   :setting_id,
   :strategy_id,
   :slot_id,
+  cast(:setting_labels as jsonb),
   :trade_date_local,
   :market_tz,
   :instrument,
@@ -173,6 +175,7 @@ values (
 )
 on conflict (fact_event_id) do update set
   correlation_id = excluded.correlation_id,
+  setting_labels = excluded.setting_labels,
   decision = excluded.decision,
   reason = excluded.reason,
   blocking_trade_id = excluded.blocking_trade_id,
@@ -187,6 +190,7 @@ on conflict (fact_event_id) do update set
             text_param("setting_id", str(item.get("setting_id", ""))),
             text_param("strategy_id", str(item.get("strategy_id", ""))),
             text_param("slot_id", str(item.get("slot_id", ""))),
+            text_param("setting_labels", json.dumps(item.get("setting_labels", []), separators=(",", ":"))),
             text_param("trade_date_local", str(item.get("trade_date_local", ""))),
             text_param("market_tz", str(item.get("market_tz", ""))),
             text_param("instrument", str(item.get("instrument", ""))),
