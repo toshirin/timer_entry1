@@ -126,6 +126,12 @@ schema では、主に以下の対応を取る。
 - 代表例は米国統計時間帯である
 - 除外窓は時間帯集計の基準 timezone とは独立して扱う
 
+TODO:
+
+- lon12 など米国統計時刻と重なりやすい London slot では、英米間の DST ズレ期間に統計発表時刻の扱いが汚染される可能性がある
+- US/UK DST mismatch window を共通 `exclude_windows` として定義し、scan / canonical 1分足 / qualify tick replay で同じ trading day 除外を適用できるようにする
+- 実装時は slot 個別の ad hoc 除外ではなく、共通 calendar / session filter 層で扱う
+
 ### 4.4 監視開始
 
 - 1分足 backtest では entry バーの次バーから TP / SL 判定を始める

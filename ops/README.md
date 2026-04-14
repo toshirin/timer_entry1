@@ -157,6 +157,20 @@ docker run --rm \
 
 `daily_transaction_import` は、`ops_main.import_cursor` に `oanda_last_transaction_id` がない場合、Oanda の最新 `lastTransactionID` を取得して cursor だけを初期化します。
 その初回実行では過去 transaction は取り込まず、次回以降に `sinceid` で増分取得します。
+cursor が数字でない場合、または Oanda が `Invalid value specified for 'id'` を返した場合も、最新 `lastTransactionID` へリセットします。
+
+現在の cursor 確認:
+
+```sql
+select * from ops_main.import_cursor;
+```
+
+手動で cursor を削除し、次回 Lambda 実行で再初期化する場合:
+
+```sql
+delete from ops_main.import_cursor
+where cursor_name = 'oanda_last_transaction_id';
+```
 
 手動で cursor を指定する場合:
 

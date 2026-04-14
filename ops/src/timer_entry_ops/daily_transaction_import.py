@@ -5,7 +5,8 @@ import json
 from typing import Any
 
 from .config import OpsConfig
-from .data_api import DataApi, long_param, text_param
+from .data_api import DataApi, text_param
+from .oanda_transactions import OandaImportError
 from .oanda_transactions import fetch_latest_transaction_id, fetch_transactions_since_id
 
 
@@ -47,6 +48,31 @@ do update set cursor_value = excluded.cursor_value, updated_at = excluded.update
 """,
         [text_param("cursor_value", transaction_id)],
     )
+
+
+def _is_valid_transaction_id(value: str | None) -> bool:
+    if value is None:
+        return False
+    return value.isdecimal() and int(value) > 0
+
+
+def _is_invalid_transaction_id_error(exc: OandaImportError) -> bool:
+    return "Invalid value specified for 'id'" in str(exc)
+
+
+def _bootstrap_latest_cursor(
+    *,
+    data_api: DataApi,
+    schema: str,
+    oanda_secret: dict[str, Any],
+) -> str:
+    latest_transaction_id = fetch_latest_transaction_id(
+        access_token=str(oanda_secret["access_token"]),
+        account_id=str(oanda_secret["account_id"]),
+        environment=str(oanda_secret.get("environment", "live")),
+    )
+    _write_last_transaction_id(data_api, schema, latest_transaction_id)
+    return latest_transaction_id
 
 
 def _insert_raw_transaction(data_api: DataApi, schema: str, transaction: dict[str, Any]) -> None:
@@ -193,27 +219,40 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     imported_transactions = 0
     latest_transaction_id = last_transaction_id
     bootstrapped_cursor = False
+    reset_invalid_cursor = False
     oanda_secret = _load_secret(secrets, config.oanda_secret_name)
-    if last_transaction_id:
-        payload = fetch_transactions_since_id(
-            access_token=str(oanda_secret["access_token"]),
-            account_id=str(oanda_secret["account_id"]),
-            environment=str(oanda_secret.get("environment", "live")),
-            transaction_id=last_transaction_id,
-        )
-        for transaction in payload.get("transactions", []):
-            _insert_raw_transaction(data_api, config.main_schema, transaction)
-            imported_transactions += 1
-        latest_transaction_id = str(payload.get("lastTransactionID", last_transaction_id))
-        _write_last_transaction_id(data_api, config.main_schema, latest_transaction_id)
+    if _is_valid_transaction_id(last_transaction_id):
+        try:
+            payload = fetch_transactions_since_id(
+                access_token=str(oanda_secret["access_token"]),
+                account_id=str(oanda_secret["account_id"]),
+                environment=str(oanda_secret.get("environment", "live")),
+                transaction_id=str(last_transaction_id),
+            )
+        except OandaImportError as exc:
+            if not _is_invalid_transaction_id_error(exc):
+                raise
+            latest_transaction_id = _bootstrap_latest_cursor(
+                data_api=data_api,
+                schema=config.main_schema,
+                oanda_secret=oanda_secret,
+            )
+            reset_invalid_cursor = True
+            payload = None
+        if payload is not None:
+            for transaction in payload.get("transactions", []):
+                _insert_raw_transaction(data_api, config.main_schema, transaction)
+                imported_transactions += 1
+            latest_transaction_id = str(payload.get("lastTransactionID", last_transaction_id))
+            _write_last_transaction_id(data_api, config.main_schema, latest_transaction_id)
     else:
-        latest_transaction_id = fetch_latest_transaction_id(
-            access_token=str(oanda_secret["access_token"]),
-            account_id=str(oanda_secret["account_id"]),
-            environment=str(oanda_secret.get("environment", "live")),
+        latest_transaction_id = _bootstrap_latest_cursor(
+            data_api=data_api,
+            schema=config.main_schema,
+            oanda_secret=oanda_secret,
         )
-        _write_last_transaction_id(data_api, config.main_schema, latest_transaction_id)
         bootstrapped_cursor = True
+        reset_invalid_cursor = last_transaction_id is not None
 
     since_utc = _utc_now() - timedelta(hours=config.log_scan_lookback_hours)
     decision_items = _scan_table_since(dynamodb.Table(config.decision_log_table_name), since_utc)
@@ -226,4 +265,5 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         "decision_log_items": len(decision_items),
         "last_transaction_id": latest_transaction_id,
         "bootstrapped_cursor": bootstrapped_cursor,
+        "reset_invalid_cursor": reset_invalid_cursor,
     }

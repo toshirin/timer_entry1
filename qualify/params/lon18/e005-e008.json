@@ -1,0 +1,24 @@
+{
+  "experiment_code": "E005-E008",
+  "variant_code": null,
+  "slot_id": "lon18",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "18:20",
+    "forced_exit_clock_local": "19:20",
+    "tp_pips": 20,
+    "sl_pips": 10,
+    "filter_labels": ["le1"]
+  },
+  "pass_stability_gate": true,
+  "selected_experiments": ["E005", "E006", "E007", "E008"],
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "slippage_values": [0.0, 0.1, 0.2, 0.3],
+  "entry_delay_values": [0, 10, 30, 60],
+  "risk_fractions": [0.005, 0.0075, 0.01, 0.0125],
+  "kill_switch_dd_pct": -0.2,
+  "initial_capital_jpy": 100000,
+  "notes": "Run full E005-E008 suite on the E004-passed lon18 buy setting. One-way slippage values correspond to round-trip penalties of 2x. For SL10, center risk is 1.0% based on SL5->0.5%, so compare conservative to mildly aggressive risk points while prioritizing min_maintenance_margin_pct >= 150."
+}

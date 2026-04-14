@@ -1,0 +1,16 @@
+{
+  "experiment_code": "E003",
+  "variant_code": null,
+  "slot_id": "tyo08",
+  "side": "sell",
+  "baseline": {
+    "entry_clock_local": "08:20",
+    "forced_exit_clock_local": "09:15",
+    "tp_pips": 25,
+    "sl_pips": 12,
+    "filter_labels": ["vol_ge_p80"]
+  },
+  "forced_exit_values": ["09:05", "09:15", "09:25"],
+  "pass_stability_gate": true,
+  "notes": "Fix the E002 winner and run a small forced-exit sweep around the baseline 09:15. Use a narrow +/-10 minute comparison to test whether earlier or later liquidation improves gross/DD without expanding the problem setting."
+}

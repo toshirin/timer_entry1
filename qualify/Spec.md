@@ -237,6 +237,11 @@ E008 合格後は、params ではなく最終昇格結果 JSON を作る。
 
 runtime promotion は `qualify/params/*.json` ではなく、この最終昇格結果 JSON を入力の主経路にする。
 
+TODO:
+
+- lon12 など米国統計時刻と重なりやすい London slot では、英米間の DST ズレ期間を除外対象にするかを別途検討する
+- 実装する場合は `scan` / canonical 1分足 / E004 tick replay で同じ `exclude_windows` を共有し、qualify だけの局所対応にしない
+
 ## 11. stability gate
 
 `qualify` は `scan` から渡された stability 情報を昇格ゲートとして使う。
