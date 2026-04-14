@@ -194,9 +194,15 @@ docker run --rm \
 
 ## 取込データの現状
 
-`daily_transaction_import` の初版では、Oanda transaction を `ops_main.oanda_transactions_raw` へ raw JSON として保存し、runtime の `decision_log` を `ops_main.runtime_oanda_event_fact` へ `decision_only` として取り込みます。
+`daily_transaction_import` は、Oanda transaction を `ops_main.oanda_transactions_raw` へ raw JSON として保存し、`ops_main.oanda_transactions_normalized` へ検索用の主要列を正規化して保存します。
 
-`runtime_oanda_event_fact` には約定単価、実現損益、Oanda trade id、Oanda transaction id、units などを検索しやすい形で持つ列を用意しています。ただし現時点では、Oanda transaction の正規化、`execution_log` との突合、資金情報 snapshot の fact 化は未実装です。つまり、Oanda の実約定金額や口座資金推移をすぐ SQL / dashboard で検索する段階にはまだ達していません。
+正規化対象には `units`, `price`, `pl`, `financing`, `account_balance`, `client_ext_id`, `trade_id`, `order_id` を含めます。現在残高は Oanda transaction の約定後残高である `account_balance` を使い、`ops_main.oanda_latest_account_balance` で account ごとの最新値を参照します。
+
+```sql
+select * from ops_main.oanda_latest_account_balance;
+```
+
+runtime 側は `decision_log` と `execution_log` を取り込み、`runtime_oanda_event_fact` に補完します。Oanda transaction と runtime log は `oanda_trade_id`, `oanda_order_id`, `oanda_client_id` を使って best-effort で突合します。
 
 ## setting labels
 

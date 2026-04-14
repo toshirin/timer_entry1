@@ -266,6 +266,7 @@ runtime 側 DynamoDB log は、日次 Lambda が scan / query により取得す
 推奨属性:
 
 - `transaction_id`
+- `account_id`
 - `transaction_time`
 - `transaction_type`
 - `order_id`
@@ -276,6 +277,7 @@ runtime 側 DynamoDB log は、日次 Lambda が scan / query により取得す
 - `price`
 - `pl`
 - `financing`
+- `account_balance`
 - `reason`
 - `client_ext_id`
 - `client_ext_tag`
@@ -311,6 +313,12 @@ runtime 側 DynamoDB log は、日次 Lambda が scan / query により取得す
 - `blocking_trade_id`
 - `blocking_setting_id`
 - `units`
+- `sizing_basis`
+- `account_balance`
+- `effective_margin_ratio`
+- `estimated_margin_ratio_after_entry`
+- `margin_price`
+- `margin_price_side`
 - `requested_entry_time_local`
 - `requested_entry_time_utc`
 - `oanda_order_id`

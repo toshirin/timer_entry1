@@ -323,6 +323,19 @@ def _create_entry_trade(
                 trade_date_local=trade_date_local(now_utc, setting.market_tz),
             )
         )
+        aws_runtime.update_execution_log(
+            execution_id,
+            requested_units=sizing.requested_units,
+            sizing_basis=sizing.sizing_basis,
+            balance=account.balance,
+            effective_margin_ratio=sizing.effective_margin_ratio,
+            estimated_margin_ratio_after_entry=sizing.estimated_margin_ratio_after_entry,
+            margin_price=sizing.margin_price,
+            margin_price_side=sizing.margin_price_side,
+            requested_entry_price=requested_entry.price,
+            requested_entry_price_side=requested_entry.price_side,
+            updated_at=now_utc.isoformat(),
+        )
         order_result = oanda_client.create_market_order(
             setting=setting,
             units=sizing.requested_units,
@@ -603,7 +616,28 @@ def run_forced_exit_handler(event: dict[str, Any], context: Any) -> dict[str, An
                     updated_at=now_utc.isoformat(),
                 )
                 emit_log("SETTING_EXIT", setting_id=setting.setting_id, trade_id=trade_id, entry_trade_id=entry_trade_id, exit_price=average_close_price, exit_price_side=exit_side, exit_reason="broker_closed", pnl_jpy=realized_pl)
-                _record_decision(aws_runtime=aws_runtime, setting=setting, handler_name="forced_exit_handler", trigger_bucket=setting.trigger_bucket_exit, scheduled_local=scheduled_local, now_utc=now_utc, decision="exited", reason="broker_closed", extra={"trade_id": trade_id})
+                _record_decision(
+                    aws_runtime=aws_runtime,
+                    setting=setting,
+                    handler_name="forced_exit_handler",
+                    trigger_bucket=setting.trigger_bucket_exit,
+                    scheduled_local=scheduled_local,
+                    now_utc=now_utc,
+                    decision="exited",
+                    reason="broker_closed",
+                    extra={
+                        "trade_id": trade_id,
+                        "entry_trade_id": entry_trade_id,
+                        "exit_price": average_close_price,
+                        "exit_price_side": exit_side,
+                        "pnl_jpy": realized_pl,
+                        "pnl_pips": (
+                            pnl_pips(float(state["entry_price"]), average_close_price, setting.side)
+                            if state.get("entry_price") is not None and average_close_price is not None
+                            else None
+                        ),
+                    },
+                )
                 results.append({"setting_id": setting.setting_id, "status": "exited", "trade_id": trade_id})
                 continue
 
@@ -637,7 +671,33 @@ def run_forced_exit_handler(event: dict[str, Any], context: Any) -> dict[str, An
                 updated_at=now_utc.isoformat(),
             )
             emit_log("SETTING_EXIT", setting_id=setting.setting_id, trade_id=trade_id, entry_trade_id=entry_trade_id, exit_order_id=close_result.order_id if close_result else None, exit_price=close_result.fill_price if close_result else None, exit_price_side=exit_side, exit_reason="forced_exit")
-            _record_decision(aws_runtime=aws_runtime, setting=setting, handler_name="forced_exit_handler", trigger_bucket=setting.trigger_bucket_exit, scheduled_local=scheduled_local, now_utc=now_utc, decision="exited", reason="forced_exit", extra={"trade_id": trade_id})
+            _record_decision(
+                aws_runtime=aws_runtime,
+                setting=setting,
+                handler_name="forced_exit_handler",
+                trigger_bucket=setting.trigger_bucket_exit,
+                scheduled_local=scheduled_local,
+                now_utc=now_utc,
+                decision="exited",
+                reason="forced_exit",
+                extra={
+                    "trade_id": trade_id,
+                    "entry_trade_id": entry_trade_id,
+                    "exit_order_id": close_result.order_id if close_result else None,
+                    "exit_price": close_result.fill_price if close_result else None,
+                    "exit_price_side": exit_side,
+                    "pnl_jpy": (
+                        float(close_result.raw_response["orderFillTransaction"]["pl"])
+                        if close_result and close_result.raw_response.get("orderFillTransaction", {}).get("pl") is not None
+                        else None
+                    ),
+                    "pnl_pips": (
+                        pnl_pips(float(state["entry_price"]), float(close_result.fill_price), setting.side)
+                        if state.get("entry_price") is not None and close_result and close_result.fill_price is not None
+                        else None
+                    ),
+                },
+            )
             results.append({"setting_id": setting.setting_id, "status": "exited", "trade_id": trade_id})
         except Exception as exc:  # noqa: BLE001
             if trade_id_for_error:

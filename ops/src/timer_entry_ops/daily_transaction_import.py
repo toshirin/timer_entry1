@@ -21,6 +21,41 @@ def _load_secret(client: Any, secret_name: str) -> dict[str, Any]:
     return json.loads(response["SecretString"])
 
 
+def _json_dumps(value: Any) -> str:
+    return json.dumps(value, separators=(",", ":"))
+
+
+def _text(value: Any) -> str:
+    return "" if value is None else str(value)
+
+
+def _first_text(*values: Any) -> str:
+    for value in values:
+        if value is not None and str(value) != "":
+            return str(value)
+    return ""
+
+
+def _nested_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _first_closed_trade(transaction: dict[str, Any]) -> dict[str, Any]:
+    trades_closed = transaction.get("tradesClosed")
+    if isinstance(trades_closed, list) and trades_closed:
+        first = trades_closed[0]
+        return first if isinstance(first, dict) else {}
+    return {}
+
+
+def _trade_opened(transaction: dict[str, Any]) -> dict[str, Any]:
+    return _nested_dict(transaction.get("tradeOpened"))
+
+
+def _client_extensions(transaction: dict[str, Any]) -> dict[str, Any]:
+    return _nested_dict(transaction.get("clientExtensions"))
+
+
 def _cursor_sql(schema: str) -> str:
     return f"""
 select cursor_value
@@ -103,9 +138,104 @@ on conflict (transaction_id) do update set
             text_param("account_id", str(transaction.get("accountID", ""))),
             text_param("transaction_time", str(transaction.get("time", "1970-01-01T00:00:00Z"))),
             text_param("transaction_type", str(transaction.get("type", ""))),
-            text_param("raw_json", json.dumps(transaction, separators=(",", ":"))),
+            text_param("raw_json", _json_dumps(transaction)),
         ],
     )
+
+
+def _normalized_transaction_values(transaction: dict[str, Any]) -> dict[str, str]:
+    trade_opened = _trade_opened(transaction)
+    closed_trade = _first_closed_trade(transaction)
+    client_extensions = _client_extensions(transaction)
+    return {
+        "transaction_id": _text(transaction.get("id")),
+        "account_id": _text(transaction.get("accountID")),
+        "transaction_time": _first_text(transaction.get("time"), "1970-01-01T00:00:00Z"),
+        "transaction_type": _text(transaction.get("type")),
+        "order_id": _text(transaction.get("orderID")),
+        "trade_id": _first_text(transaction.get("tradeID"), trade_opened.get("tradeID"), closed_trade.get("tradeID")),
+        "batch_id": _text(transaction.get("batchID")),
+        "instrument": _text(transaction.get("instrument")),
+        "units": _text(transaction.get("units")),
+        "price": _text(transaction.get("price")),
+        "pl": _text(transaction.get("pl")),
+        "financing": _text(transaction.get("financing")),
+        "account_balance": _text(transaction.get("accountBalance")),
+        "reason": _text(transaction.get("reason")),
+        "client_ext_id": _first_text(client_extensions.get("id"), transaction.get("clientOrderID")),
+        "client_ext_tag": _first_text(client_extensions.get("tag"), transaction.get("clientOrderTag")),
+        "client_ext_comment": _first_text(client_extensions.get("comment"), transaction.get("clientOrderComment")),
+    }
+
+
+def _insert_normalized_transaction(data_api: DataApi, schema: str, transaction: dict[str, Any]) -> dict[str, str]:
+    values = _normalized_transaction_values(transaction)
+    data_api.execute(
+        f"""
+insert into {schema}.oanda_transactions_normalized (
+  transaction_id,
+  account_id,
+  transaction_time,
+  transaction_type,
+  order_id,
+  trade_id,
+  batch_id,
+  instrument,
+  units,
+  price,
+  pl,
+  financing,
+  account_balance,
+  reason,
+  client_ext_id,
+  client_ext_tag,
+  client_ext_comment,
+  raw_transaction_id_ref,
+  ingested_at
+)
+values (
+  :transaction_id,
+  nullif(:account_id, ''),
+  cast(:transaction_time as timestamptz),
+  :transaction_type,
+  nullif(:order_id, ''),
+  nullif(:trade_id, ''),
+  nullif(:batch_id, ''),
+  nullif(:instrument, ''),
+  nullif(:units, '')::numeric,
+  nullif(:price, '')::numeric,
+  nullif(:pl, '')::numeric,
+  nullif(:financing, '')::numeric,
+  nullif(:account_balance, '')::numeric,
+  nullif(:reason, ''),
+  nullif(:client_ext_id, ''),
+  nullif(:client_ext_tag, ''),
+  nullif(:client_ext_comment, ''),
+  :transaction_id,
+  now()
+)
+on conflict (transaction_id) do update set
+  transaction_time = excluded.transaction_time,
+  account_id = excluded.account_id,
+  transaction_type = excluded.transaction_type,
+  order_id = excluded.order_id,
+  trade_id = excluded.trade_id,
+  batch_id = excluded.batch_id,
+  instrument = excluded.instrument,
+  units = excluded.units,
+  price = excluded.price,
+  pl = excluded.pl,
+  financing = excluded.financing,
+  account_balance = excluded.account_balance,
+  reason = excluded.reason,
+  client_ext_id = excluded.client_ext_id,
+  client_ext_tag = excluded.client_ext_tag,
+  client_ext_comment = excluded.client_ext_comment,
+  ingested_at = excluded.ingested_at
+""",
+        [text_param(name, value) for name, value in values.items()],
+    )
+    return values
 
 
 def _scan_table_since(table: Any, since_utc: datetime) -> list[dict[str, Any]]:
@@ -124,6 +254,312 @@ def _scan_table_since(table: Any, since_utc: datetime) -> list[dict[str, Any]]:
         if not last_key:
             return items
         scan_kwargs["ExclusiveStartKey"] = last_key
+
+
+def _matching_oanda_where() -> str:
+    return """
+where (
+  nullif(:trade_id, '') is not null and oanda_trade_id = nullif(:trade_id, '')
+) or (
+  nullif(:order_id, '') is not null and oanda_order_id = nullif(:order_id, '')
+)
+"""
+
+
+def _upsert_oanda_only_fact(data_api: DataApi, schema: str, values: dict[str, str], *, is_exit: bool) -> None:
+    data_api.execute(
+        f"""
+insert into {schema}.runtime_oanda_event_fact (
+  fact_event_id,
+  correlation_id,
+  setting_id,
+  strategy_id,
+  slot_id,
+  setting_labels,
+  trade_date_local,
+  market_tz,
+  instrument,
+  side,
+  units,
+  oanda_order_id,
+  oanda_trade_id,
+  oanda_client_id,
+  entry_transaction_id,
+  exit_transaction_id,
+  entry_at,
+  exit_at,
+  entry_price,
+  exit_price,
+  pnl_jpy,
+  account_balance,
+  decision,
+  reason,
+  match_status,
+  status,
+  created_at,
+  updated_at,
+  synced_at
+)
+values (
+  :fact_event_id,
+  nullif(:correlation_id, ''),
+  :setting_id,
+  nullif(:strategy_id, ''),
+  nullif(:slot_id, ''),
+  '[]'::jsonb,
+  null,
+  null,
+  nullif(:instrument, ''),
+  null,
+  nullif(:units, '')::numeric,
+  nullif(:order_id, ''),
+  nullif(:trade_id, ''),
+  nullif(:client_ext_id, ''),
+  nullif(:entry_transaction_id, ''),
+  nullif(:exit_transaction_id, ''),
+  nullif(:entry_at, '')::timestamptz,
+  nullif(:exit_at, '')::timestamptz,
+  nullif(:entry_price, '')::numeric,
+  nullif(:exit_price, '')::numeric,
+  nullif(:pl, '')::numeric,
+  nullif(:account_balance, '')::numeric,
+  'oanda_only',
+  nullif(:reason, ''),
+  'oanda_only',
+  'oanda_only',
+  cast(:created_at as timestamptz),
+  cast(:updated_at as timestamptz),
+  now()
+)
+on conflict (fact_event_id) do update set
+  oanda_order_id = excluded.oanda_order_id,
+  oanda_trade_id = excluded.oanda_trade_id,
+  oanda_client_id = excluded.oanda_client_id,
+  entry_transaction_id = coalesce(excluded.entry_transaction_id, {schema}.runtime_oanda_event_fact.entry_transaction_id),
+  exit_transaction_id = coalesce(excluded.exit_transaction_id, {schema}.runtime_oanda_event_fact.exit_transaction_id),
+  entry_at = coalesce(excluded.entry_at, {schema}.runtime_oanda_event_fact.entry_at),
+  exit_at = coalesce(excluded.exit_at, {schema}.runtime_oanda_event_fact.exit_at),
+  entry_price = coalesce(excluded.entry_price, {schema}.runtime_oanda_event_fact.entry_price),
+  exit_price = coalesce(excluded.exit_price, {schema}.runtime_oanda_event_fact.exit_price),
+  pnl_jpy = coalesce(excluded.pnl_jpy, {schema}.runtime_oanda_event_fact.pnl_jpy),
+  account_balance = coalesce(excluded.account_balance, {schema}.runtime_oanda_event_fact.account_balance),
+  updated_at = excluded.updated_at,
+  synced_at = excluded.synced_at
+""",
+        [
+            text_param("fact_event_id", f"oanda#{values['transaction_id']}"),
+            text_param("correlation_id", values["trade_id"]),
+            text_param("setting_id", _first_text(values["client_ext_id"], "unknown_oanda_only")),
+            text_param("strategy_id", values["client_ext_tag"]),
+            text_param("slot_id", ""),
+            text_param("instrument", values["instrument"]),
+            text_param("units", values["units"]),
+            text_param("order_id", values["order_id"]),
+            text_param("trade_id", values["trade_id"]),
+            text_param("client_ext_id", values["client_ext_id"]),
+            text_param("entry_transaction_id", "" if is_exit else values["transaction_id"]),
+            text_param("exit_transaction_id", values["transaction_id"] if is_exit else ""),
+            text_param("entry_at", "" if is_exit else values["transaction_time"]),
+            text_param("exit_at", values["transaction_time"] if is_exit else ""),
+            text_param("entry_price", "" if is_exit else values["price"]),
+            text_param("exit_price", values["price"] if is_exit else ""),
+            text_param("pl", values["pl"] if is_exit else ""),
+            text_param("account_balance", values["account_balance"]),
+            text_param("reason", values["reason"]),
+            text_param("created_at", values["transaction_time"]),
+            text_param("updated_at", values["transaction_time"]),
+        ],
+    )
+
+
+def _update_fact_from_oanda_transaction(
+    data_api: DataApi,
+    schema: str,
+    transaction: dict[str, Any],
+    values: dict[str, str],
+) -> None:
+    is_exit = bool(_first_closed_trade(transaction)) or values["pl"] != ""
+    entry_assignments = """
+  entry_transaction_id = coalesce(entry_transaction_id, :transaction_id),
+  entry_at = coalesce(entry_at, cast(:transaction_time as timestamptz)),
+  entry_price = coalesce(entry_price, nullif(:price, '')::numeric),
+"""
+    exit_assignments = """
+  exit_transaction_id = coalesce(exit_transaction_id, :transaction_id),
+  exit_at = coalesce(exit_at, cast(:transaction_time as timestamptz)),
+  exit_price = coalesce(exit_price, nullif(:price, '')::numeric),
+  pnl_jpy = coalesce(nullif(:pl, '')::numeric, pnl_jpy),
+"""
+    response = data_api.execute(
+        f"""
+update {schema}.runtime_oanda_event_fact
+set
+  oanda_order_id = coalesce(oanda_order_id, nullif(:order_id, '')),
+  oanda_trade_id = coalesce(oanda_trade_id, nullif(:trade_id, '')),
+  oanda_client_id = coalesce(oanda_client_id, nullif(:client_ext_id, '')),
+  units = coalesce(nullif(:units, '')::numeric, units),
+  account_balance = coalesce(nullif(:account_balance, '')::numeric, account_balance),
+  {exit_assignments if is_exit else entry_assignments}
+  match_status = case when match_status in ('decision_only', 'execution_only') then 'matched' else match_status end,
+  synced_at = now()
+{_matching_oanda_where()}
+""",
+        [
+            text_param(name, values[name])
+            for name in (
+                "transaction_id",
+                "transaction_time",
+                "order_id",
+                "trade_id",
+                "client_ext_id",
+                "units",
+                "price",
+                "pl",
+                "account_balance",
+            )
+        ],
+    )
+    if int(response.get("numberOfRecordsUpdated", 0)) == 0:
+        _upsert_oanda_only_fact(data_api, schema, values, is_exit=is_exit)
+
+
+def _upsert_fact_from_execution(data_api: DataApi, schema: str, item: dict[str, Any]) -> None:
+    execution_id = str(item["execution_id"])
+    correlation_id = str(item.get("correlation_id") or item.get("trade_id") or execution_id)
+    common_params = [
+        text_param("execution_id", execution_id),
+        text_param("correlation_id", correlation_id),
+        text_param("setting_id", _text(item.get("setting_id"))),
+        text_param("strategy_id", _text(item.get("strategy_id"))),
+        text_param("slot_id", _text(item.get("slot_id"))),
+        text_param("setting_labels", _json_dumps(item.get("setting_labels", []))),
+        text_param("trade_date_local", _text(item.get("trade_date_local"))),
+        text_param("market_tz", _text(item.get("market_tz"))),
+        text_param("instrument", _text(item.get("instrument"))),
+        text_param("side", _text(item.get("side"))),
+        text_param("units", _text(item.get("units"))),
+        text_param("sizing_basis", _text(item.get("sizing_basis"))),
+        text_param("account_balance", _text(item.get("balance"))),
+        text_param("effective_margin_ratio", _text(item.get("effective_margin_ratio"))),
+        text_param("estimated_margin_ratio_after_entry", _text(item.get("estimated_margin_ratio_after_entry"))),
+        text_param("margin_price", _text(item.get("margin_price"))),
+        text_param("margin_price_side", _text(item.get("margin_price_side"))),
+        text_param("requested_entry_time_local", _text(item.get("requested_entry_time_local"))),
+        text_param("requested_entry_time_utc", _text(item.get("requested_entry_time_utc"))),
+        text_param("oanda_order_id", _text(item.get("oanda_order_id"))),
+        text_param("oanda_trade_id", _text(item.get("oanda_trade_id"))),
+        text_param("oanda_client_id", _text(item.get("oanda_client_id"))),
+        text_param("entry_at", _text(item.get("entry_filled_at"))),
+        text_param("entry_price", _text(item.get("entry_price"))),
+        text_param("status", _text(item.get("status"))),
+        text_param("created_at", _first_text(item.get("created_at"), item.get("requested_entry_time_utc"), _utc_now().isoformat())),
+        text_param("updated_at", _first_text(item.get("updated_at"), item.get("created_at"), _utc_now().isoformat())),
+    ]
+    response = data_api.execute(
+        f"""
+update {schema}.runtime_oanda_event_fact
+set
+  execution_id = :execution_id,
+  setting_labels = cast(:setting_labels as jsonb),
+  units = coalesce(nullif(:units, '')::numeric, units),
+  sizing_basis = coalesce(nullif(:sizing_basis, ''), sizing_basis),
+  account_balance = coalesce(nullif(:account_balance, '')::numeric, account_balance),
+  effective_margin_ratio = coalesce(nullif(:effective_margin_ratio, '')::numeric, effective_margin_ratio),
+  estimated_margin_ratio_after_entry = coalesce(nullif(:estimated_margin_ratio_after_entry, '')::numeric, estimated_margin_ratio_after_entry),
+  margin_price = coalesce(nullif(:margin_price, '')::numeric, margin_price),
+  margin_price_side = coalesce(nullif(:margin_price_side, ''), margin_price_side),
+  requested_entry_time_local = coalesce(nullif(:requested_entry_time_local, ''), requested_entry_time_local),
+  requested_entry_time_utc = coalesce(nullif(:requested_entry_time_utc, '')::timestamptz, requested_entry_time_utc),
+  oanda_order_id = coalesce(nullif(:oanda_order_id, ''), oanda_order_id),
+  oanda_trade_id = coalesce(nullif(:oanda_trade_id, ''), oanda_trade_id),
+  oanda_client_id = coalesce(nullif(:oanda_client_id, ''), oanda_client_id),
+  entry_at = coalesce(nullif(:entry_at, '')::timestamptz, entry_at),
+  entry_price = coalesce(nullif(:entry_price, '')::numeric, entry_price),
+  status = coalesce(nullif(:status, ''), status),
+  match_status = case when match_status = 'decision_only' then 'matched' else match_status end,
+  updated_at = cast(:updated_at as timestamptz),
+  synced_at = now()
+where correlation_id = :correlation_id
+""",
+        common_params,
+    )
+    if int(response.get("numberOfRecordsUpdated", 0)) > 0:
+        return
+    data_api.execute(
+        f"""
+insert into {schema}.runtime_oanda_event_fact (
+  fact_event_id,
+  correlation_id,
+  execution_id,
+  setting_id,
+  strategy_id,
+  slot_id,
+  setting_labels,
+  trade_date_local,
+  market_tz,
+  instrument,
+  side,
+  units,
+  sizing_basis,
+  account_balance,
+  effective_margin_ratio,
+  estimated_margin_ratio_after_entry,
+  margin_price,
+  margin_price_side,
+  requested_entry_time_local,
+  requested_entry_time_utc,
+  oanda_order_id,
+  oanda_trade_id,
+  oanda_client_id,
+  entry_at,
+  entry_price,
+  match_status,
+  status,
+  created_at,
+  updated_at,
+  synced_at
+)
+values (
+  :execution_id,
+  :correlation_id,
+  :execution_id,
+  :setting_id,
+  nullif(:strategy_id, ''),
+  nullif(:slot_id, ''),
+  cast(:setting_labels as jsonb),
+  nullif(:trade_date_local, ''),
+  nullif(:market_tz, ''),
+  nullif(:instrument, ''),
+  nullif(:side, ''),
+  nullif(:units, '')::numeric,
+  nullif(:sizing_basis, ''),
+  nullif(:account_balance, '')::numeric,
+  nullif(:effective_margin_ratio, '')::numeric,
+  nullif(:estimated_margin_ratio_after_entry, '')::numeric,
+  nullif(:margin_price, '')::numeric,
+  nullif(:margin_price_side, ''),
+  nullif(:requested_entry_time_local, ''),
+  nullif(:requested_entry_time_utc, '')::timestamptz,
+  nullif(:oanda_order_id, ''),
+  nullif(:oanda_trade_id, ''),
+  nullif(:oanda_client_id, ''),
+  nullif(:entry_at, '')::timestamptz,
+  nullif(:entry_price, '')::numeric,
+  'execution_only',
+  nullif(:status, ''),
+  cast(:created_at as timestamptz),
+  cast(:updated_at as timestamptz),
+  now()
+)
+on conflict (fact_event_id) do update set
+  correlation_id = excluded.correlation_id,
+  setting_labels = excluded.setting_labels,
+  status = excluded.status,
+  updated_at = excluded.updated_at,
+  synced_at = excluded.synced_at
+""",
+        common_params,
+    )
 
 
 def _upsert_fact_from_decision(data_api: DataApi, schema: str, item: dict[str, Any]) -> None:
@@ -147,6 +583,11 @@ insert into {schema}.runtime_oanda_event_fact (
   reason,
   blocking_trade_id,
   blocking_setting_id,
+  oanda_trade_id,
+  exit_at,
+  exit_price,
+  pnl_pips,
+  pnl_jpy,
   created_at,
   updated_at,
   synced_at,
@@ -168,6 +609,11 @@ values (
   :reason,
   :blocking_trade_id,
   :blocking_setting_id,
+  nullif(:oanda_trade_id, ''),
+  nullif(:exit_at, '')::timestamptz,
+  nullif(:exit_price, '')::numeric,
+  nullif(:pnl_pips, '')::numeric,
+  nullif(:pnl_jpy, '')::numeric,
   cast(:created_at as timestamptz),
   cast(:updated_at as timestamptz),
   now(),
@@ -180,6 +626,11 @@ on conflict (fact_event_id) do update set
   reason = excluded.reason,
   blocking_trade_id = excluded.blocking_trade_id,
   blocking_setting_id = excluded.blocking_setting_id,
+  oanda_trade_id = coalesce(excluded.oanda_trade_id, {schema}.runtime_oanda_event_fact.oanda_trade_id),
+  exit_at = coalesce(excluded.exit_at, {schema}.runtime_oanda_event_fact.exit_at),
+  exit_price = coalesce(excluded.exit_price, {schema}.runtime_oanda_event_fact.exit_price),
+  pnl_pips = coalesce(excluded.pnl_pips, {schema}.runtime_oanda_event_fact.pnl_pips),
+  pnl_jpy = coalesce(excluded.pnl_jpy, {schema}.runtime_oanda_event_fact.pnl_jpy),
   updated_at = excluded.updated_at,
   synced_at = excluded.synced_at
 """,
@@ -199,6 +650,11 @@ on conflict (fact_event_id) do update set
             text_param("reason", str(item.get("reason", ""))),
             text_param("blocking_trade_id", str(item.get("blocking_trade_id", ""))),
             text_param("blocking_setting_id", str(item.get("blocking_setting_id", ""))),
+            text_param("oanda_trade_id", _first_text(item.get("entry_trade_id"), item.get("oanda_trade_id"))),
+            text_param("exit_at", str(item.get("created_at", item.get("actual_invoked_at_utc", ""))) if item.get("decision") == "exited" else ""),
+            text_param("exit_price", _text(item.get("exit_price"))),
+            text_param("pnl_pips", _text(item.get("pnl_pips"))),
+            text_param("pnl_jpy", _text(item.get("pnl_jpy"))),
             text_param("created_at", str(item.get("created_at", item.get("actual_invoked_at_utc", _utc_now().isoformat())))),
             text_param("updated_at", str(item.get("created_at", item.get("actual_invoked_at_utc", _utc_now().isoformat())))),
         ],
@@ -221,6 +677,8 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     last_transaction_id = _read_last_transaction_id(data_api, config.main_schema)
     imported_transactions = 0
+    normalized_transactions = 0
+    normalized_transaction_values: list[tuple[dict[str, Any], dict[str, str]]] = []
     latest_transaction_id = last_transaction_id
     bootstrapped_cursor = False
     reset_invalid_cursor = False
@@ -246,7 +704,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         if payload is not None:
             for transaction in payload.get("transactions", []):
                 _insert_raw_transaction(data_api, config.main_schema, transaction)
+                normalized_values = _insert_normalized_transaction(data_api, config.main_schema, transaction)
+                normalized_transaction_values.append((transaction, normalized_values))
                 imported_transactions += 1
+                normalized_transactions += 1
             latest_transaction_id = str(payload.get("lastTransactionID", last_transaction_id))
             _write_last_transaction_id(data_api, config.main_schema, latest_transaction_id)
     else:
@@ -262,11 +723,18 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     decision_items = _scan_table_since(dynamodb.Table(config.decision_log_table_name), since_utc)
     for item in decision_items:
         _upsert_fact_from_decision(data_api, config.main_schema, item)
+    execution_items = _scan_table_since(dynamodb.Table(config.execution_log_table_name), since_utc)
+    for item in execution_items:
+        _upsert_fact_from_execution(data_api, config.main_schema, item)
+    for transaction, normalized_values in normalized_transaction_values:
+        _update_fact_from_oanda_transaction(data_api, config.main_schema, transaction, normalized_values)
 
     return {
         "status": "ok",
         "imported_transactions": imported_transactions,
+        "normalized_transactions": normalized_transactions,
         "decision_log_items": len(decision_items),
+        "execution_log_items": len(execution_items),
         "last_transaction_id": latest_transaction_id,
         "bootstrapped_cursor": bootstrapped_cursor,
         "reset_invalid_cursor": reset_invalid_cursor,
