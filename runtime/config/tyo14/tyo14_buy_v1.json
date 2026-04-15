@@ -1,0 +1,32 @@
+{
+  "setting_id": "tyo14_buy_runtime_v1",
+  "enabled": true,
+  "strategy_id": "timed_entry_buy",
+  "slot_id": "tyo14",
+  "market_session": "tokyo",
+  "market_tz": "Asia/Tokyo",
+  "instrument": "USD_JPY",
+  "side": "buy",
+  "entry_clock_local": "14:10",
+  "forced_exit_clock_local": "15:05",
+  "trigger_bucket_entry": "ENTRY#Asia/Tokyo#1410",
+  "trigger_bucket_exit": "EXIT#Asia/Tokyo#1505",
+  "fixed_units": 10,
+  "margin_ratio_target": null,
+  "size_scale_pct": null,
+  "tp_pips": 15.0,
+  "sl_pips": 25.0,
+  "research_label": "tyo14_buy_v1",
+  "labels": [
+    "fix10",
+    "watch"
+  ],
+  "market_open_check_seconds": 10,
+  "max_concurrent_positions": 1,
+  "kill_switch_dd_pct": -0.2,
+  "kill_switch_reference_balance_jpy": 100000.0,
+  "min_maintenance_margin_pct": 193.290201,
+  "filter_spec_json": "[{\"filter_type\":\"pre_open_slope\",\"operator\":\"le\",\"threshold\":6.0,\"lookback_start_min\":55,\"lookback_end_min\":5}]",
+  "execution_spec_json": "{\"source_result_type\":\"qualify_promotion_result\",\"source_result_id\":\"tyo14_buy_v1\",\"source_params_files\":{\"E004\":\"qualify/params/tyo14/e004.json\",\"E005-E008\":\"qualify/params/tyo14/e005-e008.json\"},\"source_output_dirs\":{\"E004\":\"qualify/out/tyo14/E004/latest\",\"E005-E008\":\"qualify/out/tyo14\"},\"selected_risk_fraction\":0.02,\"final_equity_jpy\":123767.479007,\"annualized_pips\":49.966667,\"cagr\":0.036178,\"trade_rate\":0.67106,\"gross_pips\":361.1,\"in_gross_pips\":164.6,\"out_gross_pips\":196.5,\"win_rate\":0.5236,\"evidence\":{\"E004\":{\"comparison_label\":\"buy1410_le6_tp15_sl25_fx1505\",\"gross_pips\":361.1,\"minute_gross_pips\":436.53,\"delta_gross_pips\":-75.43,\"in_gross_pips\":164.6,\"out_gross_pips\":196.5,\"profit_factor\":1.0742,\"minute_profit_factor\":1.0898,\"max_dd_pips\":-400.7,\"minute_max_dd_pips\":-392.89,\"annualized_pips\":51.59,\"tick_pass_positive_inout_gate\":true,\"tick_not_found_count\":0,\"forced_exit_missing_count\":0,\"entry_after_forced_exit_count\":0,\"same_bar_unresolved_count\":0},\"E005\":{\"max_one_way_slip_pips_passed\":0.1,\"max_round_trip_slip_pips_passed\":0.2,\"slippage_sweep\":[{\"slip_pips\":0.0,\"round_trip_slip_pips\":0.0,\"gross_pips\":196.5,\"annualized_pips\":65.5,\"profit_factor\":1.074923,\"max_dd_pips\":-400.7,\"win_rate\":0.528169},{\"slip_pips\":0.1,\"round_trip_slip_pips\":0.2,\"gross_pips\":100.8,\"annualized_pips\":33.6,\"profit_factor\":1.037725,\"max_dd_pips\":-438.5,\"win_rate\":0.522887},{\"slip_pips\":0.2,\"round_trip_slip_pips\":0.4,\"gross_pips\":-34.4,\"annualized_pips\":-11.466667,\"profit_factor\":0.987467,\"max_dd_pips\":-503.7,\"win_rate\":0.515845},{\"slip_pips\":0.3,\"round_trip_slip_pips\":0.6,\"gross_pips\":-141.3,\"annualized_pips\":-47.1,\"profit_factor\":0.949519,\"max_dd_pips\":-568.5,\"win_rate\":0.505282}]},\"E006\":{\"walk_forward_test_years_passed\":4,\"walk_forward_test_years_total\":5,\"holdout_out_gross_pips\":196.5,\"holdout_out_profit_factor\":1.074923,\"worst_test_year\":2024,\"worst_test_out_pnl\":-274.8,\"worst_test_pf\":0.7423,\"worst_test_max_dd_pips\":-353.1,\"notes\":\"Walk-forward/holdout accepted with a notable 2024 breakdown.\"},\"E007\":{\"selected_risk_fraction\":0.02,\"kill_switch_dd_pct\":-0.2,\"min_maintenance_margin_pct\":193.290201,\"annualized_pips\":49.966667,\"trade_rate\":0.67106,\"win_rate\":0.522095,\"cagr\":0.036178,\"stop_triggered\":true,\"risk_sweep\":[{\"risk_fraction\":0.015,\"final_equity_jpy\":111165.149284,\"total_return_pct\":0.111651,\"cagr\":0.017798,\"annualized_pips\":34.15,\"trade_rate\":0.691928,\"win_rate\":0.523016,\"max_dd_pct\":-0.210428,\"min_maintenance_margin_pct\":257.720268,\"maintenance_below_150_count\":0,\"maintenance_below_100_count\":0,\"stop_triggered\":true},{\"risk_fraction\":0.02,\"final_equity_jpy\":123767.479007,\"total_return_pct\":0.237675,\"cagr\":0.036178,\"annualized_pips\":49.966667,\"trade_rate\":0.67106,\"win_rate\":0.522095,\"max_dd_pct\":-0.211331,\"min_maintenance_margin_pct\":193.290201,\"maintenance_below_150_count\":0,\"maintenance_below_100_count\":0,\"stop_triggered\":true},{\"risk_fraction\":0.025,\"final_equity_jpy\":139512.658393,\"total_return_pct\":0.395127,\"cagr\":0.057066,\"annualized_pips\":62.25,\"trade_rate\":0.662273,\"win_rate\":0.523217,\"max_dd_pct\":-0.200233,\"min_maintenance_margin_pct\":158.061783,\"maintenance_below_150_count\":0,\"maintenance_below_100_count\":0,\"stop_triggered\":true},{\"risk_fraction\":0.035,\"final_equity_jpy\":87251.532501,\"total_return_pct\":-0.127485,\"cagr\":-0.065915,\"annualized_pips\":-43.55,\"trade_rate\":0.239978,\"win_rate\":0.489703,\"max_dd_pct\":-0.208226,\"min_maintenance_margin_pct\":159.477221,\"maintenance_below_150_count\":0,\"maintenance_below_100_count\":0,\"stop_triggered\":true}]},\"E008\":{\"max_entry_delay_seconds_passed\":30,\"entry_delay_sweep\":[{\"entry_delay_seconds\":0,\"gross_pips\":196.5,\"annualized_pips\":65.5,\"profit_factor\":1.074923,\"max_dd_pips\":-400.7,\"win_rate\":0.528169},{\"entry_delay_seconds\":10,\"gross_pips\":67.8,\"annualized_pips\":22.6,\"profit_factor\":1.025485,\"max_dd_pips\":-458.0,\"win_rate\":0.521127},{\"entry_delay_seconds\":30,\"gross_pips\":156.9,\"annualized_pips\":52.3,\"profit_factor\":1.059499,\"max_dd_pips\":-381.1,\"win_rate\":0.521127},{\"entry_delay_seconds\":60,\"gross_pips\":76.5,\"annualized_pips\":25.5,\"profit_factor\":1.028668,\"max_dd_pips\":-414.1,\"win_rate\":0.512324}]}},\"pre_range_threshold\":null,\"source_file\":\"qualify/results/tyo14/tyo14_buy_v1.json\"}",
+  "notes": "Runtime promotion approved for tyo14 buy with monitoring posture rather than core allocation. E004-E008 passed, but execution robustness is limited: one-way slip tolerance is only up to 0.1 pips, 2024 walk-forward breakdown was material, all E007 risk points triggered the DD kill-switch, and entry-delay sensitivity is non-monotonic. Selected risk_fraction is 0.02 as the best balance between meaningful return and maintenance-margin safety."
+}

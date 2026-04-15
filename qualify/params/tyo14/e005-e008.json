@@ -17,7 +17,7 @@
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 10, 30, 60],
-  "risk_fractions": [0.015, 0.025, 0.035],
+  "risk_fractions": [0.015, 0.02, 0.025, 0.035],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
   "notes": "E004通過settingを固定し、E005-E008を一括実行する。E005のslip_pipsはone-way表示で、実質往復penaltyは2*slip_pips。E007の中心riskはSL25に対して2.5%で、1.5%/2.5%/3.5%の安全側比較を行う。"

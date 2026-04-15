@@ -132,6 +132,8 @@ where account_id is not null
   and account_balance is not null
 order by account_id, transaction_time desc, transaction_id desc;
 
+drop view if exists ops_main.daily_setting_summary;
+
 create or replace view ops_main.daily_setting_summary as
 select
   setting_id,
@@ -170,6 +172,8 @@ alter table ops_demo.runtime_oanda_event_fact
   add column if not exists estimated_margin_ratio_after_entry numeric,
   add column if not exists margin_price numeric,
   add column if not exists margin_price_side text;
+
+drop view if exists ops_demo.daily_setting_summary;
 
 create or replace view ops_demo.daily_setting_summary as
 select

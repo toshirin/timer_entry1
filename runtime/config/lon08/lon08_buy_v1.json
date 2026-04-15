@@ -7,6 +7,7 @@
   "market_tz": "Europe/London",
   "instrument": "USD_JPY",
   "side": "buy",
+  "labels": ["fix10"],
   "entry_clock_local": "08:50",
   "forced_exit_clock_local": "09:35",
   "trigger_bucket_entry": "ENTRY#Europe/London#0850",

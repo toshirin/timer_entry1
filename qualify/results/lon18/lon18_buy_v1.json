@@ -1,0 +1,265 @@
+{
+  "result_type": "qualify_promotion_result",
+  "schema_version": 1,
+  "result_id": "lon18_buy_v1",
+  "slot_id": "lon18",
+  "side": "buy",
+  "labels": ["fix10", "watch"],
+  "market_tz": "Europe/London",
+  "entry_clock_local": "18:20",
+  "forced_exit_clock_local": "19:20",
+  "tp_pips": 20,
+  "sl_pips": 10,
+  "filter_labels": ["le1"],
+  "pass_stability_gate": true,
+  "e004_passed": true,
+  "e005_passed": true,
+  "e006_passed": true,
+  "e007_passed": true,
+  "e008_passed": true,
+  "approved_for_runtime": true,
+  "selected_risk_fraction": 0.01,
+  "selected_entry_delay_seconds": 30,
+  "kill_switch_dd_pct": -0.2,
+  "min_maintenance_margin_pct": 154.604429,
+  "initial_capital_jpy": 100000,
+  "final_equity_jpy": 189037.816956,
+  "annualized_pips": 84.1375,
+  "cagr": 0.082851,
+  "trade_rate": 0.560506,
+  "gross_pips": 678.8,
+  "in_gross_pips": 330.3,
+  "out_gross_pips": 348.5,
+  "win_rate": 0.520118,
+  "source_params_files": {
+    "E004": "qualify/params/lon18/e004.json",
+    "E005-E008": "qualify/params/lon18/e005-e008.json"
+  },
+  "source_output_dirs": {
+    "E004": "qualify/out/lon18/E004/latest",
+    "E005-E008": "qualify/out/lon18"
+  },
+  "evidence": {
+    "E004": {
+      "trade_count": 1019,
+      "gross_pips": 673.1,
+      "minute_gross_pips": 726.882629,
+      "delta_gross_pips": -53.782629,
+      "in_gross_pips": 330.3,
+      "out_gross_pips": 348.5,
+      "profit_factor": 1.230348,
+      "max_dd_pips": -124.8,
+      "annualized_pips": 84.1375,
+      "tick_pass_positive_inout_gate": true,
+      "tick_not_found_count": 0,
+      "forced_exit_missing_count": 0,
+      "entry_after_forced_exit_count": 0
+    },
+    "E005": {
+      "max_one_way_slip_pips_passed": 0.2,
+      "max_round_trip_slip_pips_passed": 0.4,
+      "slippage_sweep": [
+        {
+          "slip_pips": 0.0,
+          "round_trip_slip_pips": 0.0,
+          "gross_pips": 348.5,
+          "annualized_pips": 116.166667,
+          "profit_factor": 1.237933,
+          "max_dd_pips": -125.2,
+          "win_rate": 0.529412
+        },
+        {
+          "slip_pips": 0.1,
+          "round_trip_slip_pips": 0.2,
+          "gross_pips": 237.5,
+          "annualized_pips": 79.166667,
+          "profit_factor": 1.155932,
+          "max_dd_pips": -149.0,
+          "win_rate": 0.522353
+        },
+        {
+          "slip_pips": 0.2,
+          "round_trip_slip_pips": 0.4,
+          "gross_pips": 155.4,
+          "annualized_pips": 51.8,
+          "profit_factor": 1.099424,
+          "max_dd_pips": -163.4,
+          "win_rate": 0.501176
+        },
+        {
+          "slip_pips": 0.3,
+          "round_trip_slip_pips": 0.6,
+          "gross_pips": 38.9,
+          "annualized_pips": 12.966667,
+          "profit_factor": 1.023995,
+          "max_dd_pips": -197.1,
+          "win_rate": 0.487059
+        }
+      ]
+    },
+    "E006": {
+      "walk_forward_summary": [
+        {
+          "train_years": "2019-2020",
+          "test_year": 2021,
+          "trade_count": 145,
+          "out_pnl": 46.9,
+          "pf": 1.178395,
+          "max_dd_pips": -41.9,
+          "continuous_loss_period": 5,
+          "win_rate": 0.503448,
+          "annualized_pips": 46.9
+        },
+        {
+          "train_years": "2020-2021",
+          "test_year": 2022,
+          "trade_count": 138,
+          "out_pnl": 241.7,
+          "pf": 1.552205,
+          "max_dd_pips": -58.8,
+          "continuous_loss_period": 6,
+          "win_rate": 0.514493,
+          "annualized_pips": 241.7
+        },
+        {
+          "train_years": "2021-2022",
+          "test_year": 2023,
+          "trade_count": 136,
+          "out_pnl": 239.4,
+          "pf": 1.635857,
+          "max_dd_pips": -83.6,
+          "continuous_loss_period": 7,
+          "win_rate": 0.544118,
+          "annualized_pips": 239.4
+        },
+        {
+          "train_years": "2022-2023",
+          "test_year": 2024,
+          "trade_count": 152,
+          "out_pnl": 112.8,
+          "pf": 1.208657,
+          "max_dd_pips": -73.8,
+          "continuous_loss_period": 4,
+          "win_rate": 0.539474,
+          "annualized_pips": 112.8
+        },
+        {
+          "train_years": "2023-2024",
+          "test_year": 2025,
+          "trade_count": 137,
+          "out_pnl": -3.7,
+          "pf": 0.993243,
+          "max_dd_pips": -125.2,
+          "continuous_loss_period": 5,
+          "win_rate": 0.50365,
+          "annualized_pips": -3.7
+        }
+      ],
+      "summary": "Walk-forward accepted with 4 positive test years out of 5; 2025 holdout was weak but near flat."
+    },
+    "E007": {
+      "min_maintenance_margin_pct": 154.604429,
+      "annualized_pips": 84.1375,
+      "trade_rate": 0.560506,
+      "win_rate": 0.520118,
+      "cagr": 0.082851,
+      "risk_sweep": [
+        {
+          "risk_fraction": 0.005,
+          "final_equity_jpy": 138743.268282,
+          "total_return_pct": 0.387433,
+          "cagr": 0.041781,
+          "annualized_pips": 84.1375,
+          "trade_rate": 0.560506,
+          "win_rate": 0.520118,
+          "max_dd_pct": -0.060962,
+          "min_maintenance_margin_pct": 309.208858,
+          "maintenance_below_150_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false
+        },
+        {
+          "risk_fraction": 0.0075,
+          "final_equity_jpy": 162316.428633,
+          "total_return_pct": 0.623164,
+          "cagr": 0.062418,
+          "annualized_pips": 84.1375,
+          "trade_rate": 0.560506,
+          "win_rate": 0.520118,
+          "max_dd_pct": -0.090239,
+          "min_maintenance_margin_pct": 206.139239,
+          "maintenance_below_150_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false
+        },
+        {
+          "risk_fraction": 0.01,
+          "final_equity_jpy": 189037.816956,
+          "total_return_pct": 0.890378,
+          "cagr": 0.082851,
+          "annualized_pips": 84.1375,
+          "trade_rate": 0.560506,
+          "win_rate": 0.520118,
+          "max_dd_pct": -0.118736,
+          "min_maintenance_margin_pct": 154.604429,
+          "maintenance_below_150_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false
+        },
+        {
+          "risk_fraction": 0.0125,
+          "final_equity_jpy": 219166.775435,
+          "total_return_pct": 1.191668,
+          "cagr": 0.103054,
+          "annualized_pips": 84.1375,
+          "trade_rate": 0.560506,
+          "win_rate": 0.520118,
+          "max_dd_pct": -0.14647,
+          "min_maintenance_margin_pct": 123.683543,
+          "maintenance_below_150_count": 471,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false
+        }
+      ]
+    },
+    "E008": {
+      "max_entry_delay_seconds_passed": 60,
+      "selected_entry_delay_seconds": 30,
+      "entry_delay_sweep": [
+        {
+          "entry_delay_seconds": 0,
+          "gross_pips": 348.5,
+          "annualized_pips": 116.166667,
+          "profit_factor": 1.237933,
+          "max_dd_pips": -125.2,
+          "win_rate": 0.529412
+        },
+        {
+          "entry_delay_seconds": 10,
+          "gross_pips": 274.8,
+          "annualized_pips": 91.6,
+          "profit_factor": 1.184219,
+          "max_dd_pips": -124.8,
+          "win_rate": 0.515294
+        },
+        {
+          "entry_delay_seconds": 30,
+          "gross_pips": 398.7,
+          "annualized_pips": 132.9,
+          "profit_factor": 1.270948,
+          "max_dd_pips": -129.2,
+          "win_rate": 0.527059
+        },
+        {
+          "entry_delay_seconds": 60,
+          "gross_pips": 361.1,
+          "annualized_pips": 120.366667,
+          "profit_factor": 1.243444,
+          "max_dd_pips": -119.8,
+          "win_rate": 0.512941
+        }
+      ]
+    }
+  },
+  "notes": "Promote lon18 buy setting to runtime. E004 execution integrity passed, E005 retained positive edge through one-way 0.2 pips, E006 walk-forward was acceptable though 2025 was weak, E007 selected 1.0% risk as the highest-return choice that still kept minimum maintenance margin above 150%, and E008 improved performance with a 30-second entry delay."
+}

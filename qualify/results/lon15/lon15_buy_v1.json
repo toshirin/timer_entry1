@@ -4,6 +4,7 @@
   "result_id": "lon15_buy_v1",
   "slot_id": "lon15",
   "side": "buy",
+  "labels": ["fix10"],
   "market_tz": "Europe/London",
   "entry_clock_local": "15:40",
   "forced_exit_clock_local": "16:45",
