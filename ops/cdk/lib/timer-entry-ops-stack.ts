@@ -28,6 +28,10 @@ export class TimerEntryOpsStack extends Stack {
     const executionLogTableName = process.env.EXECUTION_LOG_TABLE_NAME ?? "timer-entry-runtime-execution-log";
     const importScheduleExpression = process.env.OPS_IMPORT_SCHEDULE_EXPRESSION ?? "cron(15 22 * * ? *)";
     const auroraPostgresVersion = process.env.OPS_AURORA_POSTGRES_VERSION ?? "16.4";
+    const serverlessMinCapacity = numberEnv("OPS_AURORA_MIN_ACU", 0);
+    const serverlessMaxCapacity = numberEnv("OPS_AURORA_MAX_ACU", 2);
+    const serverlessAutoPauseMinutes = numberEnv("OPS_AURORA_AUTO_PAUSE_MINUTES", 5);
+    const dailyImportTimeoutMinutes = numberEnv("OPS_DAILY_IMPORT_TIMEOUT_MINUTES", 10);
     const artifactDir = path.resolve(__dirname, "../../dist");
 
     const vpc = new ec2.Vpc(this, "OpsVpc", {
@@ -52,8 +56,9 @@ export class TimerEntryOpsStack extends Stack {
         autoMinorVersionUpgrade: true,
         publiclyAccessible: false,
       }),
-      serverlessV2MinCapacity: 0.5,
-      serverlessV2MaxCapacity: 2,
+      serverlessV2MinCapacity: serverlessMinCapacity,
+      serverlessV2MaxCapacity: serverlessMaxCapacity,
+      serverlessV2AutoPauseDuration: Duration.minutes(serverlessAutoPauseMinutes),
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       deletionProtection: true,
@@ -83,7 +88,7 @@ export class TimerEntryOpsStack extends Stack {
       architecture: lambda.Architecture.X86_64,
       handler: "timer_entry_ops.daily_transaction_import.lambda_handler",
       code: lambda.Code.fromAsset(path.join(artifactDir, "daily_transaction_import.zip")),
-      timeout: Duration.minutes(5),
+      timeout: Duration.minutes(dailyImportTimeoutMinutes),
       memorySize: 512,
       environment: {
         OPS_DB_CLUSTER_ARN: cluster.clusterArn,
@@ -117,6 +122,18 @@ export class TimerEntryOpsStack extends Stack {
     new CfnOutput(this, "OpsDatabaseName", { value: databaseName });
     new CfnOutput(this, "DailyImportFunctionName", { value: dailyImport.functionName });
   }
+}
+
+function numberEnv(name: string, defaultValue: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") {
+    return defaultValue;
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    throw new Error(`${name} must be a number: ${raw}`);
+  }
+  return value;
 }
 
 function auroraPostgresEngineVersion(version: string): rds.AuroraPostgresEngineVersion {

@@ -132,7 +132,9 @@ runtime log 同士の紐付けには、可能であれば `decision_log` と `ex
 
 ### 6.3 Serverless 前提
 
-- Aurora は auto-pause を前提とする
+- Aurora は `min ACU 0` と auto-pause を前提とする
+- auto-pause の初期値は 5 分とし、日次 Lambda とローカル Web の初回アクセス時 resume 待ちは許容する
+- 日次 Lambda の timeout は Aurora resume / cold start を見込んだ値にする
 - ローカル Web は必要時のみ起動する
 - 初回アクセス時の resume 待ち時間は許容する
 - 常時接続やコネクション保持を前提にしない
