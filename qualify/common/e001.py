@@ -14,6 +14,7 @@ from timer_entry.features import compute_feature_row
 from timer_entry.filters import (
     parse_opposite_right_dominance_filter_label,
     parse_right_dominance_filter_label,
+    parse_trend_ratio_filter_label,
     parse_volatility_filter_label,
 )
 from timer_entry.minute_data import MinuteDataSummary, TradingDay, load_trading_days
@@ -118,8 +119,9 @@ def _resolve_threshold_metadata(
     if not feature_rows:
         if needs_pre_range:
             raise ValueError("feature rows are required to resolve pre_range percentile thresholds")
-        return metadata
-    feature_df = pd.DataFrame(feature_rows)
+        feature_df = pd.DataFrame()
+    else:
+        feature_df = pd.DataFrame(feature_rows)
     values = (
         pd.to_numeric(feature_df["pre_range_pips"], errors="coerce").dropna()
         if needs_pre_range and "pre_range_pips" in feature_df.columns
@@ -145,6 +147,8 @@ def _resolve_threshold_metadata(
         right_dom_spec = parse_right_dominance_filter_label(label)
         opp_right_dom_spec = parse_opposite_right_dominance_filter_label(label)
         threshold_spec = right_dom_spec or opp_right_dom_spec
+        if threshold_spec is None:
+            threshold_spec = parse_trend_ratio_filter_label(label)
         if threshold_spec is None:
             continue
         _, threshold = threshold_spec

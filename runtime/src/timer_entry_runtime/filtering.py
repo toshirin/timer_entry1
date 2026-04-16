@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import math
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -141,12 +142,12 @@ def _trend_ratio(spec: dict[str, Any], local_map: dict[datetime, Candle], entry_
     candles = _window(local_map, entry_dt, start_min, end_min)
     net_move = abs(end_candle.bid_close - start_candle.bid_open) / PIP_SIZE
     path_range = (max(c.bid_high for c in candles) - min(c.bid_low for c in candles)) / PIP_SIZE
-    ratio = net_move / path_range if path_range > 0 else 0.0
+    ratio = net_move / path_range if path_range > 0 else math.nan
     operator = str(spec.get("operator", "ge"))
     threshold = float(spec.get("threshold", 0.5))
     return FilterDecision(
         filter_type="trend_ratio",
-        passed=_compare(operator, ratio, threshold),
+        passed=path_range > 0 and _compare(operator, ratio, threshold),
         values={"trend_ratio": ratio, "net_move_pips": net_move, "path_range_pips": path_range, "operator": operator, "threshold": threshold},
     )
 

@@ -311,6 +311,11 @@ E001 で percentile label を使う場合、対象実験期間全体の `feature
 - `range_lt_0_3`
   - `trend_ratio < 0.3`
 
+qualify では `range_lt_0_20` のような下側閾値 sweep label を追加してよい。
+`range_lt_0_25` は `trend_ratio < 0.25` を意味し、label の小数表現は `0_25` のように underscore で表す。
+`range_lt_0_3` は後方互換 label として維持する。
+出力には label と実際の threshold の両方を残す。
+
 ## 8. filter 評価の標準化
 
 filter は runtime でも scan / qualify でも同じ評価器を使う。

@@ -52,6 +52,15 @@ def test_e001_resolves_pre_range_percentile_threshold_metadata() -> None:
     assert metadata["vol_ge_p70"]["resolved_pre_range_threshold"] == 38.0
 
 
+def test_e001_resolves_trend_ratio_label_threshold_metadata() -> None:
+    metadata = _resolve_threshold_metadata(("range_lt_0_20", "range_lt_0_35"), [])
+    assert metadata["range_lt_0_20"]["resolved_threshold"] == 0.2
+    assert metadata["range_lt_0_20"]["resolved_pre_range_threshold"] is None
+    assert metadata["range_lt_0_20"]["resolved_percentile"] is None
+    assert metadata["range_lt_0_20"]["threshold_source"] == "label_threshold"
+    assert metadata["range_lt_0_35"]["resolved_threshold"] == 0.35
+
+
 def test_e002_params_build_strategy_setting_with_baseline_filter() -> None:
     params = E002Params.from_dict(
         {

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -161,6 +162,48 @@ def test_runtime_filter_supports_opposite_sign_right_strength_balance() -> None:
     assert decisions[0].passed is True
     assert decisions[0].values["opposite_sign"] is True
     assert round(float(decisions[0].values["right_strength_balance_pips"]), 6) == 4.0
+
+
+def test_runtime_trend_ratio_zero_range_does_not_pass_range_lt_filter() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "filter_spec_json": json.dumps(
+                [
+                    {
+                        "filter_type": "trend_ratio",
+                        "operator": "lt",
+                        "threshold": 0.25,
+                        "lookback_start_min": 55,
+                        "lookback_end_min": 5,
+                    }
+                ],
+                separators=(",", ":"),
+            ),
+        }
+    )
+    start_utc = datetime(2024, 1, 1, 23, 30, tzinfo=timezone.utc)
+    candles = [
+        Candle(
+            time_utc=start_utc + timedelta(minutes=offset),
+            bid_open=150.00,
+            bid_high=150.00,
+            bid_low=150.00,
+            bid_close=150.00,
+            complete=True,
+        )
+        for offset in range(51)
+    ]
+
+    decisions = evaluate_filters(
+        setting=setting,
+        now_utc=datetime(2024, 1, 2, 0, 25, tzinfo=timezone.utc),
+        candles=candles,
+    )
+
+    assert decisions[0].passed is False
+    assert math.isnan(float(decisions[0].values["trend_ratio"]))
+    assert decisions[0].values["threshold"] == 0.25
 
 
 def test_tp_sl_failure_keeps_trade_state_entered_for_forced_exit() -> None:
