@@ -1,0 +1,31 @@
+{
+  "setting_id": "lon11_buy_runtime_v1",
+  "enabled": true,
+  "strategy_id": "timed_entry_buy",
+  "slot_id": "lon11",
+  "market_session": "london",
+  "market_tz": "Europe/London",
+  "instrument": "USD_JPY",
+  "side": "buy",
+  "entry_clock_local": "11:05",
+  "forced_exit_clock_local": "12:10",
+  "trigger_bucket_entry": "ENTRY#Europe/London#1105",
+  "trigger_bucket_exit": "EXIT#Europe/London#1210",
+  "fixed_units": 10,
+  "margin_ratio_target": null,
+  "size_scale_pct": null,
+  "tp_pips": 15.0,
+  "sl_pips": 30.0,
+  "research_label": "lon11_buy_v1",
+  "labels": [
+    "fix10"
+  ],
+  "market_open_check_seconds": 10,
+  "max_concurrent_positions": 1,
+  "kill_switch_dd_pct": -0.2,
+  "kill_switch_reference_balance_jpy": 100000.0,
+  "min_maintenance_margin_pct": 186.649578,
+  "filter_spec_json": "[{\"filter_type\":\"pre_range_regime\",\"operator\":\"ge\",\"threshold\":14.499664306640625,\"lookback_start_min\":55,\"lookback_end_min\":5}]",
+  "execution_spec_json": "{\"source_result_type\":\"qualify_promotion_result\",\"source_result_id\":\"lon11_buy_v1\",\"source_params_files\":{\"E004\":\"qualify/params/lon11/e004.json\",\"E005-E008\":\"qualify/params/lon11/e005-e008.json\"},\"source_output_dirs\":{\"E004\":\"qualify/out/lon11/E004/latest\",\"E005-E008\":\"qualify/out/lon11\"},\"selected_risk_fraction\":0.025,\"final_equity_jpy\":166771.683397,\"annualized_pips\":96.471429,\"cagr\":0.075801,\"trade_rate\":0.40044,\"gross_pips\":675.3,\"in_gross_pips\":228.4,\"out_gross_pips\":446.9,\"win_rate\":0.56044,\"evidence\":{\"E004\":{\"trade_count\":728,\"gross_pips\":675.3,\"minute_gross_pips\":666.29776,\"delta_gross_pips\":9.00224,\"profit_factor\":1.16877,\"minute_profit_factor\":1.165684,\"max_dd_pips\":-254.6,\"minute_max_dd_pips\":-273.800049,\"annualized_pips\":96.471429,\"minute_annualized_pips\":95.185394,\"tick_pass_positive_inout_gate\":true,\"tick_not_found_count\":0,\"forced_exit_missing_count\":0,\"entry_after_forced_exit_count\":0,\"same_bar_conflict_count\":0,\"same_bar_unresolved_count\":0},\"E005\":{\"max_one_way_slip_pips_passed\":0.3,\"max_round_trip_slip_pips_passed\":0.6,\"slippage_sweep\":[{\"slip_pips\":0.0,\"round_trip_slip_pips\":0.0,\"gross_pips\":675.3,\"annualized_pips\":148.966667,\"profit_factor\":1.164999,\"max_dd_pips\":-254.6,\"win_rate\":0.56044},{\"slip_pips\":0.1,\"round_trip_slip_pips\":0.2,\"gross_pips\":495.1,\"annualized_pips\":112.2,\"profit_factor\":1.120287,\"max_dd_pips\":-302.6,\"win_rate\":0.556319},{\"slip_pips\":0.2,\"round_trip_slip_pips\":0.4,\"gross_pips\":330.9,\"annualized_pips\":76.8,\"profit_factor\":1.079263,\"max_dd_pips\":-330.7,\"win_rate\":0.549451},{\"slip_pips\":0.3,\"round_trip_slip_pips\":0.6,\"gross_pips\":196.7,\"annualized_pips\":47.233333,\"profit_factor\":1.046398,\"max_dd_pips\":-346.3,\"win_rate\":0.543956}]},\"E006\":{\"walk_forward_test_total_out_pnl\":668.5,\"walk_forward_positive_tests\":3,\"walk_forward_negative_tests\":2,\"holdout_gross_pips\":446.9,\"holdout_profit_factor\":1.164999,\"holdout_max_dd_pips\":-254.6,\"weak_test_years\":[{\"test_year\":2021,\"out_pnl\":-2.1,\"pf\":0.9814,\"max_dd_pips\":-43.8},{\"test_year\":2025,\"out_pnl\":-16.9,\"pf\":0.9839,\"max_dd_pips\":-235.4}]},\"E007\":{\"min_maintenance_margin_pct\":186.649578,\"annualized_pips\":96.471429,\"trade_rate\":0.40044,\"win_rate\":0.56044,\"cagr\":0.075801,\"risk_sweep\":[{\"risk_fraction\":0.015,\"final_equity_jpy\":137605.027589,\"total_return_pct\":0.37605,\"cagr\":0.046658,\"annualized_pips\":96.471429,\"trade_rate\":0.40044,\"win_rate\":0.56044,\"max_dd_pct\":-0.122109,\"min_maintenance_margin_pct\":311.08263,\"maintenance_below_150_count\":0,\"maintenance_below_100_count\":0,\"stop_triggered\":false},{\"risk_fraction\":0.02,\"final_equity_jpy\":151801.164834,\"total_return_pct\":0.518012,\"cagr\":0.061442,\"annualized_pips\":96.471429,\"trade_rate\":0.40044,\"win_rate\":0.56044,\"max_dd_pct\":-0.160506,\"min_maintenance_margin_pct\":233.311972,\"maintenance_below_150_count\":0,\"maintenance_below_100_count\":0,\"stop_triggered\":false},{\"risk_fraction\":0.025,\"final_equity_jpy\":166771.683397,\"total_return_pct\":0.667717,\"cagr\":0.075801,\"annualized_pips\":96.471429,\"trade_rate\":0.40044,\"win_rate\":0.56044,\"max_dd_pct\":-0.197756,\"min_maintenance_margin_pct\":186.649578,\"maintenance_below_150_count\":0,\"maintenance_below_100_count\":0,\"stop_triggered\":false},{\"risk_fraction\":0.03,\"final_equity_jpy\":98753.954373,\"total_return_pct\":-0.01246,\"cagr\":-0.002505,\"annualized_pips\":3.66,\"trade_rate\":0.166667,\"win_rate\":0.524752,\"max_dd_pct\":-0.209583,\"min_maintenance_margin_pct\":167.360656,\"maintenance_below_150_count\":0,\"maintenance_below_100_count\":0,\"stop_triggered\":true},{\"risk_fraction\":0.04,\"final_equity_jpy\":88661.074091,\"total_return_pct\":-0.113389,\"cagr\":-0.029639,\"annualized_pips\":-19.65,\"trade_rate\":0.063806,\"win_rate\":0.482759,\"max_dd_pct\":-0.20415,\"min_maintenance_margin_pct\":146.065578,\"maintenance_below_150_count\":4,\"maintenance_below_100_count\":0,\"stop_triggered\":true}]},\"E008\":{\"max_entry_delay_seconds_passed\":30,\"entry_delay_sweep\":[{\"entry_delay_seconds\":0,\"gross_pips\":446.9,\"annualized_pips\":148.966667,\"profit_factor\":1.164999,\"max_dd_pips\":-254.6,\"win_rate\":0.56044},{\"entry_delay_seconds\":5,\"gross_pips\":413.3,\"annualized_pips\":137.766667,\"profit_factor\":1.152464,\"max_dd_pips\":-258.6,\"win_rate\":0.552857},{\"entry_delay_seconds\":10,\"gross_pips\":472.4,\"annualized_pips\":157.466667,\"profit_factor\":1.17852,\"max_dd_pips\":-250.3,\"win_rate\":0.564483},{\"entry_delay_seconds\":30,\"gross_pips\":450.7,\"annualized_pips\":150.233333,\"profit_factor\":1.168909,\"max_dd_pips\":-269.5,\"win_rate\":0.55074}]}},\"pre_range_threshold\":14.499664306640625,\"source_file\":\"qualify/results/lon11/lon11_buy_v1.json\"}",
+  "notes": "lon11 buy 11:05 vol_ge_p60 TP15 SL30 forced_exit 12:10 passed E004-E008. E004 tick replay was clean with no missing ticks or forced-exit issues. E005 remained positive through 0.3 pips one-way slip. E006 walk-forward/holdout remained acceptable despite weaker 2021 and 2025 test windows. E007 selected 0.025 risk_fraction as the highest-return option that preserved kill-switch and maintenance safety. E008 showed no material fragility through 30 seconds of entry delay."
+}

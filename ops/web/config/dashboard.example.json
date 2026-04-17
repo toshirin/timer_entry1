@@ -1,0 +1,11 @@
+{
+  "initialEquityJpy": 100000,
+  "initialEquityDate": "2026-01-01",
+  "manualAdjustments": [
+    {
+      "year": 2026,
+      "amountJpy": 0,
+      "note": "manual trade adjustment"
+    }
+  ]
+}

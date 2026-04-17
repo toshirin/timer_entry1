@@ -31,8 +31,9 @@ main {
   align-items: center;
   background: #ffffff;
   border-bottom: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: auto auto minmax(420px, 1fr);
   padding: 24px 32px;
 }
 
@@ -62,6 +63,7 @@ h2 {
 .header-meta {
   display: flex;
   gap: 10px;
+  justify-content: flex-end;
 }
 
 .header-meta span,
@@ -73,11 +75,104 @@ h2 {
   padding: 7px 9px;
 }
 
+.control-bar {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.control-bar label {
+  display: grid;
+  gap: 4px;
+}
+
+.control-bar label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.control-bar select,
+.control-bar input,
+.control-bar button {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.control-bar button {
+  cursor: pointer;
+}
+
+.control-bar button:disabled,
+.control-bar input:disabled,
+.control-bar select:disabled {
+  color: #9aa49f;
+  cursor: default;
+}
+
+.period-control {
+  align-items: flex-end;
+  display: flex;
+  gap: 6px;
+}
+
+.period-control input {
+  width: 138px;
+}
+
+.label-select {
+  min-width: 130px;
+}
+
 .metric-grid {
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 24px 32px;
+}
+
+.asset-band {
+  border-top: 0;
+}
+
+.asset-layout {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+}
+
+.asset-summary {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--green);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+}
+
+.asset-summary span,
+.asset-summary small {
+  color: var(--muted);
+}
+
+.asset-summary span {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.asset-summary strong {
+  font-size: 34px;
+  line-height: 1;
 }
 
 .metric {
@@ -132,7 +227,7 @@ h2 {
 }
 
 .compact-band {
-  align-items: end;
+  align-items: flex-end;
   display: flex;
   gap: 18px;
   justify-content: space-between;
@@ -159,6 +254,11 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.triple-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
 .chart-panel,
 .table-wrap,
 .notice {
@@ -178,6 +278,39 @@ h2 {
 
 .table-wrap.wide {
   max-height: 560px;
+}
+
+.period-table {
+  margin-bottom: 18px;
+}
+
+.setting-table {
+  margin-bottom: 24px;
+}
+
+.embedded-section {
+  padding: 0;
+}
+
+.sub-heading {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 22px;
+}
+
+.delta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.rate-cell {
+  display: grid;
+  gap: 2px;
+}
+
+.rate-count {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 table {
@@ -206,15 +339,76 @@ tr:last-child td {
   border-bottom: 0;
 }
 
+.pill.ok,
 .pill.matched {
   border-color: #9fc7b1;
   color: var(--green);
 }
 
+.pill.warn,
 .pill.decision_only,
+.pill.execution_only,
 .pill.oanda_only {
   border-color: #e5c174;
   color: #8a641d;
+}
+
+.pill.bad {
+  border-color: #d99b99;
+  color: var(--red);
+}
+
+.pill.muted-pill {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.event-log-table {
+  table-layout: fixed;
+}
+
+.event-log-table th:nth-child(1),
+.event-log-table td:nth-child(1) {
+  width: 96px;
+}
+
+.event-log-table th:nth-child(2),
+.event-log-table td:nth-child(2) {
+  width: 190px;
+}
+
+.event-log-table th:nth-child(3),
+.event-log-table td:nth-child(3) {
+  width: 160px;
+}
+
+.event-log-table th:nth-child(6),
+.event-log-table td:nth-child(6) {
+  width: 220px;
+}
+
+.clip-cell {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reason-cell {
+  color: var(--muted);
+}
+
+.number-cell {
+  text-align: right;
+}
+
+.number-cell.positive {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.number-cell.negative {
+  color: var(--red);
+  font-weight: 700;
 }
 
 .notice {
@@ -230,7 +424,9 @@ tr:last-child td {
   .topbar,
   .header-meta,
   .compact-band,
+  .asset-layout,
   .chart-grid,
+  .triple-grid,
   .split {
     align-items: stretch;
     flex-direction: column;
@@ -241,6 +437,10 @@ tr:last-child td {
   .header-meta,
   .compact-band {
     display: grid;
+  }
+
+  .control-bar {
+    justify-content: start;
   }
 
   .metric-grid {

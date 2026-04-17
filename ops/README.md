@@ -213,6 +213,37 @@ select * from ops_main.oanda_latest_account_balance;
 
 runtime 側は `decision_log` と `execution_log` を取り込み、`runtime_oanda_event_fact` に補完します。Oanda transaction と runtime log は `oanda_trade_id`, `oanda_order_id`, `oanda_client_id` を使って best-effort で突合します。
 
+## setting metadata
+
+dashboard が `execution_spec_json` の期待値や labels を安定参照できるよう、runtime config JSON を `setting_metadata` へ取り込みます。
+
+```bash
+PYTHONPATH=ops/src \
+OPS_DB_CLUSTER_ARN=... \
+OPS_DB_SECRET_ARN=... \
+OPS_DB_NAME=timer_entry_ops \
+python ops/scripts/import_setting_metadata.py runtime/config
+```
+
+Docker 実行:
+
+```bash
+docker run --rm \
+  --entrypoint /bin/bash \
+  -v "$PWD:/work" \
+  -v "$HOME/.aws:/root/.aws:ro" \
+  -w /work \
+  -e AWS_PROFILE \
+  -e AWS_REGION=ap-northeast-1 \
+  -e OPS_DB_CLUSTER_ARN='...' \
+  -e OPS_DB_SECRET_ARN='...' \
+  -e OPS_DB_NAME=timer_entry_ops \
+  python:3.12-slim \
+  -lc "pip install boto3 && PYTHONPATH=ops/src python ops/scripts/import_setting_metadata.py runtime/config"
+```
+
+`ops_demo` へ取り込む場合は `--schema ops_demo` を付けます。
+
 ## setting labels
 
 runtime の `setting_config.labels` は、ops dashboard での分類・絞り込み用の文字列配列です。売買判定には使いません。

@@ -88,6 +88,38 @@ create table if not exists ops_main.runtime_oanda_event_fact (
   synced_at timestamptz not null default now()
 );
 
+create table if not exists ops_main.setting_metadata (
+  setting_id text primary key,
+  enabled boolean not null default false,
+  strategy_id text,
+  slot_id text,
+  setting_labels jsonb not null default '[]'::jsonb,
+  market_session text,
+  market_tz text,
+  instrument text,
+  side text,
+  entry_clock_local text,
+  forced_exit_clock_local text,
+  fixed_units numeric,
+  margin_ratio_target numeric,
+  size_scale_pct numeric,
+  tp_pips numeric,
+  sl_pips numeric,
+  research_label text,
+  kill_switch_dd_pct numeric,
+  kill_switch_reference_balance_jpy numeric,
+  min_maintenance_margin_pct numeric,
+  filter_spec_json jsonb,
+  execution_spec_json jsonb,
+  expected_trade_rate numeric,
+  expected_win_rate numeric,
+  expected_annualized_pips numeric,
+  expected_cagr numeric,
+  source_file text,
+  imported_at timestamptz not null default now(),
+  raw_config jsonb not null
+);
+
 alter table ops_main.runtime_oanda_event_fact
   add column if not exists setting_labels jsonb not null default '[]'::jsonb;
 
@@ -102,6 +134,34 @@ alter table ops_main.runtime_oanda_event_fact
   add column if not exists estimated_margin_ratio_after_entry numeric,
   add column if not exists margin_price numeric,
   add column if not exists margin_price_side text;
+
+alter table ops_main.setting_metadata
+  add column if not exists enabled boolean not null default false,
+  add column if not exists setting_labels jsonb not null default '[]'::jsonb,
+  add column if not exists market_session text,
+  add column if not exists market_tz text,
+  add column if not exists instrument text,
+  add column if not exists side text,
+  add column if not exists entry_clock_local text,
+  add column if not exists forced_exit_clock_local text,
+  add column if not exists fixed_units numeric,
+  add column if not exists margin_ratio_target numeric,
+  add column if not exists size_scale_pct numeric,
+  add column if not exists tp_pips numeric,
+  add column if not exists sl_pips numeric,
+  add column if not exists research_label text,
+  add column if not exists kill_switch_dd_pct numeric,
+  add column if not exists kill_switch_reference_balance_jpy numeric,
+  add column if not exists min_maintenance_margin_pct numeric,
+  add column if not exists filter_spec_json jsonb,
+  add column if not exists execution_spec_json jsonb,
+  add column if not exists expected_trade_rate numeric,
+  add column if not exists expected_win_rate numeric,
+  add column if not exists expected_annualized_pips numeric,
+  add column if not exists expected_cagr numeric,
+  add column if not exists source_file text,
+  add column if not exists imported_at timestamptz not null default now(),
+  add column if not exists raw_config jsonb not null default '{}'::jsonb;
 
 create index if not exists idx_ops_fact_setting_created
   on ops_main.runtime_oanda_event_fact (setting_id, created_at);
@@ -120,6 +180,9 @@ create index if not exists idx_ops_normalized_order
 
 create index if not exists idx_ops_normalized_client_ext
   on ops_main.oanda_transactions_normalized (client_ext_id);
+
+create index if not exists idx_ops_setting_metadata_slot
+  on ops_main.setting_metadata (slot_id);
 
 create or replace view ops_main.oanda_latest_account_balance as
 select distinct on (account_id)
@@ -143,7 +206,16 @@ select
   count(*) filter (where decision = 'entered') as entered_count,
   count(*) filter (where decision like 'skipped%') as skipped_count,
   count(*) filter (where decision = 'skipped_concurrency') as conflict_count,
+  count(*) filter (where decision = 'skipped_filter' or reason = 'filter_rejected') as filter_skip_count,
+  count(*) filter (where pnl_pips is not null) as closed_entry_count,
+  count(*) filter (where pnl_pips > 0) as winning_entry_count,
   case when count(*) = 0 then null else count(*) filter (where decision = 'skipped_concurrency')::numeric / count(*) end as conflict_rate,
+  case when count(*) = 0 then null else count(*) filter (where decision = 'entered')::numeric / count(*) end as trade_rate,
+  case
+    when count(*) filter (where pnl_pips is not null) = 0 then null
+    else count(*) filter (where pnl_pips > 0)::numeric
+      / count(*) filter (where pnl_pips is not null)
+  end as win_rate,
   sum(pnl_pips) as pnl_pips,
   sum(pnl_jpy) as pnl_jpy,
   avg(expected_trade_rate) as expected_trade_rate,
@@ -157,6 +229,7 @@ create table if not exists ops_demo.import_cursor (like ops_main.import_cursor i
 create table if not exists ops_demo.oanda_transactions_raw (like ops_main.oanda_transactions_raw including all);
 create table if not exists ops_demo.oanda_transactions_normalized (like ops_main.oanda_transactions_normalized including all);
 create table if not exists ops_demo.runtime_oanda_event_fact (like ops_main.runtime_oanda_event_fact including all);
+create table if not exists ops_demo.setting_metadata (like ops_main.setting_metadata including all);
 
 alter table ops_demo.runtime_oanda_event_fact
   add column if not exists setting_labels jsonb not null default '[]'::jsonb;
@@ -173,6 +246,34 @@ alter table ops_demo.runtime_oanda_event_fact
   add column if not exists margin_price numeric,
   add column if not exists margin_price_side text;
 
+alter table ops_demo.setting_metadata
+  add column if not exists enabled boolean not null default false,
+  add column if not exists setting_labels jsonb not null default '[]'::jsonb,
+  add column if not exists market_session text,
+  add column if not exists market_tz text,
+  add column if not exists instrument text,
+  add column if not exists side text,
+  add column if not exists entry_clock_local text,
+  add column if not exists forced_exit_clock_local text,
+  add column if not exists fixed_units numeric,
+  add column if not exists margin_ratio_target numeric,
+  add column if not exists size_scale_pct numeric,
+  add column if not exists tp_pips numeric,
+  add column if not exists sl_pips numeric,
+  add column if not exists research_label text,
+  add column if not exists kill_switch_dd_pct numeric,
+  add column if not exists kill_switch_reference_balance_jpy numeric,
+  add column if not exists min_maintenance_margin_pct numeric,
+  add column if not exists filter_spec_json jsonb,
+  add column if not exists execution_spec_json jsonb,
+  add column if not exists expected_trade_rate numeric,
+  add column if not exists expected_win_rate numeric,
+  add column if not exists expected_annualized_pips numeric,
+  add column if not exists expected_cagr numeric,
+  add column if not exists source_file text,
+  add column if not exists imported_at timestamptz not null default now(),
+  add column if not exists raw_config jsonb not null default '{}'::jsonb;
+
 drop view if exists ops_demo.daily_setting_summary;
 
 create or replace view ops_demo.daily_setting_summary as
@@ -184,7 +285,16 @@ select
   count(*) filter (where decision = 'entered') as entered_count,
   count(*) filter (where decision like 'skipped%') as skipped_count,
   count(*) filter (where decision = 'skipped_concurrency') as conflict_count,
+  count(*) filter (where decision = 'skipped_filter' or reason = 'filter_rejected') as filter_skip_count,
+  count(*) filter (where pnl_pips is not null) as closed_entry_count,
+  count(*) filter (where pnl_pips > 0) as winning_entry_count,
   case when count(*) = 0 then null else count(*) filter (where decision = 'skipped_concurrency')::numeric / count(*) end as conflict_rate,
+  case when count(*) = 0 then null else count(*) filter (where decision = 'entered')::numeric / count(*) end as trade_rate,
+  case
+    when count(*) filter (where pnl_pips is not null) = 0 then null
+    else count(*) filter (where pnl_pips > 0)::numeric
+      / count(*) filter (where pnl_pips is not null)
+  end as win_rate,
   sum(pnl_pips) as pnl_pips,
   sum(pnl_jpy) as pnl_jpy,
   avg(expected_trade_rate) as expected_trade_rate,

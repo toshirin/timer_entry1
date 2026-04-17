@@ -19,4 +19,5 @@ ops/cdk/*.tsbuildinfo
 ops/web/.next/
 ops/web/node_modules/
 ops/web/*.tsbuildinfo
+ops/web/config/dashboard.json
 **/__pycache__/

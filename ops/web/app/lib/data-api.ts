@@ -14,10 +14,10 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-export function opsSchema(): string {
-  const schema = process.env.OPS_WEB_SCHEMA ?? "ops_demo";
+export function opsSchema(requested?: string | null): string {
+  const schema = requested ?? process.env.OPS_WEB_SCHEMA ?? "ops_demo";
   if (schema !== "ops_main" && schema !== "ops_demo") {
-    throw new Error("OPS_WEB_SCHEMA must be ops_main or ops_demo");
+    throw new Error("schema must be ops_main or ops_demo");
   }
   return schema;
 }

@@ -394,78 +394,16 @@ runtime 側 DynamoDB log は、日次 Lambda が scan / query により取得す
 
 ## 10. 監視ダッシュボード方針
 
-### 10.1 配置方針
-
 - ダッシュボードはローカル Web アプリとする
 - 必要な時のみ `docker-compose up -d` で起動する
 - 閲覧用途に専念し、初版では常設しない
 - AWS に常設公開しない
-
-### 10.2 Phase1 必須機能
-
-#### 1. strategy 別パフォーマンス
-
-- `setting_id` 単位
-- 累積 pips
-- 累積 pnl
-- DD
-- win rate
-- PF
-- 取引数
-
-#### 2. 日次 / 月次分解
-
-- 日次 pnl
-- 月次 pnl
-- 連敗数
-- DD 更新日
-- 直近 N 日の推移
-- `execution_spec_json` にある期待 `trade_rate` / `win_rate` と実績値の比較
-- 期待値と実績値の差分
-
-#### 3. slot 別ヒートマップ
-
-- `slot_id` 単位の集計
-- side ごとの傾向表示
-- 実運用と研究結果のズレを早期検知できる形にする
-
-#### 4. kill-switch 監視
-
-- 発動履歴
-- DD 推移
-- 判定対象の主要値
-- 停止対象 setting 一覧
-- 警告系数値
-- warning / disabled に近い setting 一覧
-
-#### 5. 突合異常監視
-
-- `execution_log` にあるが Oanda に見つからない
-- Oanda transaction はあるが setting に結びつかない
-- 複数候補で突合不能
-- 欠損識別子の件数
-
-#### 6. conflict 監視
-
-- `decision_log` の排他ロックまたは concurrency 由来の不発件数
-- conflict 率
-- blocking trade / setting が取れる場合の内訳
-- setting / slot / 日次単位の conflict 推移
-
-### 10.3 初版で含めないもの
-
-- ダッシュボードからの `enabled` 自動操作
-- 常設運用前提の認証機構
-- リアルタイム更新
-- 高頻度 polling
-
-### 10.4 技術スタック
-
-- ローカル Web はフロントエンド重視で作る
 - 初版候補は `Next.js + React + TypeScript` とする
 - browser から AWS へ直接接続せず、Next.js 側の軽量 backend を Data API への土管として使う
 - UI 確認時は demo 用 schema のダミーデータを参照できるようにする
 - demo 用 schema には勝ち / 負け、DD 悪化、kill-switch 警告、突合異常、Oanda のみ存在、decision のみ存在、conflict 高めの setting、期待 `trade_rate` / `win_rate` との乖離がある setting を含める
+
+画面構成、期間粒度、ラベル条件、指標定義、DB resume 対応、UI 用 config、API 方針の詳細は `ops/docs/Dashboard_UI.md` に分離する。
 
 ## 11. ChatGPT 向け CLI 方針
 

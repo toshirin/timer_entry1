@@ -1,0 +1,17 @@
+{
+  "experiment_code": "E001",
+  "variant_code": null,
+  "slot_id": "lon09",
+  "side": "sell",
+  "baseline": {
+    "entry_clock_local": "09:45",
+    "forced_exit_clock_local": "10:40",
+    "tp_pips": 10,
+    "sl_pips": 15,
+    "filter_labels": ["range_lt_0_3"]
+  },
+  "comparison_family": "trend_ratio",
+  "comparison_labels": ["all", "range_lt_0_35", "range_lt_0_3", "range_lt_0_25", "range_lt_0_20"],
+  "pass_stability_gate": true,
+  "notes": "lon09 sell is effectively a trend_ratio slot. Keep same entry and forced exit, center on the gate-passing scan winner 09:45/range_lt_0_3/TP10/SL15. Include all only as a reference line; do not treat it as a realistic promotion candidate."
+}
