@@ -29,6 +29,9 @@ EOF
 copy_doc "README.md" "top_README.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 copy_doc "docs/FX_Research_Constitution.md" "docs_FX_Research_Constitution.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 
+copy_doc "runtime/README.md" "runtime_README.md" | tee -a "${OUT_DIR}/MANIFEST.md"
+copy_doc "runtime/Spec.md" "runtime_Spec.md" | tee -a "${OUT_DIR}/MANIFEST.md"
+
 copy_doc "src/timer_entry/README.md" "timer_entry_README.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 copy_doc "src/timer_entry/Spec.md" "timer_entry_Spec.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 copy_doc "src/timer_entry/filters.py" "timer_entry_filters.py" | tee -a "${OUT_DIR}/MANIFEST.md"
@@ -39,6 +42,11 @@ copy_doc "scan/README.md" "scan_README.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 copy_doc "qualify/README.md" "qualify_README.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 copy_doc "qualify/Spec.md" "qualify_Spec.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 copy_doc "qualify/docs/Ops.md" "qualify_docs_Ops.md" | tee -a "${OUT_DIR}/MANIFEST.md"
+
+copy_doc "ops/README.md" "ops_README.md" | tee -a "${OUT_DIR}/MANIFEST.md"
+copy_doc "ops/Spec.md" "ops_Spec.md" | tee -a "${OUT_DIR}/MANIFEST.md"
+copy_doc "ops/docs/Dashboard_UI.md" "ops_docs_Dashboard_UI.md" | tee -a "${OUT_DIR}/MANIFEST.md"
+copy_doc "ops/web/README.md" "ops_web_README.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 
 echo
 echo "[DONE] copied ChatGPT source docs to ${OUT_DIR}"

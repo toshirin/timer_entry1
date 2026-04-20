@@ -1,0 +1,24 @@
+{
+  "experiment_code": "E005-E008",
+  "variant_code": null,
+  "slot_id": "lon09",
+  "side": "sell",
+  "baseline": {
+    "entry_clock_local": "09:45",
+    "forced_exit_clock_local": "10:35",
+    "tp_pips": 10,
+    "sl_pips": 15,
+    "filter_labels": ["range_lt_0_3"]
+  },
+  "pass_stability_gate": true,
+  "selected_experiments": ["E005", "E006", "E007", "E008"],
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "slippage_values": [0.0, 0.1, 0.2, 0.3],
+  "entry_delay_values": [0, 5, 10, 30, 60],
+  "risk_fractions": [0.01, 0.015, 0.02],
+  "kill_switch_dd_pct": -0.2,
+  "initial_capital_jpy": 100000,
+  "notes": "Run full E005-E008 suite on the E004-passed lon09 sell baseline. Slippage values are one-way; effective round-trip penalty is 2x each slip value. For E007, use conservative/center/aggressive risk grid around the SL15-derived center risk of 1.5%."
+}

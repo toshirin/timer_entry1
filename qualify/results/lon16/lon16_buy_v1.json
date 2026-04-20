@@ -1,0 +1,246 @@
+{
+  "result_type": "qualify_promotion_result",
+  "schema_version": 1,
+  "result_id": "lon16_buy_v1",
+  "slot_id": "lon16",
+  "side": "buy",
+  "market_tz": "Europe/London",
+  "entry_clock_local": "16:50",
+  "forced_exit_clock_local": "17:55",
+  "tp_pips": 20.0,
+  "sl_pips": 30.0,
+  "filter_labels": ["opposite_sign"],
+  "labels": ["fix10"],
+  "pass_stability_gate": true,
+  "e004_passed": true,
+  "e005_passed": true,
+  "e006_passed": true,
+  "e007_passed": true,
+  "e008_passed": true,
+  "approved_for_runtime": true,
+  "selected_risk_fraction": 0.03,
+  "kill_switch_dd_pct": -0.2,
+  "min_maintenance_margin_pct": 150.0,
+  "initial_capital_jpy": 100000.0,
+  "final_equity_jpy": 179755.498935,
+  "annualized_pips": 90.771429,
+  "cagr": 0.087385,
+  "trade_rate": 0.500275,
+  "gross_pips": 635.4,
+  "in_gross_pips": 365.1,
+  "out_gross_pips": 270.3,
+  "win_rate": 0.533553,
+  "source_params_files": {
+    "E004": "qualify/params/lon16/e004.json",
+    "E005-E008": "qualify/params/lon16/e005-e008.json"
+  },
+  "source_output_dirs": {
+    "E004": "qualify/out/lon16/E004/latest",
+    "E005-E008": "qualify/out/lon16"
+  },
+  "evidence": {
+    "E004": {
+      "gross_pips_tick": 635.4,
+      "gross_pips_minute": 612.589264,
+      "delta_gross_pips": 22.810736,
+      "trade_count_tick": 909,
+      "trade_count_minute": 909,
+      "profit_factor_tick": 1.204335,
+      "max_dd_pips_tick": -172.0,
+      "annualized_pips_tick": 90.771429,
+      "tick_pass_positive_inout_gate": true,
+      "tick_not_found_count": 0,
+      "forced_exit_missing_count": 0
+    },
+    "E005": {
+      "max_one_way_slip_pips_passed": 0.3,
+      "max_round_trip_slip_pips_passed": 0.6,
+      "slippage_sweep": [
+        {
+          "slip_pips": 0.0,
+          "round_trip_slip_pips": 0.0,
+          "gross_pips": 270.3,
+          "annualized_pips": 90.1,
+          "profit_factor": 1.16145,
+          "max_dd_pips": -172.0,
+          "win_rate": 0.547619
+        },
+        {
+          "slip_pips": 0.1,
+          "round_trip_slip_pips": 0.2,
+          "gross_pips": 197.8,
+          "annualized_pips": 65.933333,
+          "profit_factor": 1.115842,
+          "max_dd_pips": -178.7,
+          "win_rate": 0.539683
+        },
+        {
+          "slip_pips": 0.2,
+          "round_trip_slip_pips": 0.4,
+          "gross_pips": 125.1,
+          "annualized_pips": 41.7,
+          "profit_factor": 1.071847,
+          "max_dd_pips": -188.2,
+          "win_rate": 0.526455
+        },
+        {
+          "slip_pips": 0.3,
+          "round_trip_slip_pips": 0.6,
+          "gross_pips": 55.6,
+          "annualized_pips": 18.533333,
+          "profit_factor": 1.031285,
+          "max_dd_pips": -209.0,
+          "win_rate": 0.518519
+        }
+      ]
+    },
+    "E006": {
+      "walk_forward_positive_count": 4,
+      "walk_forward_total_count": 5,
+      "out_gross_pips": 270.3,
+      "out_profit_factor": 1.16145,
+      "out_trade_count": 378,
+      "holdout_rows": [
+        {
+          "train_years": "2019-2020",
+          "test_year": 2021,
+          "trade_count": 128,
+          "out_pnl": 7.5,
+          "pf": 1.030525,
+          "max_dd_pips": -55.8,
+          "win_rate": 0.53125,
+          "annualized_pips": 7.5
+        },
+        {
+          "train_years": "2020-2021",
+          "test_year": 2022,
+          "trade_count": 137,
+          "out_pnl": 434.7,
+          "pf": 1.978173,
+          "max_dd_pips": -77.3,
+          "win_rate": 0.613139,
+          "annualized_pips": 434.7
+        },
+        {
+          "train_years": "2021-2022",
+          "test_year": 2023,
+          "trade_count": 131,
+          "out_pnl": 102.7,
+          "pf": 1.176703,
+          "max_dd_pips": -73.2,
+          "win_rate": 0.572519,
+          "annualized_pips": 102.7
+        },
+        {
+          "train_years": "2022-2023",
+          "test_year": 2024,
+          "trade_count": 121,
+          "out_pnl": -80.2,
+          "pf": 0.868244,
+          "max_dd_pips": -172.0,
+          "win_rate": 0.495868,
+          "annualized_pips": -80.2
+        },
+        {
+          "train_years": "2023-2024",
+          "test_year": 2025,
+          "trade_count": 126,
+          "out_pnl": 247.8,
+          "pf": 1.511666,
+          "max_dd_pips": -156.0,
+          "win_rate": 0.571429,
+          "annualized_pips": 247.8
+        }
+      ]
+    },
+    "E007": {
+      "min_maintenance_margin_pct": 154.851497,
+      "annualized_pips": 90.771429,
+      "trade_rate": 0.500275,
+      "win_rate": 0.533553,
+      "cagr": 0.087385,
+      "risk_sweep": [
+        {
+          "risk_fraction": 0.02,
+          "final_equity_jpy": 149457.229833,
+          "total_return_pct": 0.494572,
+          "cagr": 0.059085,
+          "annualized_pips": 90.771429,
+          "trade_rate": 0.500275,
+          "win_rate": 0.533553,
+          "max_dd_pct": -0.109909,
+          "min_maintenance_margin_pct": 232.277246,
+          "maintenance_below_150_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false
+        },
+        {
+          "risk_fraction": 0.03,
+          "final_equity_jpy": 179755.498935,
+          "total_return_pct": 0.797555,
+          "cagr": 0.087385,
+          "annualized_pips": 90.771429,
+          "trade_rate": 0.500275,
+          "win_rate": 0.533553,
+          "max_dd_pct": -0.161373,
+          "min_maintenance_margin_pct": 154.851497,
+          "maintenance_below_150_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false
+        },
+        {
+          "risk_fraction": 0.04,
+          "final_equity_jpy": 153848.34834,
+          "total_return_pct": 0.538483,
+          "cagr": 0.07444,
+          "annualized_pips": 61.55,
+          "trade_rate": 0.404513,
+          "win_rate": 0.529252,
+          "max_dd_pct": -0.204542,
+          "min_maintenance_margin_pct": 116.138623,
+          "maintenance_below_150_count": 306,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": true
+        }
+      ]
+    },
+    "E008": {
+      "max_entry_delay_seconds_passed": 10,
+      "entry_delay_sweep": [
+        {
+          "entry_delay_seconds": 0,
+          "gross_pips": 270.3,
+          "annualized_pips": 90.1,
+          "profit_factor": 1.16145,
+          "max_dd_pips": -172.0,
+          "win_rate": 0.547619
+        },
+        {
+          "entry_delay_seconds": 5,
+          "gross_pips": 289.2,
+          "annualized_pips": 96.4,
+          "profit_factor": 1.175592,
+          "max_dd_pips": -155.8,
+          "win_rate": 0.531746
+        },
+        {
+          "entry_delay_seconds": 10,
+          "gross_pips": 295.3,
+          "annualized_pips": 98.433333,
+          "profit_factor": 1.179046,
+          "max_dd_pips": -154.6,
+          "win_rate": 0.537037
+        },
+        {
+          "entry_delay_seconds": 30,
+          "gross_pips": 226.8,
+          "annualized_pips": 75.6,
+          "profit_factor": 1.133924,
+          "max_dd_pips": -160.2,
+          "win_rate": 0.539683
+        }
+      ]
+    }
+  },
+  "notes": "E004-E008 all passed. Adopt lon16 buy baseline with opposite_sign, TP20, SL30, forced exit 17:55. E007 adopts risk_fraction 0.03 under user's 100% lower-bound interpretation, with kill-switch -20% and no maintenance-below-100 or stop trigger. E008 shows 10s entry delay is best, but strategy remains robust across tested delays."
+}

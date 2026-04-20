@@ -6,6 +6,8 @@
 最上位の不変方針は [docs/FX_Research_Constitution.md](docs/FX_Research_Constitution.md) に置きます。
 特に Bid / Ask 完全分離、未来参照禁止、監視窓の分離は本リポジトリ全体で厳守します。
 
+近い将来の作業と長期メモは [RoadMap.md](RoadMap.md) に置きます。
+
 ## このリポジトリの目的
 
 - タイマー売買戦略の研究資産を専用 repo として整理する
