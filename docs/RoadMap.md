@@ -7,7 +7,6 @@
 
 - 自動昇降格 lambda
   - 別スレッドで作成中
-- `lon12` の DST ズレ問題
 - ops 日次集計を NY Close / broker day 基準へ変更
   - 現状の `trade_date_local` は setting の `market_tz` 基準
   - ops 側で閉じる課題なので、runtime / runtime 参照 DB の安定化を優先する

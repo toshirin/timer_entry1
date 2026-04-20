@@ -6,6 +6,7 @@ from typing import Iterable
 
 import pandas as pd
 
+from .calendar import is_trading_day_excluded
 from .direction import DirectionSpec, get_direction_spec
 from .features import PIP_SIZE, compute_feature_row
 from .filters import evaluate_canonical_filter
@@ -366,6 +367,8 @@ def run_backtest_1m(
 
     for day in days:
         if day.session_tz != setting.market_tz:
+            continue
+        if is_trading_day_excluded(day.session_date, day.session_tz, setting.exclude_windows):
             continue
 
         entry_row = _row_at(day, setting.normalized_entry_clock())

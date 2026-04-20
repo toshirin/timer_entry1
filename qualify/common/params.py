@@ -24,6 +24,7 @@ class BaselineSettingInput:
     tp_pips: float
     sl_pips: float
     filter_labels: tuple[str, ...]
+    exclude_windows: tuple[str, ...] = ()
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "BaselineSettingInput":
@@ -36,6 +37,7 @@ class BaselineSettingInput:
             tp_pips=float(data["tp_pips"]),
             sl_pips=float(data["sl_pips"]),
             filter_labels=labels,
+            exclude_windows=tuple(str(value) for value in data.get("exclude_windows", [])),
         )
 
 
@@ -109,6 +111,7 @@ class E001Params:
             tp_pips=self.baseline.tp_pips,
             sl_pips=self.baseline.sl_pips,
             filter_labels=(comparison_label,),
+            exclude_windows=self.baseline.exclude_windows,
             pre_range_threshold=pre_range_threshold,
             dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
@@ -188,6 +191,7 @@ class E002Params:
             tp_pips=float(tp_pips),
             sl_pips=float(sl_pips),
             filter_labels=self.baseline.filter_labels,
+            exclude_windows=self.baseline.exclude_windows,
             pre_range_threshold=pre_range_threshold,
             dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
@@ -261,6 +265,7 @@ class E003Params:
             tp_pips=self.baseline.tp_pips,
             sl_pips=self.baseline.sl_pips,
             filter_labels=self.baseline.filter_labels,
+            exclude_windows=self.baseline.exclude_windows,
             pre_range_threshold=pre_range_threshold,
             dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
@@ -341,6 +346,7 @@ class E004Params:
             tp_pips=self.baseline.tp_pips,
             sl_pips=self.baseline.sl_pips,
             filter_labels=self.baseline.filter_labels,
+            exclude_windows=self.baseline.exclude_windows,
             pre_range_threshold=pre_range_threshold,
             dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,

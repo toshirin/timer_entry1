@@ -287,7 +287,12 @@ def _prepare_e004_baseline(
     jobs: int,
 ) -> dict[str, object]:
     print(f"[LOAD] minute dataset from {dataset_dir}")
-    days, load_summary = load_trading_days(years, dataset_dir=dataset_dir, session_tz=params.market_tz)  # type: ignore[arg-type]
+    days, load_summary = load_trading_days(
+        years,
+        dataset_dir=dataset_dir,
+        session_tz=params.market_tz,  # type: ignore[arg-type]
+        exclude_windows=params.baseline.exclude_windows,
+    )
     filtered_days = _filter_days(days, date_from=params.date_from, date_to=params.date_to)
     feature_rows = _eligible_feature_rows(filtered_days, params)  # type: ignore[arg-type]
     eligible_days_by_segment = _eligible_days_by_segment(feature_rows)

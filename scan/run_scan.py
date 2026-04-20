@@ -28,6 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--exit-after-min", type=int, default=55)
     parser.add_argument("--sl-grid", nargs="+", type=float, default=[5, 10, 15, 20, 25])
     parser.add_argument("--tp-grid", nargs="+", type=float, default=[5, 10, 15, 20, 25])
+    parser.add_argument("--exclude-windows", nargs="*", default=[])
     return parser.parse_args()
 
 
@@ -90,6 +91,7 @@ def main() -> None:
             "exit_after_min": args.exit_after_min,
             "sl_grid": args.sl_grid,
             "tp_grid": args.tp_grid,
+            "exclude_windows": args.exclude_windows,
         },
     )
 
@@ -98,6 +100,7 @@ def main() -> None:
         year_days: list[object] = []
         fallback_count = 0
         duplicate_removed_count = 0
+        excluded_count = 0
         total_year_count = len(args.years)
         load_pbar = tqdm(args.years, desc=f"load {session_prefix}", unit="year")
         for idx, year in enumerate(load_pbar, start=1):
@@ -105,17 +108,21 @@ def main() -> None:
                 [year],
                 dataset_dir=args.dataset_dir,
                 session_tz=session_tz,  # type: ignore[arg-type]
+                exclude_windows=args.exclude_windows,
             )
             year_days.extend(trading_days_part)
             fallback_count += load_summary_part.time_jst_fallback_count
             duplicate_removed_count += load_summary_part.duplicate_clock_removed_count
+            excluded_count += load_summary_part.excluded_session_day_count
             load_pbar.set_postfix_str(
                 f"year={year} days={load_summary_part.session_day_count} "
+                f"excluded={load_summary_part.excluded_session_day_count} "
                 f"fallback={load_summary_part.time_jst_fallback_count}"
             )
             print(
                 f"[LOAD-YEAR] session={session_prefix} {idx}/{total_year_count} "
                 f"year={year} days={load_summary_part.session_day_count} "
+                f"excluded={load_summary_part.excluded_session_day_count} "
                 f"fallback={load_summary_part.time_jst_fallback_count} "
                 f"dup_removed={load_summary_part.duplicate_clock_removed_count}",
                 flush=True,
@@ -166,7 +173,7 @@ def main() -> None:
         gc.collect()
         print(
             f"[DONE] session={session_prefix} days={len(year_days)} "
-            f"fallback={fallback_count} dup_removed={duplicate_removed_count}",
+            f"excluded={excluded_count} fallback={fallback_count} dup_removed={duplicate_removed_count}",
             flush=True,
         )
 

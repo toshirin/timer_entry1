@@ -35,6 +35,31 @@ def test_e001_params_build_strategy_setting_with_dynamic_label() -> None:
     assert setting.sl_pips == 15.0
 
 
+def test_baseline_exclude_windows_flow_to_strategy_setting() -> None:
+    params = E001Params.from_dict(
+        {
+            "experiment_code": "E001",
+            "variant_code": None,
+            "slot_id": "lon12",
+            "side": "buy",
+            "baseline": {
+                "entry_clock_local": "12:30",
+                "forced_exit_clock_local": "13:25",
+                "tp_pips": 10,
+                "sl_pips": 20,
+                "filter_labels": ["all"],
+                "exclude_windows": ["us_uk_dst_mismatch"],
+            },
+            "comparison_family": "pre_open_slope",
+            "comparison_labels": ["all", "ge2"],
+            "pass_stability_gate": True,
+        }
+    )
+    setting = params.to_strategy_setting(comparison_label="ge2")
+    assert params.baseline.exclude_windows == ("us_uk_dst_mismatch",)
+    assert setting.exclude_windows == ("us_uk_dst_mismatch",)
+
+
 def test_e001_resolves_pre_range_percentile_threshold_metadata() -> None:
     metadata = _resolve_threshold_metadata(
         ("all", "vol_ge_p60", "vol_ge_p70"),

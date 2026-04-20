@@ -125,12 +125,11 @@ schema では、主に以下の対応を取る。
 - 外生ショックを避けるための時刻帯は `exclude_windows` として別管理する
 - 代表例は米国統計時間帯である
 - 除外窓は時間帯集計の基準 timezone とは独立して扱う
-
-TODO:
-
-- lon12 など米国統計時刻と重なりやすい London slot では、英米間の DST ズレ期間に統計発表時刻の扱いが汚染される可能性がある
-- US/UK DST mismatch window を共通 `exclude_windows` として定義し、scan / canonical 1分足 / qualify tick replay で同じ trading day 除外を適用できるようにする
-- 実装時は slot 個別の ad hoc 除外ではなく、共通 calendar / session filter 層で扱う
+- `us_uk_dst_mismatch` は、米国と英国の DST 適用状態が異なる London trading day を除外する共通 window とする
+  - 対象は `Europe/London` session のみ
+  - 判定は `Europe/London` と `America/New_York` の同一 session date 正午時点の DST 状態差で行う
+  - scan / canonical 1分足 / qualify tick replay は同じ `src/timer_entry/calendar.py` の判定を使う
+  - slot 個別の ad hoc 除外ではなく、共通 calendar / session filter 層で扱う
 
 ### 4.4 監視開始
 

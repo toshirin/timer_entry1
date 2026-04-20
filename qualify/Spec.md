@@ -237,10 +237,9 @@ E008 合格後は、params ではなく最終昇格結果 JSON を作る。
 
 runtime promotion は `qualify/params/*.json` ではなく、この最終昇格結果 JSON を入力の主経路にする。
 
-TODO:
-
-- lon12 など米国統計時刻と重なりやすい London slot では、英米間の DST ズレ期間を除外対象にするかを別途検討する
-- 実装する場合は `scan` / canonical 1分足 / E004 tick replay で同じ `exclude_windows` を共有し、qualify だけの局所対応にしない
+`exclude_windows` は baseline の一部として受け取る。
+`us_uk_dst_mismatch` を指定した場合、米国と英国の DST 適用状態が異なる London trading day を除外する。
+この判定は `scan` / canonical 1分足 / E004 tick replay と共通の `src/timer_entry/calendar.py` を使い、qualify だけの局所対応にはしない。
 
 ## 11. stability gate
 
