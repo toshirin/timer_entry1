@@ -4,6 +4,7 @@
   "result_id": "lon19_buy_v1",
   "slot_id": "lon19",
   "side": "buy",
+  "labels": [],
   "market_tz": "Europe/London",
   "entry_clock_local": "19:15",
   "forced_exit_clock_local": "20:10",
@@ -29,7 +30,6 @@
   "in_gross_pips": 132.4,
   "out_gross_pips": 418.2,
   "win_rate": 0.526506,
-  "labels": ["fix10"],
   "source_params_files": {
     "E004": "qualify/params/lon19/e004.json",
     "E005-E008": "qualify/params/lon19/e005-e008.json"

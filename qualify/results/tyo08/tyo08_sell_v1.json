@@ -4,7 +4,7 @@
   "result_id": "tyo08_sell_v1",
   "slot_id": "tyo08",
   "side": "sell",
-  "labels": ["fix10"],
+  "labels": [],
   "market_tz": "Asia/Tokyo",
   "entry_clock_local": "08:20",
   "forced_exit_clock_local": "09:25",

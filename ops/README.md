@@ -34,6 +34,7 @@ docker run --rm \
 生成物:
 
 - `ops/dist/daily_transaction_import.zip`
+- `ops/dist/monthly_unit_level_policy.zip`
 
 ## CDK
 

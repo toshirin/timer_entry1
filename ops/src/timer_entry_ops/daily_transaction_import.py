@@ -4,8 +4,19 @@ from datetime import datetime, timedelta, timezone
 import json
 from typing import Any
 
+from timer_entry_runtime.level_policy import UnitLevelDecision, decide_emergency_demotion, infer_level_from_sizing
+from timer_entry_runtime.models import SettingConfig
+
 from .config import OpsConfig
 from .data_api import DataApi, text_param
+from .monthly_unit_level_policy import (
+    _apply_setting_level,
+    _decision_from_log,
+    _insert_decision_log,
+    _mark_decision_log_applied,
+    _record_value,
+    _should_apply,
+)
 from .oanda_transactions import OandaImportError
 from .oanda_transactions import fetch_latest_transaction_id, fetch_transactions_since_id
 
@@ -661,6 +672,183 @@ on conflict (fact_event_id) do update set
     )
 
 
+def _decision_month_from_event(event: dict[str, Any]) -> str:
+    trade_date_local = str(event.get("trade_date_local") or "")
+    if len(trade_date_local) >= 7:
+        return trade_date_local[:7]
+    created_at = str(event.get("created_at") or "")
+    if len(created_at) >= 7:
+        return created_at[:7]
+    return _utc_now().strftime("%Y-%m")
+
+
+def _select_unprocessed_kill_switch_events(data_api: DataApi, schema: str) -> list[dict[str, Any]]:
+    response = data_api.execute(
+        f"""
+select
+  f.fact_event_id,
+  f.setting_id,
+  f.trade_date_local,
+  f.created_at::text,
+  l.decision_log_id,
+  l.applied,
+  l.current_level,
+  l.next_level,
+  l.decision,
+  l.decision_reason,
+  l.current_units,
+  l.threshold_jpy,
+  l.cum_jpy_month,
+  l.unit_basis,
+  l.policy_name,
+  l.policy_version
+from {schema}.runtime_oanda_event_fact f
+left join {schema}.unit_level_decision_log l
+  on l.decision_log_id = concat('kill_switch#', f.fact_event_id)
+where f.decision = 'skipped_kill_switch'
+  and coalesce(l.applied, false) = false
+order by f.created_at asc, f.fact_event_id asc
+limit 100
+"""
+    )
+    events: list[dict[str, Any]] = []
+    for record in response.get("records", []):
+        events.append(
+            {
+                "fact_event_id": _record_value(record, 0),
+                "setting_id": _record_value(record, 1),
+                "trade_date_local": _record_value(record, 2),
+                "created_at": _record_value(record, 3),
+                "decision_log_id": _record_value(record, 4),
+                "applied": _record_value(record, 5),
+                "current_level": _record_value(record, 6),
+                "next_level": _record_value(record, 7),
+                "decision": _record_value(record, 8),
+                "decision_reason": _record_value(record, 9),
+                "current_units": _record_value(record, 10),
+                "threshold_jpy": _record_value(record, 11),
+                "cum_jpy_month": _record_value(record, 12),
+                "unit_basis": _record_value(record, 13),
+                "policy_name": _record_value(record, 14),
+                "policy_version": _record_value(record, 15),
+            }
+        )
+    return events
+
+
+def _get_setting(setting_table: Any, setting_id: str) -> SettingConfig | None:
+    response = setting_table.get_item(Key={"setting_id": setting_id})
+    item = response.get("Item")
+    return SettingConfig.from_item(item) if isinstance(item, dict) else None
+
+
+def _process_kill_switch_demotions(
+    *,
+    data_api: DataApi,
+    schema: str,
+    setting_table: Any,
+    now_utc: datetime,
+) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for event in _select_unprocessed_kill_switch_events(data_api, schema):
+        fact_event_id = str(event.get("fact_event_id") or "")
+        setting_id = str(event.get("setting_id") or "")
+        if not fact_event_id or not setting_id:
+            results.append({"status": "skipped_missing_event_fields", "fact_event_id": fact_event_id, "setting_id": setting_id})
+            continue
+        setting = _get_setting(setting_table, setting_id)
+        if setting is None:
+            results.append({"status": "skipped_missing_setting", "fact_event_id": fact_event_id, "setting_id": setting_id})
+            continue
+        decision_month = _decision_month_from_event(event)
+        decision_log_id = f"kill_switch#{fact_event_id}"
+        if not setting.enabled:
+            if event.get("decision_log_id"):
+                results.append(
+                    {"status": "skipped_disabled_pending_log", "fact_event_id": fact_event_id, "setting_id": setting_id}
+                )
+                continue
+            current_level = infer_level_from_sizing(
+                unit_level=setting.unit_level,
+                fixed_units=setting.fixed_units,
+                size_scale_pct=setting.size_scale_pct,
+            )
+            decision = UnitLevelDecision(
+                source="kill_switch",
+                current_level=current_level,
+                next_level=current_level,
+                decision="keep",
+                decision_reason="disabled_setting",
+            )
+            _insert_decision_log(
+                data_api,
+                schema,
+                setting=setting,
+                decision_month=decision_month,
+                decision=decision,
+                latest_equity_jpy=None,
+                closed_trade_count=0,
+                applied=False,
+                duplicate=False,
+                now_utc=now_utc,
+                decision_log_id=decision_log_id,
+            )
+            _mark_decision_log_applied(data_api, schema, decision_log_id=decision_log_id, now_utc=now_utc)
+            results.append({"status": "skipped_disabled_setting", "fact_event_id": fact_event_id, "setting_id": setting_id})
+            continue
+
+        if event.get("decision_log_id"):
+            decision = _decision_from_log(event, source="kill_switch")
+        else:
+            current_level = infer_level_from_sizing(
+                unit_level=setting.unit_level,
+                fixed_units=setting.fixed_units,
+                size_scale_pct=setting.size_scale_pct,
+            )
+            decision = decide_emergency_demotion(
+                current_level=current_level,
+                source="kill_switch",
+                decision_reason="kill_switch_triggered",
+            )
+            _insert_decision_log(
+                data_api,
+                schema,
+                setting=setting,
+                decision_month=decision_month,
+                decision=decision,
+                latest_equity_jpy=None,
+                closed_trade_count=0,
+                applied=False,
+                duplicate=False,
+                now_utc=now_utc,
+                decision_log_id=decision_log_id,
+            )
+        applied = _should_apply(setting, decision)
+        if applied:
+            _apply_setting_level(
+                setting_table,
+                setting=setting,
+                decision=decision,
+                decision_month=decision_month,
+                now_utc=now_utc,
+                updated_by="ops_kill_switch_unit_level_policy",
+            )
+        _mark_decision_log_applied(data_api, schema, decision_log_id=decision_log_id, now_utc=now_utc)
+        results.append(
+            {
+                "status": "processed",
+                "fact_event_id": fact_event_id,
+                "setting_id": setting_id,
+                "current_level": decision.current_level,
+                "next_level": decision.next_level,
+                "decision": decision.decision,
+                "decision_reason": decision.decision_reason,
+                "applied": applied,
+            }
+        )
+    return results
+
+
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     import boto3
 
@@ -674,6 +862,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     )
     secrets = session.client("secretsmanager")
     dynamodb = session.resource("dynamodb")
+    setting_table = dynamodb.Table(config.setting_config_table_name)
 
     last_transaction_id = _read_last_transaction_id(data_api, config.main_schema)
     imported_transactions = 0
@@ -728,6 +917,12 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         _upsert_fact_from_execution(data_api, config.main_schema, item)
     for transaction, normalized_values in normalized_transaction_values:
         _update_fact_from_oanda_transaction(data_api, config.main_schema, transaction, normalized_values)
+    kill_switch_demotion_results = _process_kill_switch_demotions(
+        data_api=data_api,
+        schema=config.main_schema,
+        setting_table=setting_table,
+        now_utc=_utc_now(),
+    )
 
     return {
         "status": "ok",
@@ -735,6 +930,8 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         "normalized_transactions": normalized_transactions,
         "decision_log_items": len(decision_items),
         "execution_log_items": len(execution_items),
+        "kill_switch_demotions": len(kill_switch_demotion_results),
+        "kill_switch_demotions_applied": sum(1 for result in kill_switch_demotion_results if result.get("applied")),
         "last_transaction_id": latest_transaction_id,
         "bootstrapped_cursor": bootstrapped_cursor,
         "reset_invalid_cursor": reset_invalid_cursor,

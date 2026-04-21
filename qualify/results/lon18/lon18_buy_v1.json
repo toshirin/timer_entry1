@@ -4,7 +4,7 @@
   "result_id": "lon18_buy_v1",
   "slot_id": "lon18",
   "side": "buy",
-  "labels": ["fix10", "watch"],
+  "labels": ["watch"],
   "market_tz": "Europe/London",
   "entry_clock_local": "18:20",
   "forced_exit_clock_local": "19:20",

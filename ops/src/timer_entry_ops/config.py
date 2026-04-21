@@ -20,6 +20,7 @@ class OpsConfig:
     main_schema: str
     demo_schema: str
     oanda_secret_name: str
+    setting_config_table_name: str
     decision_log_table_name: str
     execution_log_table_name: str
     log_scan_lookback_hours: int
@@ -34,6 +35,7 @@ class OpsConfig:
             main_schema=os.getenv("OPS_MAIN_SCHEMA", "ops_main"),
             demo_schema=os.getenv("OPS_DEMO_SCHEMA", "ops_demo"),
             oanda_secret_name=_require_env("OANDA_SECRET_NAME"),
+            setting_config_table_name=os.getenv("SETTING_CONFIG_TABLE_NAME", "timer-entry-runtime-setting-config"),
             decision_log_table_name=_require_env("DECISION_LOG_TABLE_NAME"),
             execution_log_table_name=_require_env("EXECUTION_LOG_TABLE_NAME"),
             log_scan_lookback_hours=int(os.getenv("LOG_SCAN_LOOKBACK_HOURS", "36")),

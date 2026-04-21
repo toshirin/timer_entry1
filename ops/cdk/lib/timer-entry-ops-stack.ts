@@ -24,9 +24,12 @@ export class TimerEntryOpsStack extends Stack {
     const mainSchema = process.env.OPS_MAIN_SCHEMA ?? "ops_main";
     const demoSchema = process.env.OPS_DEMO_SCHEMA ?? "ops_demo";
     const oandaSecretName = process.env.OANDA_SECRET_NAME ?? "oanda_rest_api_key";
+    const settingConfigTableName = process.env.SETTING_CONFIG_TABLE_NAME ?? "timer-entry-runtime-setting-config";
     const decisionLogTableName = process.env.DECISION_LOG_TABLE_NAME ?? "timer-entry-runtime-decision-log";
     const executionLogTableName = process.env.EXECUTION_LOG_TABLE_NAME ?? "timer-entry-runtime-execution-log";
     const importScheduleExpression = process.env.OPS_IMPORT_SCHEDULE_EXPRESSION ?? "cron(15 22 * * ? *)";
+    const unitLevelPolicyScheduleExpression =
+      process.env.OPS_UNIT_LEVEL_POLICY_SCHEDULE_EXPRESSION ?? "cron(20 22 L * ? *)";
     const auroraPostgresVersion = process.env.OPS_AURORA_POSTGRES_VERSION ?? "16.4";
     const serverlessMinCapacity = numberEnv("OPS_AURORA_MIN_ACU", 0);
     const serverlessMaxCapacity = numberEnv("OPS_AURORA_MAX_ACU", 2);
@@ -76,6 +79,11 @@ export class TimerEntryOpsStack extends Stack {
       "DecisionLogTable",
       decisionLogTableName,
     );
+    const settingConfigTable = dynamodb.Table.fromTableName(
+      this,
+      "SettingConfigTable",
+      settingConfigTableName,
+    );
     const executionLogTable = dynamodb.Table.fromTableName(
       this,
       "ExecutionLogTable",
@@ -97,6 +105,7 @@ export class TimerEntryOpsStack extends Stack {
         OPS_MAIN_SCHEMA: mainSchema,
         OPS_DEMO_SCHEMA: demoSchema,
         OANDA_SECRET_NAME: oandaSecretName,
+        SETTING_CONFIG_TABLE_NAME: settingConfigTableName,
         DECISION_LOG_TABLE_NAME: decisionLogTableName,
         EXECUTION_LOG_TABLE_NAME: executionLogTableName,
         LOG_SCAN_LOOKBACK_HOURS: process.env.LOG_SCAN_LOOKBACK_HOURS ?? "36",
@@ -109,6 +118,35 @@ export class TimerEntryOpsStack extends Stack {
     oandaSecret.grantRead(dailyImport);
     decisionLogTable.grantReadData(dailyImport);
     executionLogTable.grantReadData(dailyImport);
+    settingConfigTable.grantReadWriteData(dailyImport);
+
+    const monthlyUnitLevelPolicy = new lambda.Function(this, "MonthlyUnitLevelPolicy", {
+      functionName: "timer-entry-ops-monthly-unit-level-policy",
+      runtime: lambda.Runtime.PYTHON_3_12,
+      architecture: lambda.Architecture.X86_64,
+      handler: "timer_entry_ops.monthly_unit_level_policy.lambda_handler",
+      code: lambda.Code.fromAsset(path.join(artifactDir, "monthly_unit_level_policy.zip")),
+      timeout: Duration.minutes(5),
+      memorySize: 512,
+      environment: {
+        OPS_DB_CLUSTER_ARN: cluster.clusterArn,
+        OPS_DB_SECRET_ARN: cluster.secret!.secretArn,
+        OPS_DB_NAME: databaseName,
+        OPS_MAIN_SCHEMA: mainSchema,
+        OPS_DEMO_SCHEMA: demoSchema,
+        OANDA_SECRET_NAME: oandaSecretName,
+        SETTING_CONFIG_TABLE_NAME: settingConfigTableName,
+        DECISION_LOG_TABLE_NAME: decisionLogTableName,
+        EXECUTION_LOG_TABLE_NAME: executionLogTableName,
+        LOG_SCAN_LOOKBACK_HOURS: process.env.LOG_SCAN_LOOKBACK_HOURS ?? "36",
+      },
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+
+    cluster.grantDataApiAccess(monthlyUnitLevelPolicy);
+    cluster.secret!.grantRead(monthlyUnitLevelPolicy);
+    oandaSecret.grantRead(monthlyUnitLevelPolicy);
+    settingConfigTable.grantReadWriteData(monthlyUnitLevelPolicy);
 
     const importRule = new events.Rule(this, "DailyImportRule", {
       ruleName: "timer-entry-ops-daily-import-rule",
@@ -117,10 +155,18 @@ export class TimerEntryOpsStack extends Stack {
     });
     importRule.addTarget(new targets.LambdaFunction(dailyImport));
 
+    const unitLevelPolicyRule = new events.Rule(this, "MonthlyUnitLevelPolicyRule", {
+      ruleName: "timer-entry-ops-monthly-unit-level-policy-rule",
+      description: "Monthly unit level policy for timer_entry runtime settings",
+      schedule: events.Schedule.expression(unitLevelPolicyScheduleExpression),
+    });
+    unitLevelPolicyRule.addTarget(new targets.LambdaFunction(monthlyUnitLevelPolicy));
+
     new CfnOutput(this, "OpsDatabaseClusterArn", { value: cluster.clusterArn });
     new CfnOutput(this, "OpsDatabaseSecretArn", { value: cluster.secret!.secretArn });
     new CfnOutput(this, "OpsDatabaseName", { value: databaseName });
     new CfnOutput(this, "DailyImportFunctionName", { value: dailyImport.functionName });
+    new CfnOutput(this, "MonthlyUnitLevelPolicyFunctionName", { value: monthlyUnitLevelPolicy.functionName });
   }
 }
 

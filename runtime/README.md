@@ -242,7 +242,7 @@ ops 用ラベル:
 
 qualify の最終昇格結果 JSON から runtime setting_config JSON を作成します。
 初期状態では `enabled=false` で出力されます。
-既定では `fixed_units=10`、`max_concurrent_positions=1` を補完します。`kill_switch_dd_pct`、`kill_switch_reference_balance_jpy`、`min_maintenance_margin_pct` は最終昇格結果 JSON の値を優先します。必要に応じて `--fixed-units`、`--use-margin-ratio --margin-ratio-target`、`--size-scale-pct`、`--kill-switch-dd-pct`、`--kill-switch-reference-balance-jpy`、`--min-maintenance-margin-pct`、`--max-concurrent-positions` で上書きします。
+既定では `fixed_units=10`、`unit_level=0`、`unit_level_policy_name=unit_level_policy`、`max_concurrent_positions=1` を補完します。`kill_switch_dd_pct`、`kill_switch_reference_balance_jpy`、`min_maintenance_margin_pct` は最終昇格結果 JSON の値を優先します。必要に応じて `--fixed-units`、`--use-margin-ratio --margin-ratio-target`、`--size-scale-pct`、`--kill-switch-dd-pct`、`--kill-switch-reference-balance-jpy`、`--min-maintenance-margin-pct`、`--max-concurrent-positions` で上書きします。
 
 ```bash
 PYTHONPATH="$PWD/src:$PWD/runtime/src:$PWD" \

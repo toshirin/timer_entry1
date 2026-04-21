@@ -195,6 +195,7 @@ Setting 別損益は以下の 2 セクションに分ける。
 
 - setting
 - labels
+- unit level
 - pnl pips
 - 累積 pnl pips
 - 損益円
@@ -213,12 +214,86 @@ Setting 別損益は以下の 2 セクションに分ける。
 
 Kill 状態は、初版では直近 N 日の `skipped_kill_switch` 有無と、最終発生日からの経過日数で表現する。
 
+`unit level` は現在の unit level のみを短く表示する。
+例:
+
+```text
+L0
+L3
+L0 watch
+```
+
+`fixed_units`、`size_scale_pct`、`unit_level_decision_month`、`unit_level_updated_at`、`unit_level_updated_by` などの詳細は、一覧表ではなく Unit Level セクションに表示する。
+
 #### 6.3.2 選択 setting の期間別損益
 
 期間別損益と同じ表、グラフ1、グラフ2、グラフ3を表示する。
 対象は全 setting 一覧表で選択された setting に限定する。
 
-### 6.4 直近ログ
+### 6.4 Unit Level
+
+Unit Level セクションでは、現在の unit level 状態と、月次昇降格または即時降格の履歴を表示する。
+
+このセクションは以下の 2 つに分ける。
+
+- 現在状態
+- 昇降格ログ
+
+#### 6.4.1 現在状態
+
+行は setting とする。
+
+列:
+
+- setting
+- labels
+- level
+- size
+- decision month
+- updated at
+- updated by
+- policy
+
+`size` は `fixed_units` と `size_scale_pct` を 1 列にまとめて表示する。
+
+表示例:
+
+```text
+fixed_units = 10       -> 10u
+size_scale_pct = 1.0   -> 1.0%
+```
+
+`decision month` は `unit_level_decision_month` を表示する。
+`updated at` は `unit_level_updated_at` を表示する。
+`updated by` は `unit_level_updated_by` を表示する。
+`policy` は `unit_level_policy_name` と必要に応じて `unit_level_policy_version` を表示する。
+
+#### 6.4.2 昇降格ログ
+
+`unit_level_decision_log` を新しい順に表示する。
+
+列:
+
+- month
+- setting
+- from -> to
+- decision
+- reason
+- pnl jpy
+- threshold jpy
+- units
+- applied
+- created
+
+`from -> to` は `current_level` と `next_level` を `L1 -> L2` のように表示する。
+`decision` は `promote`、`demote`、`keep`、`force_level0_watch` を表示する。
+`reason` は `decision_reason` を表示する。
+
+表示対象は共通コントロールの DB schema、期間、ラベル条件に従う。
+期間条件は `decision_month` または `created_at` に適用する。
+ラベル条件は log の `labels` に適用する。
+
+### 6.5 直近ログ
 
 現在の Recent Events 相当。
 

@@ -4,7 +4,7 @@
   "result_id": "lon09_sell_v1",
   "slot_id": "lon09",
   "side": "sell",
-  "labels": ["fix10"],
+  "labels": [],
   "market_tz": "Europe/London",
   "entry_clock_local": "09:45",
   "forced_exit_clock_local": "10:35",

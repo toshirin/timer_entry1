@@ -35,9 +35,27 @@ export async function GET(request: Request) {
     const summaryWhere = ["trade_date_local is not null", commonWhere].filter(Boolean).join(" and ");
     const summaryWhereClause = `where ${summaryWhere}`;
     const eventWhereClause = commonWhere ? `where ${commonWhere}` : "";
+    const unitLevelCurrentWhere = labelPredicate(labelMode, selectedLabels);
+    const unitLevelCurrentWhereClause = unitLevelCurrentWhere ? `where ${unitLevelCurrentWhere}` : "";
+    const unitLevelLogWhere = [unitLevelLogTimePredicate(period, bounds), labelPredicate(labelMode, selectedLabels, "labels")]
+      .filter(Boolean)
+      .join(" and ");
+    const unitLevelLogWhereClause = unitLevelLogWhere ? `where ${unitLevelLogWhere}` : "";
     const assetWhere = transactionTimePredicate(bounds);
     const assetWhereClause = assetWhere ? `where ${assetWhere}` : "";
-    const [summaryRows, eventRows, labelRows, periodRows, settingBucketRows, currentBalanceRows, assetRows, startBalanceRows, firstBalanceRows] = await Promise.all([
+    const [
+      summaryRows,
+      eventRows,
+      labelRows,
+      periodRows,
+      settingBucketRows,
+      unitLevelCurrentRows,
+      unitLevelLogRows,
+      currentBalanceRows,
+      assetRows,
+      startBalanceRows,
+      firstBalanceRows
+    ] = await Promise.all([
       queryRows(`
         select
           setting_id,
@@ -95,6 +113,9 @@ export async function GET(request: Request) {
           union
           select jsonb_array_elements_text(setting_labels) as label
           from ${schema}.setting_metadata
+          union
+          select jsonb_array_elements_text(labels) as label
+          from ${schema}.unit_level_decision_log
         ) labels
         where label <> ''
         order by label
@@ -120,6 +141,7 @@ export async function GET(request: Request) {
         select
           f.setting_id,
           coalesce(sm.setting_labels::text, max(f.setting_labels::text)) as setting_labels,
+          sm.unit_level,
           sm.expected_trade_rate,
           sm.expected_win_rate,
           sm.expected_annualized_pips,
@@ -145,12 +167,55 @@ export async function GET(request: Request) {
         group by
           f.setting_id,
           sm.setting_labels,
+          sm.unit_level,
           sm.expected_trade_rate,
           sm.expected_win_rate,
           sm.expected_annualized_pips,
           sm.expected_cagr,
           bucket
         order by f.setting_id, bucket
+      `),
+      queryRows(`
+        select
+          setting_id,
+          setting_labels::text as setting_labels,
+          unit_level,
+          fixed_units,
+          size_scale_pct,
+          unit_level_decision_month,
+          unit_level_updated_at,
+          unit_level_updated_by,
+          unit_level_policy_name,
+          unit_level_policy_version
+        from ${schema}.setting_metadata
+        ${unitLevelCurrentWhereClause}
+        order by setting_id
+      `),
+      queryRows(`
+        select
+          decision_log_id,
+          setting_id,
+          labels::text as labels,
+          decision_month,
+          source,
+          current_level,
+          next_level,
+          current_units,
+          threshold_jpy,
+          cum_jpy_month,
+          latest_equity_jpy,
+          unit_basis,
+          closed_trade_count,
+          decision,
+          decision_reason,
+          applied,
+          duplicate,
+          applied_at,
+          created_at
+        from ${schema}.unit_level_decision_log
+        ${unitLevelLogWhereClause}
+        order by created_at desc, decision_log_id desc
+        limit 100
       `),
       queryRows(`
         select account_balance, transaction_time
@@ -222,6 +287,39 @@ export async function GET(request: Request) {
       asset,
       periodPerformance,
       settingPerformance,
+      unitLevelCurrent: unitLevelCurrentRows.map((row) => ({
+        setting_id: String(row.setting_id ?? ""),
+        setting_labels: parseLabels(row.setting_labels),
+        unit_level: numberOrNull(row.unit_level),
+        fixed_units: numberOrNull(row.fixed_units),
+        size_scale_pct: numberOrNull(row.size_scale_pct),
+        unit_level_decision_month: stringOrNull(row.unit_level_decision_month),
+        unit_level_updated_at: stringOrNull(row.unit_level_updated_at),
+        unit_level_updated_by: stringOrNull(row.unit_level_updated_by),
+        unit_level_policy_name: stringOrNull(row.unit_level_policy_name),
+        unit_level_policy_version: stringOrNull(row.unit_level_policy_version)
+      })),
+      unitLevelLogs: unitLevelLogRows.map((row) => ({
+        decision_log_id: String(row.decision_log_id ?? ""),
+        setting_id: String(row.setting_id ?? ""),
+        labels: parseLabels(row.labels),
+        decision_month: String(row.decision_month ?? ""),
+        source: String(row.source ?? ""),
+        current_level: numberOrNull(row.current_level),
+        next_level: numberOrNull(row.next_level),
+        current_units: numberOrNull(row.current_units),
+        threshold_jpy: numberOrNull(row.threshold_jpy),
+        cum_jpy_month: numberOrNull(row.cum_jpy_month),
+        latest_equity_jpy: numberOrNull(row.latest_equity_jpy),
+        unit_basis: stringOrNull(row.unit_basis),
+        closed_trade_count: numberOrZero(row.closed_trade_count),
+        decision: String(row.decision ?? ""),
+        decision_reason: String(row.decision_reason ?? ""),
+        applied: Boolean(row.applied),
+        duplicate: Boolean(row.duplicate),
+        applied_at: stringOrNull(row.applied_at),
+        created_at: String(row.created_at ?? "")
+      })),
       selectedSetting,
       selectedSettingPeriodPerformance,
       summary: summaryRows.map(withParsedLabels) as unknown as DashboardSummary[],
@@ -330,6 +428,26 @@ function transactionTimePredicate(bounds: { start: string | null; end: string | 
   return clauses.join(" and ");
 }
 
+function unitLevelLogTimePredicate(period: Period, bounds: { start: string | null; end: string | null }): string {
+  const clauses = [];
+  if (period === "week") {
+    if (bounds.start) {
+      clauses.push(`created_at >= '${bounds.start}T00:00:00Z'`);
+    }
+    if (bounds.end) {
+      clauses.push(`created_at < '${bounds.end}T00:00:00Z'`);
+    }
+    return clauses.join(" and ");
+  }
+  if (period !== "all" && bounds.start) {
+    clauses.push(`decision_month >= '${bounds.start.slice(0, 7)}'`);
+  }
+  if (period !== "all" && bounds.end) {
+    clauses.push(`decision_month < '${bounds.end.slice(0, 7)}'`);
+  }
+  return clauses.join(" and ");
+}
+
 function assetBucketExpression(period: Period): string {
   if (period === "all") {
     return "date_trunc('year', transaction_time)::date";
@@ -351,12 +469,12 @@ function periodBucketExpression(period: Period, alias?: string): string {
   return column;
 }
 
-function labelPredicate(labelMode: LabelMode, labels: string[]): string {
+function labelPredicate(labelMode: LabelMode, labels: string[], column = "setting_labels"): string {
   if (labelMode === "all" || labels.length === 0) {
     return "";
   }
   const values = labels.map((label) => `'${sqlString(label)}'`).join(",");
-  const exists = `exists (select 1 from jsonb_array_elements_text(setting_labels) as labels(label) where labels.label in (${values}))`;
+  const exists = `exists (select 1 from jsonb_array_elements_text(${column}) as labels(label) where labels.label in (${values}))`;
   return labelMode === "include" ? exists : `not ${exists}`;
 }
 
@@ -506,6 +624,7 @@ function buildSettingPerformance(rows: QueryRow[], period: Period, config: Dashb
       return {
         setting_id: settingId,
         setting_labels: parseLabels(firstRow.setting_labels),
+        unit_level: numberOrNull(firstRow.unit_level),
         decision_count: decisionCount,
         entered_count: enteredCount,
         conflict_count: conflictCount,
@@ -597,6 +716,10 @@ function numberOrNull(value: unknown): number | null {
 
 function numberOrZero(value: unknown): number {
   return numberOrNull(value) ?? 0;
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" && value ? value : null;
 }
 
 function isDbWakingError(error: unknown) {

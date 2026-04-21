@@ -4,6 +4,7 @@
   "result_id": "lon10_buy_v1",
   "slot_id": "lon10",
   "side": "buy",
+  "labels": [],
   "market_tz": "Europe/London",
   "entry_clock_local": "10:40",
   "forced_exit_clock_local": "11:45",
@@ -29,7 +30,6 @@
   "in_gross_pips": 342.0,
   "out_gross_pips": 91.8,
   "win_rate": 0.608696,
-  "labels": ["fix10"],
   "source_params_files": {
     "E004": "qualify/params/lon10/e004.json",
     "E005-E008": "qualify/params/lon10/e005-e008.json"

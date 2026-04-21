@@ -80,6 +80,7 @@ export type DashboardPeriodPerformance = {
 export type DashboardSettingPerformance = {
   setting_id: string;
   setting_labels: string[];
+  unit_level: number | null;
   decision_count: number;
   entered_count: number;
   conflict_count: number;
@@ -103,6 +104,41 @@ export type DashboardSettingPerformance = {
   days_since_last_kill: number | null;
 };
 
+export type DashboardUnitLevelCurrent = {
+  setting_id: string;
+  setting_labels: string[];
+  unit_level: number | null;
+  fixed_units: number | null;
+  size_scale_pct: number | null;
+  unit_level_decision_month: string | null;
+  unit_level_updated_at: string | null;
+  unit_level_updated_by: string | null;
+  unit_level_policy_name: string | null;
+  unit_level_policy_version: string | null;
+};
+
+export type DashboardUnitLevelLog = {
+  decision_log_id: string;
+  setting_id: string;
+  labels: string[];
+  decision_month: string;
+  source: string;
+  current_level: number | null;
+  next_level: number | null;
+  current_units: number | null;
+  threshold_jpy: number | null;
+  cum_jpy_month: number | null;
+  latest_equity_jpy: number | null;
+  unit_basis: string | null;
+  closed_trade_count: number;
+  decision: string;
+  decision_reason: string;
+  applied: boolean;
+  duplicate: boolean;
+  applied_at: string | null;
+  created_at: string;
+};
+
 export type DashboardResponse = {
   schema: string;
   period: "all" | "year" | "month" | "week";
@@ -114,6 +150,8 @@ export type DashboardResponse = {
   asset: DashboardAsset;
   periodPerformance: DashboardPeriodPerformance[];
   settingPerformance: DashboardSettingPerformance[];
+  unitLevelCurrent: DashboardUnitLevelCurrent[];
+  unitLevelLogs: DashboardUnitLevelLog[];
   selectedSetting: string | null;
   selectedSettingPeriodPerformance: DashboardPeriodPerformance[];
   summary: DashboardSummary[];

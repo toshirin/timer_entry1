@@ -4,7 +4,7 @@
   "result_id": "tyo13_buy_v1",
   "slot_id": "tyo13",
   "side": "buy",
-  "labels": ["fix10"],
+  "labels": [],
   "market_tz": "Asia/Tokyo",
   "entry_clock_local": "13:00",
   "forced_exit_clock_local": "14:05",

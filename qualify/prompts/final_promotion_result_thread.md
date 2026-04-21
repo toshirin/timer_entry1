@@ -12,7 +12,8 @@
 - E008 entry delay 耐性が合格済みであること
 - E005 の `slip_pips` は one-way 表示で、実質往復 penalty は `2 * slip_pips` です
 - E007 では `selected_risk_fraction`, `kill_switch_dd_pct`, `min_maintenance_margin_pct`, `initial_capital_jpy` を明示してください
-- `labels` には"fix10"だけを文字列配列として入れてください
+- `labels` は原則として空配列 `[]` にしてください。監視対象など、運用上の意味がある場合だけ `"watch"` などのラベルを入れてください。初期 unit size を表す `"fix10"` は入れないでください
+- unit level は runtime promotion 側で初期 `unit_level=0` / `fixed_units=10` として付与します。この最終昇格結果 JSON には `unit_level`、`unit_level_policy_name`、`unit_level_policy_version`、`size_scale_pct` を入れないでください
 - 結果 JSON では、後から取り出したい主要指標を `evidence` の中だけでなく top-level にも入れてください
 - E005 / E007 / E008 の sweep 成績は、top-level ではなく `evidence` に要約転記してください
 - `evidence` には全 trade や全 equity curve を貼らず、採用判断に使った summary row の主要列だけを入れてください
@@ -51,14 +52,13 @@ Codex 側では以下に保存します。
   "result_id": "{slot_id}_buy_v1",
   "slot_id": "{slot_id}",
   "side": "buy",
-  "labels": ["fix10"],
+  "labels": [],
   "market_tz": "Europe/London",
   "entry_clock_local": "15:40",
   "forced_exit_clock_local": "16:45",
   "tp_pips": 15,
   "sl_pips": 20,
   "filter_labels": ["right_stronger"],
-  "labels": ["london", "news_sensitive"],
   "pass_stability_gate": true,
   "e004_passed": true,
   "e005_passed": true,
@@ -162,6 +162,6 @@ Codex 側では以下に保存します。
       ]
     }
   },
-  "notes": "short rationale"
+  "notes": "short rationale. Runtime promotion will initialize this setting as unit_level=0 / fixed_units=10; monthly unit level changes are handled by Unit Level Policy."
 }
 ```

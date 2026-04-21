@@ -8,6 +8,8 @@ from typing import Any
 from timer_entry.filters import parse_volatility_filter_label
 from timer_entry.schemas import QualifyPromotionResult, StrategySetting
 
+from .level_policy import POLICY_NAME, POLICY_VERSION, infer_level_from_sizing
+
 
 def _load_payload(path: str | Path) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -182,6 +184,16 @@ def promote_qualify_result_to_runtime_config(
         }
     )
     runtime_config = resolved_setting.to_runtime_json_dict()
+    runtime_config["unit_level"] = infer_level_from_sizing(
+        unit_level=None,
+        fixed_units=fixed_units,
+        size_scale_pct=size_scale_pct,
+    )
+    runtime_config["unit_level_policy_name"] = POLICY_NAME
+    runtime_config["unit_level_policy_version"] = POLICY_VERSION
+    runtime_config["unit_level_updated_at"] = None
+    runtime_config["unit_level_updated_by"] = "promotion"
+    runtime_config["unit_level_decision_month"] = None
     if not runtime_config.get("filter_spec_json") and tuple(setting.filter_labels) != ("all",):
         raise ValueError("filter_labels could not be converted to runtime filter_spec_json")
     return runtime_config

@@ -9,6 +9,7 @@ SRC_DIR="$ROOT_DIR/src"
 CORE_SRC_DIR="$REPO_DIR/src/timer_entry"
 REQ_FILE="$ROOT_DIR/requirements.txt"
 CORE_RUNTIME_FILES=(
+  "calendar.py"
   "direction.py"
   "filters.py"
   "schemas.py"

@@ -103,6 +103,12 @@ create table if not exists ops_main.setting_metadata (
   fixed_units numeric,
   margin_ratio_target numeric,
   size_scale_pct numeric,
+  unit_level integer,
+  unit_level_policy_name text,
+  unit_level_policy_version text,
+  unit_level_updated_at timestamptz,
+  unit_level_updated_by text,
+  unit_level_decision_month text,
   tp_pips numeric,
   sl_pips numeric,
   research_label text,
@@ -147,6 +153,12 @@ alter table ops_main.setting_metadata
   add column if not exists fixed_units numeric,
   add column if not exists margin_ratio_target numeric,
   add column if not exists size_scale_pct numeric,
+  add column if not exists unit_level integer,
+  add column if not exists unit_level_policy_name text,
+  add column if not exists unit_level_policy_version text,
+  add column if not exists unit_level_updated_at timestamptz,
+  add column if not exists unit_level_updated_by text,
+  add column if not exists unit_level_decision_month text,
   add column if not exists tp_pips numeric,
   add column if not exists sl_pips numeric,
   add column if not exists research_label text,
@@ -183,6 +195,56 @@ create index if not exists idx_ops_normalized_client_ext
 
 create index if not exists idx_ops_setting_metadata_slot
   on ops_main.setting_metadata (slot_id);
+
+create table if not exists ops_main.unit_level_decision_log (
+  decision_log_id text primary key,
+  setting_id text not null,
+  strategy_id text,
+  slot_id text,
+  instrument text,
+  market_session text,
+  decision_month text not null,
+  policy_name text not null,
+  policy_version text not null,
+  labels jsonb not null default '[]'::jsonb,
+  source text not null,
+  current_level integer not null,
+  next_level integer not null,
+  current_units numeric,
+  threshold_jpy numeric,
+  cum_jpy_month numeric,
+  latest_equity_jpy numeric,
+  unit_basis text,
+  closed_trade_count integer not null default 0,
+  decision text not null,
+  decision_reason text not null,
+  applied boolean not null default false,
+  duplicate boolean not null default false,
+  applied_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table ops_main.unit_level_decision_log
+  add column if not exists strategy_id text,
+  add column if not exists slot_id text,
+  add column if not exists instrument text,
+  add column if not exists market_session text,
+  add column if not exists labels jsonb not null default '[]'::jsonb,
+  add column if not exists current_units numeric,
+  add column if not exists threshold_jpy numeric,
+  add column if not exists cum_jpy_month numeric,
+  add column if not exists latest_equity_jpy numeric,
+  add column if not exists unit_basis text,
+  add column if not exists closed_trade_count integer not null default 0,
+  add column if not exists duplicate boolean not null default false,
+  add column if not exists applied_at timestamptz,
+  add column if not exists created_at timestamptz not null default now();
+
+create index if not exists idx_ops_unit_level_decision_setting_month
+  on ops_main.unit_level_decision_log (setting_id, decision_month);
+
+create index if not exists idx_ops_unit_level_decision_created_at
+  on ops_main.unit_level_decision_log (created_at);
 
 create or replace view ops_main.oanda_latest_account_balance as
 select distinct on (account_id)
@@ -230,6 +292,7 @@ create table if not exists ops_demo.oanda_transactions_raw (like ops_main.oanda_
 create table if not exists ops_demo.oanda_transactions_normalized (like ops_main.oanda_transactions_normalized including all);
 create table if not exists ops_demo.runtime_oanda_event_fact (like ops_main.runtime_oanda_event_fact including all);
 create table if not exists ops_demo.setting_metadata (like ops_main.setting_metadata including all);
+create table if not exists ops_demo.unit_level_decision_log (like ops_main.unit_level_decision_log including all);
 
 alter table ops_demo.runtime_oanda_event_fact
   add column if not exists setting_labels jsonb not null default '[]'::jsonb;
@@ -258,6 +321,12 @@ alter table ops_demo.setting_metadata
   add column if not exists fixed_units numeric,
   add column if not exists margin_ratio_target numeric,
   add column if not exists size_scale_pct numeric,
+  add column if not exists unit_level integer,
+  add column if not exists unit_level_policy_name text,
+  add column if not exists unit_level_policy_version text,
+  add column if not exists unit_level_updated_at timestamptz,
+  add column if not exists unit_level_updated_by text,
+  add column if not exists unit_level_decision_month text,
   add column if not exists tp_pips numeric,
   add column if not exists sl_pips numeric,
   add column if not exists research_label text,
@@ -273,6 +342,28 @@ alter table ops_demo.setting_metadata
   add column if not exists source_file text,
   add column if not exists imported_at timestamptz not null default now(),
   add column if not exists raw_config jsonb not null default '{}'::jsonb;
+
+alter table ops_demo.unit_level_decision_log
+  add column if not exists strategy_id text,
+  add column if not exists slot_id text,
+  add column if not exists instrument text,
+  add column if not exists market_session text,
+  add column if not exists labels jsonb not null default '[]'::jsonb,
+  add column if not exists current_units numeric,
+  add column if not exists threshold_jpy numeric,
+  add column if not exists cum_jpy_month numeric,
+  add column if not exists latest_equity_jpy numeric,
+  add column if not exists unit_basis text,
+  add column if not exists closed_trade_count integer not null default 0,
+  add column if not exists duplicate boolean not null default false,
+  add column if not exists applied_at timestamptz,
+  add column if not exists created_at timestamptz not null default now();
+
+create index if not exists idx_ops_demo_unit_level_decision_setting_month
+  on ops_demo.unit_level_decision_log (setting_id, decision_month);
+
+create index if not exists idx_ops_demo_unit_level_decision_created_at
+  on ops_demo.unit_level_decision_log (created_at);
 
 drop view if exists ops_demo.daily_setting_summary;
 

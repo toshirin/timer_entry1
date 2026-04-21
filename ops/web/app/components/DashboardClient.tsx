@@ -226,6 +226,8 @@ function DashboardContent({ data, onSelectSetting }: { data: DashboardResponse; 
         onSelect={onSelectSetting}
       />
 
+      <UnitLevelSection current={data.unitLevelCurrent} logs={data.unitLevelLogs} />
+
       <section className="band">
         <div className="section-heading">
           <h2>Recent Events</h2>
@@ -264,6 +266,7 @@ function SettingPerformanceSection({
               <th>select</th>
               <th>setting</th>
               <th>labels</th>
+              <th>level</th>
               <th>pips</th>
               <th>cum pips</th>
               <th>pnl jpy</th>
@@ -289,11 +292,12 @@ function SettingPerformanceSection({
                 </td>
                 <td>{row.setting_id}</td>
                 <td>{formatLabels(row.setting_labels)}</td>
-                <td>{formatNumber(row.pnl_pips)}</td>
+                <td>{formatLevel(row.unit_level, row.setting_labels)}</td>
+                <td className={pnlTone(row.pnl_pips)}>{formatNumber(row.pnl_pips)}</td>
                 <td className={pnlTone(row.cumulative_pnl_pips)}>
                   {formatWithDelta(row.cumulative_pnl_pips, row.expected_annualized_pips, formatNumber)}
                 </td>
-                <td>{formatYen(row.pnl_jpy)}</td>
+                <td className={pnlTone(row.pnl_jpy)}>{formatYen(row.pnl_jpy)}</td>
                 <td className={pnlTone(row.cumulative_pnl_jpy)}>{formatYen(row.cumulative_pnl_jpy)}</td>
                 {showCagr && <td>{formatWithDelta(row.actual_cagr, row.expected_cagr, formatPct)}</td>}
                 <td>{formatNumber(row.max_dd_pips)}</td>
@@ -311,6 +315,105 @@ function SettingPerformanceSection({
         <p>Period PnL for the selected setting.</p>
       </div>
       <PeriodPerformanceSection rows={selectedRows} embedded />
+    </section>
+  );
+}
+
+function UnitLevelSection({
+  current,
+  logs
+}: {
+  current: DashboardResponse["unitLevelCurrent"];
+  logs: DashboardResponse["unitLevelLogs"];
+}) {
+  return (
+    <section className="band">
+      <div className="section-heading">
+        <h2>Unit Level</h2>
+        <p>Current sizing state and monthly level decisions.</p>
+      </div>
+      <div className="table-wrap setting-table">
+        <table>
+          <thead>
+            <tr>
+              <th>setting</th>
+              <th>labels</th>
+              <th>level</th>
+              <th>size</th>
+              <th>unit month</th>
+              <th>updated</th>
+              <th>updated by</th>
+              <th>policy</th>
+            </tr>
+          </thead>
+          <tbody>
+            {current.map((row) => (
+              <tr key={row.setting_id}>
+                <td className="clip-cell" title={row.setting_id}>
+                  {row.setting_id}
+                </td>
+                <td className="clip-cell" title={formatLabels(row.setting_labels)}>
+                  {formatLabels(row.setting_labels)}
+                </td>
+                <td>{formatLevel(row.unit_level, row.setting_labels)}</td>
+                <td>{formatUnitSize(row.fixed_units, row.size_scale_pct)}</td>
+                <td>{row.unit_level_decision_month ?? "-"}</td>
+                <td>{row.unit_level_updated_at ? compactDate(row.unit_level_updated_at) : "-"}</td>
+                <td className="clip-cell" title={row.unit_level_updated_by ?? "-"}>
+                  {row.unit_level_updated_by ?? "-"}
+                </td>
+                <td className="clip-cell" title={formatPolicy(row.unit_level_policy_name, row.unit_level_policy_version)}>
+                  {formatPolicy(row.unit_level_policy_name, row.unit_level_policy_version)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="section-heading sub-heading">
+        <h2>Level Decisions</h2>
+        <p>Promotion, demotion, keep, and watch decisions.</p>
+      </div>
+      <div className="table-wrap wide event-table">
+        <table>
+          <thead>
+            <tr>
+              <th>month</th>
+              <th>setting</th>
+              <th>from to</th>
+              <th>decision</th>
+              <th>reason</th>
+              <th>pnl jpy</th>
+              <th>threshold</th>
+              <th>units</th>
+              <th>applied</th>
+              <th>created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.map((row) => (
+              <tr key={row.decision_log_id}>
+                <td>{row.decision_month}</td>
+                <td className="clip-cell" title={row.setting_id}>
+                  {row.setting_id}
+                </td>
+                <td>{formatLevelMove(row.current_level, row.next_level)}</td>
+                <td>
+                  <span className={`pill ${unitDecisionTone(row.decision)}`}>{row.decision}</span>
+                </td>
+                <td className="clip-cell reason-cell" title={row.decision_reason}>
+                  {row.decision_reason}
+                </td>
+                <td className={pnlTone(row.cum_jpy_month)}>{formatYen(row.cum_jpy_month)}</td>
+                <td>{formatYen(row.threshold_jpy)}</td>
+                <td>{formatUnits(row.current_units)}</td>
+                <td>{row.applied ? "yes" : "no"}</td>
+                <td>{compactDate(row.created_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -390,9 +493,9 @@ function PeriodPerformanceTable({ rows }: { rows: DashboardResponse["periodPerfo
           {rows.map((row) => (
             <tr key={row.bucket}>
               <td>{row.bucket}</td>
-              <td>{formatNumber(row.pnl_pips)}</td>
+              <td className={pnlTone(row.pnl_pips)}>{formatNumber(row.pnl_pips)}</td>
               <td className={pnlTone(row.cumulative_pnl_pips)}>{formatNumber(row.cumulative_pnl_pips)}</td>
-              <td>{formatYen(row.pnl_jpy)}</td>
+              <td className={pnlTone(row.pnl_jpy)}>{formatYen(row.pnl_jpy)}</td>
               <td className={pnlTone(row.cumulative_pnl_jpy)}>{formatYen(row.cumulative_pnl_jpy)}</td>
               <td>{formatNumber(row.max_dd_pips)}</td>
               <td>{formatRateWithCount(row.conflict_rate, row.conflict_count, row.decision_count)}</td>
@@ -570,6 +673,34 @@ function formatLabels(labels: string[]) {
   return labels.length ? labels.join(", ") : "-";
 }
 
+function formatLevel(level: number | null, labels: string[] = []) {
+  const base = level === null ? "-" : `L${level}`;
+  return labels.includes("watch") && base !== "-" ? `${base} watch` : base;
+}
+
+function formatLevelMove(current: number | null, next: number | null) {
+  const from = current === null ? "-" : `L${current}`;
+  const to = next === null ? "-" : `L${next}`;
+  return `${from} -> ${to}`;
+}
+
+function formatUnitSize(fixedUnits: number | null, sizeScalePct: number | null) {
+  if (fixedUnits !== null) {
+    return `${formatUnits(fixedUnits)}u`;
+  }
+  if (sizeScalePct !== null) {
+    return `${formatNumber(sizeScalePct)}%`;
+  }
+  return "-";
+}
+
+function formatPolicy(name: string | null, version: string | null) {
+  if (!name && !version) {
+    return "-";
+  }
+  return [name, version].filter(Boolean).join(" ");
+}
+
 function decisionTone(decision: string | null) {
   if (decision === "entered" || decision === "exited") {
     return "ok";
@@ -579,6 +710,16 @@ function decisionTone(decision: string | null) {
   }
   if (decision?.includes("failed")) {
     return "bad";
+  }
+  return "muted-pill";
+}
+
+function unitDecisionTone(decision: string | null) {
+  if (decision === "promote") {
+    return "ok";
+  }
+  if (decision === "demote" || decision === "force_level0_watch") {
+    return "warn";
   }
   return "muted-pill";
 }
