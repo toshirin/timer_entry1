@@ -131,6 +131,14 @@ class SettingConfig:
             return [loaded]
         raise ValueError("filter_spec_json must be a JSON object or array")
 
+    def parsed_execution_spec(self) -> dict[str, Any]:
+        if not self.execution_spec_json:
+            return {}
+        loaded = json.loads(self.execution_spec_json)
+        if isinstance(loaded, dict):
+            return loaded
+        raise ValueError("execution_spec_json must be a JSON object")
+
 
 @dataclass(frozen=True)
 class OandaSecret:

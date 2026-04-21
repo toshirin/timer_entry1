@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
+from timer_entry.schemas import StrategySetting
 
 from qualify.common.params import E001Params, E002Params, E003Params, E004Params, E005E008Params
 from qualify.common.e001 import _resolve_threshold_metadata
@@ -58,6 +61,27 @@ def test_baseline_exclude_windows_flow_to_strategy_setting() -> None:
     setting = params.to_strategy_setting(comparison_label="ge2")
     assert params.baseline.exclude_windows == ("us_uk_dst_mismatch",)
     assert setting.exclude_windows == ("us_uk_dst_mismatch",)
+
+
+def test_strategy_setting_runtime_config_uses_explicit_execution_spec_exclude_windows() -> None:
+    setting = StrategySetting(
+        setting_id="lon12_buy_test",
+        slot_id="lon12",
+        side="buy",
+        market_tz="Europe/London",
+        entry_clock_local="12:30",
+        forced_exit_clock_local="13:25",
+        tp_pips=10,
+        sl_pips=20,
+        filter_labels=("all",),
+        exclude_windows=("us_uk_dst_mismatch",),
+        execution_spec={"exclude_windows": []},
+    )
+
+    runtime_config = setting.to_runtime_config()
+    execution_spec = json.loads(runtime_config.execution_spec_json or "{}")
+
+    assert execution_spec["exclude_windows"] == []
 
 
 def test_e001_resolves_pre_range_percentile_threshold_metadata() -> None:

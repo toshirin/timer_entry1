@@ -10,6 +10,7 @@
 - Oanda REST API での成行 entry、TP/SL 作成、forced exit
 - `SETTING_*` 監査ログ出力
 - `decision_log` による不発・skip 理由の永続化
+- `execution_spec_json.exclude_windows` による entry 日除外
 - setting 単位の kill switch
 - qualify の最終結果から runtime setting_config JSON への promotion
 - CDK による基盤作成
@@ -221,6 +222,11 @@ kill switch 設定:
 - 初期運用では `1` を推奨
 - `1` の場合、Oanda 口座上に open trade が 1 本でも残っていれば新規 entry を見送る
 - 見送りは `decision_log` に `skipped_concurrency` として残す
+
+除外 window:
+
+- `execution_spec_json.exclude_windows` に `us_uk_dst_mismatch` を指定すると、London 系 setting は US / UK DST mismatch 期間中の entry を `skipped_exclude_window` として見送る
+- forced exit は安全側の処理なので、除外 window では止めない
 
 filter 設定:
 

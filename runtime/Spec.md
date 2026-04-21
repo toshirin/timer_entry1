@@ -106,6 +106,16 @@ runtime は side 文字列から直接 Bid / Ask を分岐せず、core の Dire
 - Lambda 内では setting ごとの local clock を timezone-aware に UTC へ変換して判定する
 - UTC 固定時刻で直接 setting を判定しない
 
+### 5.4 除外 window
+
+`execution_spec_json.exclude_windows` に除外 window が指定された setting は、entry handler の local clock 一致後、Oanda API を呼ぶ前に除外判定を行う。
+
+- 初期対応 window は `us_uk_dst_mismatch`
+- `us_uk_dst_mismatch` は London 系 setting の US / UK DST mismatch 期間を除外する
+- 除外日は `skipped_exclude_window` として `decision_log` に記録する
+- forced exit handler は安全側に倒すため、除外 window では止めない
+- 未知の window 名や不正な `exclude_windows` 型は config error とみなし、`SETTING_ERROR` / handler result `status=error` として目立たせる。現行実装では `skipped_config_error` の decision_log にはしない
+
 ## 6. Setting Config 方針
 
 ### 6.1 命名
@@ -386,6 +396,7 @@ status 例:
 - `skipped_duplicate`
 - `skipped_filter`
 - `skipped_kill_switch`
+- `skipped_exclude_window`
 - `skipped_config_error`
 - `entry_failed`
 - `exit_failed`
@@ -398,6 +409,7 @@ status 例:
 - market closed
 - clock mismatch
 - kill switch
+- exclude window
 - config error
 
 ## 8. 時刻と市場セッション

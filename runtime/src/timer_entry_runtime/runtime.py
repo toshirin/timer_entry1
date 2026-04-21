@@ -5,6 +5,7 @@ from dataclasses import asdict
 from datetime import datetime
 from typing import Any
 
+from timer_entry.calendar import is_trading_day_excluded
 from timer_entry.direction import get_direction_spec
 
 from .aws_runtime import RuntimeAws
@@ -156,6 +157,33 @@ def _filter_checks(
     serialized = [asdict(decision) for decision in decisions]
     emit_log("SETTING_FILTER", setting_id=setting.setting_id, filter_results=serialized)
     return all(item["passed"] for item in serialized), serialized
+
+
+def _exclude_window_check(*, setting: SettingConfig, now_utc: datetime) -> tuple[bool, dict[str, Any]]:
+    execution_spec = setting.parsed_execution_spec()
+    raw_windows = execution_spec.get("exclude_windows", [])
+    if raw_windows is None:
+        raw_windows = []
+    if isinstance(raw_windows, str):
+        exclude_windows = [raw_windows]
+    elif isinstance(raw_windows, list):
+        exclude_windows = [str(item) for item in raw_windows]
+    else:
+        raise ValueError("execution_spec_json.exclude_windows must be a string or array")
+
+    session_date = trade_date_local(now_utc, setting.market_tz)
+    details: dict[str, Any] = {
+        "exclude_windows": exclude_windows,
+        "session_date": session_date,
+        "session_tz": setting.market_tz,
+    }
+    if not exclude_windows:
+        details["trigger_reason"] = None
+        return True, details
+
+    excluded = is_trading_day_excluded(session_date, setting.market_tz, exclude_windows)
+    details["trigger_reason"] = "exclude_window" if excluded else None
+    return not excluded, details
 
 
 def _concurrency_check(*, setting: SettingConfig, oanda_client: OandaClient) -> tuple[bool, dict[str, Any]]:
@@ -512,6 +540,24 @@ def run_entry_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 emit_log("SETTING_SKIP", setting_id=setting.setting_id, reason="clock_mismatch")
                 _record_decision(aws_runtime=aws_runtime, setting=setting, handler_name="entry_handler", trigger_bucket=setting.trigger_bucket_entry, scheduled_local=scheduled_local, now_utc=now_utc, decision="skipped_clock_mismatch", reason="clock_mismatch")
                 results.append({"setting_id": setting.setting_id, "status": "skipped_clock_mismatch"})
+                continue
+
+            exclude_allowed, exclude_details = _exclude_window_check(setting=setting, now_utc=now_utc)
+            emit_log("SETTING_CHECK", setting_id=setting.setting_id, check_name="exclude_window", **exclude_details, passed=exclude_allowed)
+            if not exclude_allowed:
+                emit_log("SETTING_SKIP", setting_id=setting.setting_id, reason="exclude_window", exclude_window_details=exclude_details)
+                _record_decision(
+                    aws_runtime=aws_runtime,
+                    setting=setting,
+                    handler_name="entry_handler",
+                    trigger_bucket=setting.trigger_bucket_entry,
+                    scheduled_local=scheduled_local,
+                    now_utc=now_utc,
+                    decision="skipped_exclude_window",
+                    reason="exclude_window",
+                    extra=exclude_details,
+                )
+                results.append({"setting_id": setting.setting_id, "status": "skipped_exclude_window"})
                 continue
 
             market_open, price_snapshot = _market_open_check(setting=setting, oanda_client=oanda_client, now_utc=now_utc)

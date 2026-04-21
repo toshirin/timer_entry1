@@ -18,7 +18,7 @@ from timer_entry_runtime.order_builder import (
     requested_entry_from_snapshot,
     trade_protection_order_body,
 )
-from timer_entry_runtime.runtime import _create_entry_trade
+from timer_entry_runtime.runtime import _create_entry_trade, _exclude_window_check
 from timer_entry_runtime.sizing import compute_units
 
 
@@ -204,6 +204,103 @@ def test_runtime_trend_ratio_zero_range_does_not_pass_range_lt_filter() -> None:
     assert decisions[0].passed is False
     assert math.isnan(float(decisions[0].values["trend_ratio"]))
     assert decisions[0].values["threshold"] == 0.25
+
+
+def test_runtime_exclude_window_skips_london_us_uk_dst_mismatch_day() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "market_session": "london",
+            "market_tz": "Europe/London",
+            "entry_clock_local": "12:30",
+            "forced_exit_clock_local": "13:25",
+            "trigger_bucket_entry": "ENTRY#Europe/London#1230",
+            "trigger_bucket_exit": "EXIT#Europe/London#1325",
+            "execution_spec_json": json.dumps({"exclude_windows": ["us_uk_dst_mismatch"]}, separators=(",", ":")),
+        }
+    )
+
+    allowed, details = _exclude_window_check(
+        setting=setting,
+        now_utc=datetime(2024, 3, 15, 12, 30, tzinfo=timezone.utc),
+    )
+
+    assert allowed is False
+    assert details["session_date"] == "2024-03-15"
+    assert details["session_tz"] == "Europe/London"
+    assert details["trigger_reason"] == "exclude_window"
+
+
+def test_runtime_exclude_window_does_not_skip_london_after_dst_gap() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "market_session": "london",
+            "market_tz": "Europe/London",
+            "entry_clock_local": "12:30",
+            "forced_exit_clock_local": "13:25",
+            "trigger_bucket_entry": "ENTRY#Europe/London#1230",
+            "trigger_bucket_exit": "EXIT#Europe/London#1325",
+            "execution_spec_json": json.dumps({"exclude_windows": ["us_uk_dst_mismatch"]}, separators=(",", ":")),
+        }
+    )
+
+    allowed, details = _exclude_window_check(
+        setting=setting,
+        now_utc=datetime(2024, 3, 31, 11, 30, tzinfo=timezone.utc),
+    )
+
+    assert allowed is True
+    assert details["session_date"] == "2024-03-31"
+    assert details["trigger_reason"] is None
+
+
+def test_runtime_exclude_window_does_not_skip_london_after_autumn_dst_gap() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "market_session": "london",
+            "market_tz": "Europe/London",
+            "entry_clock_local": "12:30",
+            "forced_exit_clock_local": "13:25",
+            "trigger_bucket_entry": "ENTRY#Europe/London#1230",
+            "trigger_bucket_exit": "EXIT#Europe/London#1325",
+            "execution_spec_json": json.dumps({"exclude_windows": ["us_uk_dst_mismatch"]}, separators=(",", ":")),
+        }
+    )
+
+    allowed, details = _exclude_window_check(
+        setting=setting,
+        now_utc=datetime(2024, 11, 3, 12, 30, tzinfo=timezone.utc),
+    )
+
+    assert allowed is True
+    assert details["session_date"] == "2024-11-03"
+    assert details["trigger_reason"] is None
+
+
+def test_runtime_exclude_window_passes_without_execution_spec() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "market_session": "london",
+            "market_tz": "Europe/London",
+            "entry_clock_local": "12:30",
+            "forced_exit_clock_local": "13:25",
+            "trigger_bucket_entry": "ENTRY#Europe/London#1230",
+            "trigger_bucket_exit": "EXIT#Europe/London#1325",
+            "execution_spec_json": None,
+        }
+    )
+
+    allowed, details = _exclude_window_check(
+        setting=setting,
+        now_utc=datetime(2024, 3, 15, 12, 30, tzinfo=timezone.utc),
+    )
+
+    assert allowed is True
+    assert details["exclude_windows"] == []
+    assert details["trigger_reason"] is None
 
 
 def test_tp_sl_failure_keeps_trade_state_entered_for_forced_exit() -> None:
