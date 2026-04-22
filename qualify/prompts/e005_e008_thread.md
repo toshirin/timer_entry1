@@ -21,6 +21,7 @@
 - E005-E008 はその後段の robustness suite です
 - デフォルト実行は `qualify/e005-e008.py` の一括実行です
 - 単独確認が必要なら `--only E005` のように実行します
+- E007 を新思想でやり直す場合など、既存出力を残したい派生再実験は `--only E007 --output-alias E007=E007A` のように保存先を分けます
 - params は `qualify/params/{slot_id}/e005-e008.json` を新規に出力します
 - E004 の baseline setting は `e005-e008.json` にコピーして固定します
 - E005 の `slip_pips` は one-way 表示です

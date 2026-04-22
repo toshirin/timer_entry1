@@ -20,6 +20,20 @@ DEFAULT_WALKFORWARD_TEST_YEARS = tuple(range(2021, 2026))
 from .tick_replay import generate_e004_signal_days, run_tick_replay_batch
 
 
+def parse_output_aliases(values: list[str] | tuple[str, ...] | None) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for value in values or []:
+        if "=" not in value:
+            raise ValueError(f"output alias must use FROM=TO format: {value}")
+        source, target = (part.strip().upper() for part in value.split("=", 1))
+        if source not in {"E005", "E006", "E007", "E008"}:
+            raise ValueError(f"Unsupported output alias source: {source}")
+        if not target:
+            raise ValueError(f"Output alias target must not be empty: {value}")
+        aliases[source] = target
+    return aliases
+
+
 def _annualized_pips(trades_df: pd.DataFrame) -> float:
     if trades_df.empty:
         return math.nan
@@ -374,8 +388,9 @@ def _run_e005(
     root_out_dir: str | Path,
     baseline: dict[str, object],
     slippage_values: tuple[float, ...],
+    output_code: str = "E005",
 ) -> dict[str, pd.DataFrame]:
-    paths = ensure_run_layout(Path(root_out_dir) / "E005")
+    paths = ensure_run_layout(Path(root_out_dir) / output_code)
     signal_rows = [signal.to_dict() for signal in baseline["signals"]]  # type: ignore[index]
     eligible_days_by_segment = baseline["eligible_days_by_segment"]  # type: ignore[index]
 
@@ -444,7 +459,8 @@ def _run_e005(
     trades_df = _concat_trade_frames(trade_frames)
 
     metadata = {
-        "experiment_code": "E005",
+        "experiment_code": output_code,
+        "canonical_experiment_code": "E005",
         "slot_id": params.slot_id,
         "side": params.side,
         "slippage_values": [float(value) for value in slippage_values],
@@ -460,7 +476,7 @@ def _run_e005(
     year_df.to_csv(paths["year_summary_csv"], index=False)
     trades_df.to_csv(paths["trades_csv"], index=False)
     sanity_df.to_csv(paths["sanity_csv"], index=False)
-    print(f"[WRITE][E005] {paths['summary_csv']}")
+    print(f"[WRITE][{output_code}] {paths['summary_csv']}")
 
     return {
         "summary_df": summary_df,
@@ -476,8 +492,9 @@ def _run_e006(
     params: E004Params,
     root_out_dir: str | Path,
     baseline: dict[str, object],
+    output_code: str = "E006",
 ) -> dict[str, pd.DataFrame]:
-    paths = ensure_run_layout(Path(root_out_dir) / "E006")
+    paths = ensure_run_layout(Path(root_out_dir) / output_code)
     tick_trades_df = baseline["tick_trades_df"]  # type: ignore[index]
     tick_rows_df = baseline["tick_rows_df"]  # type: ignore[index]
     eligible_days_by_segment = baseline["eligible_days_by_segment"]  # type: ignore[index]
@@ -497,7 +514,8 @@ def _run_e006(
     trades_df = tick_trades_df.copy()
 
     metadata = {
-        "experiment_code": "E006",
+        "experiment_code": output_code,
+        "canonical_experiment_code": "E006",
         "slot_id": params.slot_id,
         "side": params.side,
         "baseline_comparison_label": params.comparison_label(),
@@ -510,7 +528,7 @@ def _run_e006(
     year_df.to_csv(paths["year_summary_csv"], index=False)
     trades_df.to_csv(paths["trades_csv"], index=False)
     sanity_df.to_csv(paths["sanity_csv"], index=False)
-    print(f"[WRITE][E006] {paths['summary_csv']}")
+    print(f"[WRITE][{output_code}] {paths['summary_csv']}")
 
     return {
         "summary_df": summary_df,
@@ -529,8 +547,9 @@ def _run_e007(
     target_maintenance_margin_candidates: tuple[float, ...],
     initial_capital_jpy: float,
     kill_switch_dd_pct: float,
+    output_code: str = "E007",
 ) -> dict[str, pd.DataFrame]:
-    paths = ensure_run_layout(Path(root_out_dir) / "E007")
+    paths = ensure_run_layout(Path(root_out_dir) / output_code)
     tick_trades_df = baseline["tick_trades_df"]  # type: ignore[index]
     tick_rows_df = baseline["tick_rows_df"]  # type: ignore[index]
     eligible_days_by_segment = baseline["eligible_days_by_segment"]  # type: ignore[index]
@@ -595,7 +614,8 @@ def _run_e007(
     equity_curve_df = pd.concat(equity_frames, ignore_index=True) if equity_frames else pd.DataFrame()
 
     metadata = {
-        "experiment_code": "E007",
+        "experiment_code": output_code,
+        "canonical_experiment_code": "E007",
         "slot_id": params.slot_id,
         "side": params.side,
         "baseline_comparison_label": params.comparison_label(),
@@ -614,7 +634,7 @@ def _run_e007(
     trades_df.to_csv(paths["trades_csv"], index=False)
     sanity_df.to_csv(paths["sanity_csv"], index=False)
     equity_curve_df.to_csv(paths["root"] / "equity_curve.csv", index=False)
-    print(f"[WRITE][E007] {paths['summary_csv']}")
+    print(f"[WRITE][{output_code}] {paths['summary_csv']}")
 
     return {
         "summary_df": summary_df,
@@ -634,8 +654,9 @@ def _run_e008(
     root_out_dir: str | Path,
     baseline: dict[str, object],
     entry_delay_values: tuple[int, ...],
+    output_code: str = "E008",
 ) -> dict[str, pd.DataFrame]:
-    paths = ensure_run_layout(Path(root_out_dir) / "E008")
+    paths = ensure_run_layout(Path(root_out_dir) / output_code)
     signal_rows = [signal.to_dict() for signal in baseline["signals"]]  # type: ignore[index]
     eligible_days_by_segment = baseline["eligible_days_by_segment"]  # type: ignore[index]
 
@@ -701,7 +722,8 @@ def _run_e008(
     trades_df = _concat_trade_frames(trade_frames)
 
     metadata = {
-        "experiment_code": "E008",
+        "experiment_code": output_code,
+        "canonical_experiment_code": "E008",
         "slot_id": params.slot_id,
         "side": params.side,
         "entry_delay_values": [int(value) for value in entry_delay_values],
@@ -718,7 +740,7 @@ def _run_e008(
     year_df.to_csv(paths["year_summary_csv"], index=False)
     trades_df.to_csv(paths["trades_csv"], index=False)
     sanity_df.to_csv(paths["sanity_csv"], index=False)
-    print(f"[WRITE][E008] {paths['summary_csv']}")
+    print(f"[WRITE][{output_code}] {paths['summary_csv']}")
 
     return {
         "summary_df": summary_df,
@@ -739,6 +761,7 @@ def run_e005_e008(
     jobs: int = 1,
     allow_gate_fail: bool = False,
     only: tuple[str, ...] | None = None,
+    output_aliases: dict[str, str] | None = None,
 ) -> dict[str, dict[str, pd.DataFrame]]:
     if not params.pass_stability_gate and not allow_gate_fail:
         raise ValueError("pass_stability_gate is False; rerun with explicit override if this is intentional")
@@ -747,6 +770,10 @@ def run_e005_e008(
     unsupported = [experiment for experiment in selected if experiment not in {"E005", "E006", "E007", "E008"}]
     if unsupported:
         raise ValueError(f"Unsupported experiments in only=: {unsupported}")
+    aliases = {key.upper(): value.upper() for key, value in (output_aliases or {}).items()}
+    unsupported_aliases = [key for key in aliases if key not in {"E005", "E006", "E007", "E008"}]
+    if unsupported_aliases:
+        raise ValueError(f"Unsupported output aliases: {unsupported_aliases}")
 
     baseline_params = params.to_e004_params()
 
@@ -764,44 +791,52 @@ def run_e005_e008(
     results: dict[str, dict[str, pd.DataFrame]] = {}
 
     if "E005" in selected:
+        output_code = aliases.get("E005", "E005")
         print(f"[RUN] E005 slippage sweep values={', '.join(f'{value:g}' for value in resolved_slippage_values)}")
-        results["E005"] = _run_e005(
+        results[output_code] = _run_e005(
             params=baseline_params,
             ticks_dir=ticks_dir,
             jobs=jobs,
             root_out_dir=out_dir,
             baseline=baseline,
             slippage_values=resolved_slippage_values,
+            output_code=output_code,
         )
 
     if "E006" in selected:
+        output_code = aliases.get("E006", "E006")
         print("[RUN] E006 walk-forward summary")
-        results["E006"] = _run_e006(
+        results[output_code] = _run_e006(
             params=baseline_params,
             root_out_dir=out_dir,
             baseline=baseline,
+            output_code=output_code,
         )
 
     if "E007" in selected:
+        output_code = aliases.get("E007", "E007")
         print(f"[RUN] E007 maintenance margin sweep values={', '.join(f'{value:g}' for value in resolved_target_margins)}")
-        results["E007"] = _run_e007(
+        results[output_code] = _run_e007(
             params=baseline_params,
             root_out_dir=out_dir,
             baseline=baseline,
             target_maintenance_margin_candidates=tuple(float(value) for value in resolved_target_margins),
             initial_capital_jpy=float(params.initial_capital_jpy),
             kill_switch_dd_pct=float(params.kill_switch_dd_pct),
+            output_code=output_code,
         )
 
     if "E008" in selected:
+        output_code = aliases.get("E008", "E008")
         print(f"[RUN] E008 delay sweep values={', '.join(str(value) for value in resolved_entry_delay_values)}")
-        results["E008"] = _run_e008(
+        results[output_code] = _run_e008(
             params=baseline_params,
             ticks_dir=ticks_dir,
             jobs=jobs,
             root_out_dir=out_dir,
             baseline=baseline,
             entry_delay_values=resolved_entry_delay_values,
+            output_code=output_code,
         )
 
     Path(out_dir).mkdir(parents=True, exist_ok=True)
@@ -810,6 +845,8 @@ def run_e005_e008(
         "slot_id": params.slot_id,
         "side": params.side,
         "selected": list(selected),
+        "output_aliases": aliases,
+        "output_experiments": [aliases.get(experiment, experiment) for experiment in selected],
         "dataset_dir": str(dataset_dir),
         "ticks_dir": str(ticks_dir),
         "out_dir": str(out_dir),

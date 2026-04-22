@@ -12,7 +12,7 @@ if str(ROOT_DIR) not in sys.path:
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from qualify.common.e005_e008 import run_e005_e008
+from qualify.common.e005_e008 import parse_output_aliases, run_e005_e008
 from qualify.common.params import load_e005_e008_params
 
 
@@ -25,6 +25,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--years", nargs="+", type=int, default=[2019, 2020, 2021, 2022, 2023, 2024, 2025])
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument("--only", nargs="+", choices=["E005", "E006", "E007", "E008"], default=None)
+    parser.add_argument(
+        "--output-alias",
+        action="append",
+        default=None,
+        help="Write an experiment to an alternate output directory, e.g. E007=E007A.",
+    )
     parser.add_argument("--allow-gate-fail", action="store_true")
     return parser.parse_args()
 
@@ -36,6 +42,9 @@ def main() -> None:
     print(f"[YEARS] {' '.join(str(year) for year in args.years)}")
     selected = tuple(args.only) if args.only else params.selected_experiments
     print(f"[ONLY] {' '.join(selected)}")
+    output_aliases = parse_output_aliases(args.output_alias)
+    if output_aliases:
+        print(f"[OUTPUT_ALIAS] {output_aliases}")
     result = run_e005_e008(
         params=params,
         dataset_dir=args.dataset_dir,
@@ -45,6 +54,7 @@ def main() -> None:
         jobs=int(args.jobs),
         allow_gate_fail=bool(args.allow_gate_fail),
         only=tuple(args.only) if args.only else None,
+        output_aliases=output_aliases,
     )
     for experiment_code, frames in result.items():
         summary_rows = len(frames.get("summary_df", []))

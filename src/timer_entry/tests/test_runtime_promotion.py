@@ -74,6 +74,7 @@ def test_promote_qualify_result_to_runtime_config(tmp_path: Path) -> None:
     assert config["kill_switch_dd_pct"] == -0.2
     assert config["kill_switch_reference_balance_jpy"] == 100000.0
     assert config["min_maintenance_margin_pct"] == 150.0
+    assert config["margin_ratio_target"] == 150.0
     assert config["unit_level"] == 0
     assert config["unit_level_policy_name"] == "unit_level_policy"
     assert config["unit_level_updated_by"] == "promotion"

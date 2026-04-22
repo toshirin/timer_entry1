@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from timer_entry.schemas import StrategySetting
 
+from qualify.common.e005_e008 import parse_output_aliases
 from qualify.common.params import E001Params, E002Params, E003Params, E004Params, E005E008Params
 from qualify.common.e001 import _resolve_threshold_metadata
 
@@ -227,3 +228,7 @@ def test_e005_e008_params_convert_to_e004_baseline() -> None:
     assert params.risk_fractions == (150, 180, 200)
     assert baseline.experiment_code == "E004"
     assert baseline.comparison_label() == "buy0840_vol_ge_p70_tp10_sl30_fx0945"
+
+
+def test_e005_e008_output_alias_parser() -> None:
+    assert parse_output_aliases(["E007=E007A"]) == {"E007": "E007A"}

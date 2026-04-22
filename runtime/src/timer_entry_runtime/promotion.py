@@ -152,7 +152,7 @@ def promote_qualify_result_to_runtime_config(
         raise ValueError("sl_pips must be greater than zero before promotion")
     if fixed_units is not None and fixed_units <= 0:
         raise ValueError("fixed_units must be greater than zero when provided")
-    if fixed_units is None and margin_ratio_target is None:
+    if margin_ratio_target is None:
         margin_ratio_target = result.selected_target_maintenance_margin_pct
     if fixed_units is None and margin_ratio_target is None:
         raise ValueError("margin_ratio_target is required when fixed_units is not provided")
