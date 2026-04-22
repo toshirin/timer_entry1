@@ -8,10 +8,11 @@
 - E004 tick replay が合格済みであること
 - E005 slippage 耐性が合格済みであること
 - E006 walk-forward / holdout が合格済みであること
-- E007 risk_fraction / kill-switch / 維持率が合格済みであること
+- E007 target maintenance margin / kill-switch / 維持率が合格済みであること
 - E008 entry delay 耐性が合格済みであること
 - E005 の `slip_pips` は one-way 表示で、実質往復 penalty は `2 * slip_pips` です
-- E007 では `selected_risk_fraction`, `kill_switch_dd_pct`, `min_maintenance_margin_pct`, `initial_capital_jpy` を明示してください
+- E007 では `selected_target_maintenance_margin_pct`, `kill_switch_dd_pct`, `min_maintenance_margin_pct`, `initial_capital_jpy` を明示してください
+- E007 の採用判断は CAGR 最大ではなく、100%割れなし、kill-switchなし、130%割れなしを最初に満たした最小の維持率候補で行ってください
 - `labels` は原則として空配列 `[]` にしてください。監視対象など、運用上の意味がある場合だけ `"watch"` などのラベルを入れてください。初期 unit size を表す `"fix10"` は入れないでください
 - unit level は runtime promotion 側で初期 `unit_level=0` / `fixed_units=10` として付与します。この最終昇格結果 JSON には `unit_level`、`unit_level_policy_name`、`unit_level_policy_version`、`size_scale_pct` を入れないでください
 - 結果 JSON では、後から取り出したい主要指標を `evidence` の中だけでなく top-level にも入れてください
@@ -32,9 +33,9 @@
 1. E004-E008 がすべて合格か確認してください
 2. runtime へ昇格してよいかを `approved_for_runtime` で明示してください
 3. 採用する setting 条件を固定してください
-4. 採用する risk / kill-switch 条件を固定してください
+4. 採用する目標維持率 / kill-switch 条件を固定してください
 5. 根拠となる主要指標を top-level に入れ、補足を `evidence` に短くまとめてください
-6. `evidence.E005.slippage_sweep`, `evidence.E007.risk_sweep`, `evidence.E008.entry_delay_sweep` に、比較した候補の主要数値を配列で転記してください
+6. `evidence.E005.slippage_sweep`, `evidence.E007.maintenance_margin_sweep`, `evidence.E008.entry_delay_sweep` に、比較した候補の主要数値を配列で転記してください
 7. 最後に Codex 保存用 JSON を必ず `json` コードブロックで出してください
 
 ## 保存先
@@ -66,7 +67,7 @@ Codex 側では以下に保存します。
   "e007_passed": true,
   "e008_passed": true,
   "approved_for_runtime": true,
-  "selected_risk_fraction": 0.0015,
+  "selected_target_maintenance_margin_pct": 150.0,
   "kill_switch_dd_pct": -0.2,
   "min_maintenance_margin_pct": 150.0,
   "initial_capital_jpy": 100000,
@@ -123,9 +124,9 @@ Codex 側では以下に保存します。
       "trade_rate": 0.0,
       "win_rate": 0.0,
       "cagr": 0.0,
-      "risk_sweep": [
+      "maintenance_margin_sweep": [
         {
-          "risk_fraction": 0.02,
+          "target_maintenance_margin_pct": 150.0,
           "final_equity_jpy": 100000.0,
           "total_return_pct": 0.0,
           "cagr": 0.0,
@@ -134,9 +135,10 @@ Codex 側では以下に保存します。
           "win_rate": 0.0,
           "max_dd_pct": 0.0,
           "min_maintenance_margin_pct": 150.0,
-          "maintenance_below_150_count": 0,
+          "maintenance_below_130_count": 0,
           "maintenance_below_100_count": 0,
-          "stop_triggered": false
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 1.1111
         }
       ]
     },

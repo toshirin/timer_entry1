@@ -74,7 +74,7 @@
 - E001 は scan で反応した filter family を深掘りする段階とする
 - 例として `pre_open_slope` では `ge2` / `ge4` などの閾値 sweep、`vol` 系では percentile sweep を行う
 - `all` は追加の有効 filter がないかを見直す入口としても使う
-- holdout、walk-forward、slippage、entry delay、kill-switch、risk_fraction、tick replay をここで評価する
+- holdout、walk-forward、slippage、entry delay、kill-switch、target maintenance margin、tick replay をここで評価する
 - E001-E008 は個別スクリプトの寄せ集めではなく、共通シナリオ実行基盤で扱う
 
 ### runtime

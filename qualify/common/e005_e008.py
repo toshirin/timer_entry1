@@ -155,11 +155,17 @@ def _build_walkforward_summary(trades_df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _build_risk_fraction_outputs(
+def _pips_year_rate_pct_at_150usd(target_maintenance_margin_pct: float) -> float:
+    if target_maintenance_margin_pct <= 0.0:
+        return math.nan
+    return 166.67 / float(target_maintenance_margin_pct)
+
+
+def _build_target_maintenance_margin_outputs(
     *,
     trades_df: pd.DataFrame,
     initial_capital_jpy: float,
-    risk_fraction: float,
+    target_maintenance_margin_pct: float,
     kill_switch_dd_pct: float,
     sl_pips: float,
     eligible_day_count: int,
@@ -169,7 +175,7 @@ def _build_risk_fraction_outputs(
         summary = pd.DataFrame(
             [
                 {
-                    "risk_fraction": risk_fraction,
+                    "target_maintenance_margin_pct": target_maintenance_margin_pct,
                     "initial_capital_jpy": initial_capital_jpy,
                     "kill_switch_dd_pct": kill_switch_dd_pct,
                     "sl_pips": sl_pips,
@@ -182,10 +188,15 @@ def _build_risk_fraction_outputs(
                     "cagr": 0.0,
                     "max_dd_pct": 0.0,
                     "min_maintenance_margin_pct": math.inf,
-                    "maintenance_below_150_count": 0,
+                    "maintenance_below_130_count": 0,
                     "maintenance_below_100_count": 0,
                     "equity_negative_count": 0,
                     "stop_triggered": False,
+                    "pips_year_rate_pct_at_150usd": _pips_year_rate_pct_at_150usd(
+                        float(target_maintenance_margin_pct)
+                    ),
+                    "needs_higher_maintenance_margin": False,
+                    "rejection_reason": "",
                 }
             ]
         )
@@ -198,15 +209,19 @@ def _build_risk_fraction_outputs(
     peak = float(initial_capital_jpy)
     halted = False
     rows: list[dict[str, object]] = []
-    risk_per_unit_jpy = float(sl_pips) * 0.01
 
     for _, trade in valid.iterrows():
         if halted:
             break
         equity_before = equity
-        risk_jpy = equity_before * float(risk_fraction)
-        units = risk_jpy / risk_per_unit_jpy if risk_per_unit_jpy > 0.0 else 0.0
         entry_price = float(trade["entry_price"])
+        margin_rate = 0.04
+        required_margin_per_unit_jpy = entry_price * margin_rate
+        units = (
+            equity_before * 100.0 / (float(target_maintenance_margin_pct) * required_margin_per_unit_jpy)
+            if target_maintenance_margin_pct > 0.0 and required_margin_per_unit_jpy > 0.0
+            else 0.0
+        )
         required_margin_jpy = units * entry_price * 0.04
         maintenance_margin_pct = equity_before / required_margin_jpy * 100.0 if required_margin_jpy > 0.0 else math.inf
         pnl_pips = float(trade["pnl_pips"])
@@ -224,7 +239,7 @@ def _build_risk_fraction_outputs(
                 "entry_price": entry_price,
                 "pnl_pips": pnl_pips,
                 "equity_before_jpy": equity_before,
-                "risk_fraction": float(risk_fraction),
+                "target_maintenance_margin_pct": float(target_maintenance_margin_pct),
                 "sl_pips": float(sl_pips),
                 "pip_value_jpy_per_unit": 0.01,
                 "units": units,
@@ -246,10 +261,22 @@ def _build_risk_fraction_outputs(
     final_equity = float(equity_df["equity_jpy"].iloc[-1]) if not equity_df.empty else float(initial_capital_jpy)
     total_return = final_equity / float(initial_capital_jpy) - 1.0 if initial_capital_jpy > 0.0 else 0.0
     cagr = (final_equity / float(initial_capital_jpy)) ** (1.0 / year_count) - 1.0 if final_equity > 0.0 and initial_capital_jpy > 0.0 else -1.0
+    maintenance_series = pd.to_numeric(equity_df["maintenance_margin_pct"], errors="coerce")
+    maintenance_below_130_count = int((maintenance_series < 130.0).sum()) if not equity_df.empty else 0
+    maintenance_below_100_count = int((maintenance_series < 100.0).sum()) if not equity_df.empty else 0
+    stop_triggered = bool(equity_df["kill_switch_triggered"].any()) if not equity_df.empty else False
+    if maintenance_below_100_count > 0:
+        rejection_reason = "maintenance_below_100"
+    elif stop_triggered:
+        rejection_reason = "stop_triggered"
+    elif maintenance_below_130_count > 0:
+        rejection_reason = "maintenance_below_130"
+    else:
+        rejection_reason = ""
     summary = pd.DataFrame(
         [
             {
-                "risk_fraction": float(risk_fraction),
+                "target_maintenance_margin_pct": float(target_maintenance_margin_pct),
                 "initial_capital_jpy": float(initial_capital_jpy),
                 "kill_switch_dd_pct": float(kill_switch_dd_pct),
                 "sl_pips": float(sl_pips),
@@ -261,17 +288,14 @@ def _build_risk_fraction_outputs(
                 "total_return_pct": total_return,
                 "cagr": cagr,
                 "max_dd_pct": float(pd.to_numeric(equity_df["drawdown_pct"], errors="coerce").min()) if not equity_df.empty else 0.0,
-                "min_maintenance_margin_pct": float(pd.to_numeric(equity_df["maintenance_margin_pct"], errors="coerce").min())
-                if not equity_df.empty
-                else math.inf,
-                "maintenance_below_150_count": int((pd.to_numeric(equity_df["maintenance_margin_pct"], errors="coerce") < 150.0).sum())
-                if not equity_df.empty
-                else 0,
-                "maintenance_below_100_count": int((pd.to_numeric(equity_df["maintenance_margin_pct"], errors="coerce") < 100.0).sum())
-                if not equity_df.empty
-                else 0,
+                "min_maintenance_margin_pct": float(maintenance_series.min()) if not equity_df.empty else math.inf,
+                "maintenance_below_130_count": maintenance_below_130_count,
+                "maintenance_below_100_count": maintenance_below_100_count,
                 "equity_negative_count": int((pd.to_numeric(equity_df["equity_jpy"], errors="coerce") < 0.0).sum()) if not equity_df.empty else 0,
-                "stop_triggered": bool(equity_df["kill_switch_triggered"].any()) if not equity_df.empty else False,
+                "stop_triggered": stop_triggered,
+                "pips_year_rate_pct_at_150usd": _pips_year_rate_pct_at_150usd(float(target_maintenance_margin_pct)),
+                "needs_higher_maintenance_margin": bool(stop_triggered or maintenance_below_130_count > 0),
+                "rejection_reason": rejection_reason,
             }
         ]
     )
@@ -502,7 +526,7 @@ def _run_e007(
     params: E004Params,
     root_out_dir: str | Path,
     baseline: dict[str, object],
-    risk_fractions: tuple[float, ...],
+    target_maintenance_margin_candidates: tuple[float, ...],
     initial_capital_jpy: float,
     kill_switch_dd_pct: float,
 ) -> dict[str, pd.DataFrame]:
@@ -515,11 +539,16 @@ def _run_e007(
 
     summary_frames: list[pd.DataFrame] = []
     equity_frames: list[pd.DataFrame] = []
-    for risk_fraction in tqdm(risk_fractions, desc="E007 risk sweep", unit="grid", mininterval=0.5):
-        equity_df, summary_df = _build_risk_fraction_outputs(
+    for target_margin in tqdm(
+        target_maintenance_margin_candidates,
+        desc="E007 maintenance margin sweep",
+        unit="grid",
+        mininterval=0.5,
+    ):
+        equity_df, summary_df = _build_target_maintenance_margin_outputs(
             trades_df=tick_trades_df,
             initial_capital_jpy=float(initial_capital_jpy),
-            risk_fraction=float(risk_fraction),
+            target_maintenance_margin_pct=float(target_margin),
             kill_switch_dd_pct=float(kill_switch_dd_pct),
             sl_pips=float(params.baseline.sl_pips),
             eligible_day_count=int(eligible_days_by_segment["full"]),  # type: ignore[index]
@@ -530,10 +559,29 @@ def _run_e007(
 
     summary_df = _variant_metrics(
         variant_df=pd.concat(summary_frames, ignore_index=True) if summary_frames else pd.DataFrame(),
-        baseline_key=risk_fractions[0] if risk_fractions else 0.0,
-        variant_col="risk_fraction",
+        baseline_key=target_maintenance_margin_candidates[0] if target_maintenance_margin_candidates else 0.0,
+        variant_col="target_maintenance_margin_pct",
         metric_cols=("final_equity_jpy", "min_maintenance_margin_pct", "annualized_pips", "cagr"),
     )
+    if not summary_df.empty:
+        selected = False
+        selected_ranks: list[int | None] = []
+        selected_by_rule: list[bool] = []
+        for rank, row in enumerate(summary_df.to_dict("records"), start=1):
+            row_ok = (
+                int(row.get("maintenance_below_100_count", 0)) == 0
+                and not bool(row.get("stop_triggered", False))
+                and int(row.get("maintenance_below_130_count", 0)) == 0
+            )
+            if row_ok and not selected:
+                selected = True
+                selected_ranks.append(rank)
+                selected_by_rule.append(True)
+            else:
+                selected_ranks.append(None)
+                selected_by_rule.append(False)
+        summary_df["selected_candidate_rank"] = selected_ranks
+        summary_df["selected_by_rule"] = selected_by_rule
     split_df = build_split_summary(tick_trades_df, eligible_days_by_segment=eligible_days_by_segment)  # type: ignore[arg-type]
     year_df = build_year_summary(tick_trades_df)
     sanity_df = _aggregate_tick_sanity(
@@ -551,10 +599,12 @@ def _run_e007(
         "slot_id": params.slot_id,
         "side": params.side,
         "baseline_comparison_label": params.comparison_label(),
-        "risk_fractions": [float(value) for value in risk_fractions],
+        "target_maintenance_margin_candidates": [float(value) for value in target_maintenance_margin_candidates],
         "initial_capital_jpy": float(initial_capital_jpy),
         "kill_switch_dd_pct": float(kill_switch_dd_pct),
-        "risk_fraction_center": 0.005 * (float(params.baseline.sl_pips) / 5.0),
+        "maintenance_warning_threshold_pct": 130.0,
+        "maintenance_absolute_ng_threshold_pct": 100.0,
+        "pips_year_rate_pct_at_150usd_formula": "166.67 / target_maintenance_margin_pct",
     }
     write_json(paths["metadata_json"], metadata)
     write_json(paths["params_json"], params.to_dict())
@@ -710,7 +760,7 @@ def run_e005_e008(
 
     resolved_slippage_values = tuple(float(value) for value in params.slippage_values)
     resolved_entry_delay_values = tuple(int(value) for value in params.entry_delay_values)
-    resolved_risk_fractions = tuple(float(value) for value in params.risk_fractions)
+    resolved_target_margins = tuple(float(value) for value in params.target_maintenance_margin_candidates)
     results: dict[str, dict[str, pd.DataFrame]] = {}
 
     if "E005" in selected:
@@ -733,12 +783,12 @@ def run_e005_e008(
         )
 
     if "E007" in selected:
-        print(f"[RUN] E007 risk sweep values={', '.join(f'{value:g}' for value in resolved_risk_fractions)}")
+        print(f"[RUN] E007 maintenance margin sweep values={', '.join(f'{value:g}' for value in resolved_target_margins)}")
         results["E007"] = _run_e007(
             params=baseline_params,
             root_out_dir=out_dir,
             baseline=baseline,
-            risk_fractions=tuple(float(value) for value in resolved_risk_fractions),
+            target_maintenance_margin_candidates=tuple(float(value) for value in resolved_target_margins),
             initial_capital_jpy=float(params.initial_capital_jpy),
             kill_switch_dd_pct=float(params.kill_switch_dd_pct),
         )
@@ -768,7 +818,7 @@ def run_e005_e008(
         "allow_gate_fail": bool(allow_gate_fail),
         "slippage_values": [float(value) for value in resolved_slippage_values],
         "entry_delay_values": [int(value) for value in resolved_entry_delay_values],
-        "risk_fractions": [float(value) for value in resolved_risk_fractions],
+        "target_maintenance_margin_candidates": [float(value) for value in resolved_target_margins],
         "initial_capital_jpy": float(params.initial_capital_jpy),
         "kill_switch_dd_pct": float(params.kill_switch_dd_pct),
         "baseline_comparison_label": baseline_params.comparison_label(),

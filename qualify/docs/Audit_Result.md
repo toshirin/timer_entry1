@@ -357,7 +357,7 @@ short の canonical 規約は以下である。
 - signal / setting / TP / SL / forced exit は固定する
 - E005 は slippage 軸だけを振る
 - E006 は walk-forward split だけを振る
-- E007 は risk_fraction / kill-switch 軸だけを振る
+- E007 は target maintenance margin / kill-switch 軸だけを振る
 - E008 は entry delay 軸だけを振る
 - 出力は summary / yearly / sanity を基本にする
 
@@ -388,12 +388,11 @@ short の canonical 規約は以下である。
 #### E007
 
 - 実質は E004 trades を固定して equity curve を後段計算する段階
-- `build_risk_fraction_outputs` は旧 repo でも共通 helper に寄っており、suite 化しやすい
-- slot 差分は主に `risk_fraction` grid と `sl_pips` の固定値
-- `jst10` は `(0.25%, 0.5%, 1.0%)`、`lon08` は `(0.5%, 1.0%, 2.0%, 3.0%)` で、ここも grid を params / CLI へ逃がすべき
-- この差分は stop 幅に応じた基準 risk の違いと解釈でき、`SL5 -> risk_fraction 0.5%` を基準点に、その等価点と前後を比較する整理が自然
-- したがって center は `risk_fraction_center = 0.5% * (sl_pips / 5)` と置ける
-- summary では少なくとも `min_maintenance_margin_pct`, `annualized_pips`, `trade_rate`, `win_rate`, `CAGR` を持つべき
+- E007 は E004 trades を固定し、複数の `target_maintenance_margin_pct` で equity curve を比較する
+- grid は通常 `[150, 180, 200]`、必要に応じて `[150, 180, 200, 230, 260]` とし、params へ逃がす
+- `maintenance_below_100_count > 0` は一発NG、`stop_triggered` または `maintenance_below_130_count > 0` は一段上の維持率確認シグナルとする
+- 採用判断は CAGR 最大ではなく、安全条件を満たした最初の維持率候補で行う
+- summary では少なくとも `target_maintenance_margin_pct`, `min_maintenance_margin_pct`, `maintenance_below_130_count`, `maintenance_below_100_count`, `stop_triggered`, `pips_year_rate_pct_at_150usd`, `annualized_pips`, `trade_rate`, `win_rate`, `CAGR` を持つべき
 
 #### E008
 
@@ -426,7 +425,7 @@ short の canonical 規約は以下である。
   - `slip_pips` は one-way 表示
   - 実質往復 penalty は `round_trip_slip_pips = 2 * slip_pips`
 - E007
-  - risk grid は `SL5 -> 0.5%` の基準点を中心に置く
+  - maintenance margin grid は `[150, 180, 200]` を基本に置く
   - `trade_rate` は `trade_count / eligible_day_count` として定義する
 
 ### 11.7 実装含意

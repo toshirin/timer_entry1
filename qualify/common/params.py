@@ -367,7 +367,7 @@ class E005E008Params:
     selected_experiments: tuple[str, ...]
     slippage_values: tuple[float, ...]
     entry_delay_values: tuple[int, ...]
-    risk_fractions: tuple[float, ...]
+    target_maintenance_margin_candidates: tuple[float, ...]
     kill_switch_dd_pct: float
     initial_capital_jpy: float = 100_000.0
     slippage_mode: str = "none"
@@ -390,13 +390,22 @@ class E005E008Params:
             raise ValueError(f"Unsupported selected_experiments: {unsupported}")
         slippage_values = tuple(float(value) for value in data.get("slippage_values", []))
         entry_delay_values = tuple(int(value) for value in data.get("entry_delay_values", []))
-        risk_fractions = tuple(float(value) for value in data.get("risk_fractions", []))
+        raw_margin_candidates = data.get("target_maintenance_margin_candidates")
+        if raw_margin_candidates is None:
+            legacy_risk_fractions = tuple(float(value) for value in data.get("risk_fractions", []))
+            sl_pips = float(dict(data["baseline"])["sl_pips"])
+            raw_margin_candidates = [
+                25.0 * sl_pips / (risk_fraction * 150.0)
+                for risk_fraction in legacy_risk_fractions
+                if risk_fraction > 0.0
+            ]
+        target_maintenance_margin_candidates = tuple(float(value) for value in raw_margin_candidates)
         if not slippage_values:
             raise ValueError("slippage_values must not be empty")
         if not entry_delay_values:
             raise ValueError("entry_delay_values must not be empty")
-        if not risk_fractions:
-            raise ValueError("risk_fractions must not be empty")
+        if not target_maintenance_margin_candidates:
+            raise ValueError("target_maintenance_margin_candidates must not be empty")
         return cls(
             experiment_code=experiment_code,
             variant_code=str(data["variant_code"]) if data.get("variant_code") is not None else None,
@@ -407,7 +416,7 @@ class E005E008Params:
             selected_experiments=selected_experiments,
             slippage_values=slippage_values,
             entry_delay_values=entry_delay_values,
-            risk_fractions=risk_fractions,
+            target_maintenance_margin_candidates=target_maintenance_margin_candidates,
             kill_switch_dd_pct=float(data["kill_switch_dd_pct"]),
             initial_capital_jpy=float(data.get("initial_capital_jpy", 100_000.0)),
             slippage_mode=str(data.get("slippage_mode", "none")),
@@ -436,6 +445,12 @@ class E005E008Params:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    @property
+    def risk_fractions(self) -> tuple[float, ...]:
+        # Backward-compatible alias for old tests/callers. New params should use
+        # target_maintenance_margin_candidates.
+        return self.target_maintenance_margin_candidates
 
 
 def load_e001_params(path: str | Path) -> E001Params:

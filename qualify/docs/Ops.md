@@ -170,7 +170,7 @@ E001 の新規 filter 定義は、Codex 宛の実装仕様書として `markdown
 
 1. ChatGPT 側で `qualify/prompts/e005_e008_thread.md` を使う
 2. E004 通過 setting を前提に、E005-E008 の比較軸を決める
-3. `slippage_values`, `entry_delay_values`, `risk_fractions`, `kill_switch_dd_pct` を JSON に含める
+3. `slippage_values`, `entry_delay_values`, `target_maintenance_margin_candidates`, `kill_switch_dd_pct` を JSON に含める
 4. Codex 側で `qualify/e005-e008.py` を実行する
 5. デフォルトは E005-E008 一括実行とする
 6. 必要なら引数で E005 / E006 / E007 / E008 の単独実行を行う
@@ -181,10 +181,10 @@ E001 の新規 filter 定義は、Codex 宛の実装仕様書として `markdown
   - `slip_pips` は one-way 表示で扱う
   - ChatGPT 側の評価文でも、実質往復 penalty は `2 * slip_pips` と明記する
 - E007
-  - risk grid は `SL5 -> 0.5%` を基準に、中心値 `0.5% * (sl_pips / 5)` とその前後で決める
-  - summary では `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_150_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct` を必須確認項目とする
-  - `annualized_pips` は `10 pips ≒ 1%/年` を目安として `cagr` と照合する
-  - `min_maintenance_margin_pct` が 150% 目安から見て不自然に高い / 低い場合は、採用前に列定義または計算仕様を確認する
+  - maintenance margin grid は通常 `[150, 180, 200]`、必要に応じて `[150, 180, 200, 230, 260]` とする
+  - summary では `target_maintenance_margin_pct`, `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_130_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct`, `pips_year_rate_pct_at_150usd` を必須確認項目とする
+  - `maintenance_below_100_count > 0` は一発NG、`stop_triggered` または `maintenance_below_130_count > 0` は一段上の維持率確認シグナルとする
+  - 採用判断は CAGR 最大ではなく、安全条件を満たした最初の維持率候補で行う
 
 注意:
 

@@ -185,7 +185,7 @@ slot ごとの方言 CSV は増やさない。
 - E006
   - walk-forward / holdout
 - E007
-  - risk_fraction / kill-switch / 維持率
+  - target maintenance margin / kill-switch / 維持率
 - E008
   - entry delay 耐性
 
@@ -202,7 +202,7 @@ E005-E008 の運用原則は以下。
 - params
   - E004 で確定した baseline setting を `e005-e008.json` にコピーして固定する
   - E005 / E007 / E008 の sweep 範囲は ChatGPT 側で決め、`e005-e008.json` から読み込む
-  - CLI 引数では sweep / risk 条件を受けない
+  - CLI 引数では sweep / maintenance margin 条件を受けない
 
 E005 と E007 では、以下を追加原則とする。
 
@@ -211,13 +211,12 @@ E005 と E007 では、以下を追加原則とする。
   - entry / exit の両方に不利側 slip を乗せるため、実質往復 penalty は `2 * slip_pips`
   - report でも `round_trip_slip_pips` を併記できるようにする
 - E007
-  - risk grid は `SL5 -> risk_fraction 0.5%` を基準点として組む
-  - center は `risk_fraction_center = 0.5% * (sl_pips / 5)` とする
-  - 比較はこの center と、その前後の保守側 / 攻め側で行う
-  - summary には少なくとも `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_150_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct` を出す
-  - `annualized_pips` は `10 pips ≒ 1%/年` を目安として `cagr` と照合する
-  - `min_maintenance_margin_pct` が 150% 目安から見て不自然に高い / 低い場合は、採用前に列定義または計算仕様を確認する
-  - 採用判断は CAGR 最大ではなく、`min_maintenance_margin_pct >= 150` を満たす安全側を優先する
+  - maintenance margin grid は通常 `[150, 180, 200]`、必要に応じて `[150, 180, 200, 230, 260]` とする
+  - params では `target_maintenance_margin_candidates` を使う
+  - summary には少なくとも `target_maintenance_margin_pct`, `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_130_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct`, `pips_year_rate_pct_at_150usd` を出す
+  - `maintenance_below_100_count > 0` は一発NGとする
+  - `stop_triggered` または `maintenance_below_130_count > 0` は、その維持率が強すぎるシグナルとして一段上の候補を確認する
+  - 採用判断は CAGR 最大ではなく、安全条件を満たした最初の維持率候補を優先する
 
 派生実験は `E001A` のように扱ってよい。
 ただし、派生は experiment code の意味を壊さず、主実験の補助目的に留める。

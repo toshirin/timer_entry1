@@ -336,6 +336,7 @@ class QualifyScenario:
     slippage_mode: str | None = None
     fixed_slippage_pips: float | None = None
     entry_delay_seconds: int | None = None
+    target_maintenance_margin_pct: float | None = None
     risk_fraction: float | None = None
     notes: str | None = None
 
@@ -367,6 +368,7 @@ class QualifyPromotionResult:
     e007_passed: bool
     e008_passed: bool
     approved_for_runtime: bool
+    selected_target_maintenance_margin_pct: float | None = None
     selected_risk_fraction: float | None = None
     kill_switch_dd_pct: float | None = -0.2
     min_maintenance_margin_pct: float | None = 150.0
@@ -413,6 +415,10 @@ class QualifyPromotionResult:
             e007_passed=bool(data["e007_passed"]),
             e008_passed=bool(data["e008_passed"]),
             approved_for_runtime=bool(data["approved_for_runtime"]),
+            selected_target_maintenance_margin_pct=_optional_float(
+                data,
+                "selected_target_maintenance_margin_pct",
+            ),
             selected_risk_fraction=_optional_float(data, "selected_risk_fraction"),
             kill_switch_dd_pct=_optional_float(data, "kill_switch_dd_pct"),
             min_maintenance_margin_pct=_optional_float(data, "min_maintenance_margin_pct"),
@@ -461,7 +467,7 @@ class QualifyPromotionResult:
         if self.initial_capital_jpy is None:
             raise ValueError("initial_capital_jpy must be set before promotion")
         required_metric_names = (
-            "selected_risk_fraction",
+            "selected_target_maintenance_margin_pct",
             "final_equity_jpy",
             "min_maintenance_margin_pct",
             "annualized_pips",
@@ -473,6 +479,8 @@ class QualifyPromotionResult:
             "win_rate",
         )
         missing_metrics = [name for name in required_metric_names if getattr(self, name) is None]
+        if self.selected_target_maintenance_margin_pct is None and self.selected_risk_fraction is not None:
+            missing_metrics = [name for name in missing_metrics if name != "selected_target_maintenance_margin_pct"]
         if missing_metrics:
             raise ValueError(f"promotion result metrics must be set before promotion: {missing_metrics}")
 

@@ -28,6 +28,7 @@ def _setting_from_result(payload: dict[str, Any]) -> tuple[StrategySetting, dict
             "source_result_id": result.result_id,
             "source_params_files": result.source_params_files,
             "source_output_dirs": result.source_output_dirs,
+            "selected_target_maintenance_margin_pct": result.selected_target_maintenance_margin_pct,
             "selected_risk_fraction": result.selected_risk_fraction,
             "final_equity_jpy": result.final_equity_jpy,
             "annualized_pips": result.annualized_pips,
@@ -151,6 +152,8 @@ def promote_qualify_result_to_runtime_config(
         raise ValueError("sl_pips must be greater than zero before promotion")
     if fixed_units is not None and fixed_units <= 0:
         raise ValueError("fixed_units must be greater than zero when provided")
+    if fixed_units is None and margin_ratio_target is None:
+        margin_ratio_target = result.selected_target_maintenance_margin_pct
     if fixed_units is None and margin_ratio_target is None:
         raise ValueError("margin_ratio_target is required when fixed_units is not provided")
     if margin_ratio_target is not None and margin_ratio_target <= 0:

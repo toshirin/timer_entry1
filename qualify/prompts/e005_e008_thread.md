@@ -11,7 +11,7 @@
 - E006
   - walk-forward / holdout
 - E007
-  - risk_fraction / kill-switch / 維持率
+  - target maintenance margin / kill-switch / 維持率
 - E008
   - entry delay 耐性
 
@@ -25,23 +25,24 @@
 - E004 の baseline setting は `e005-e008.json` にコピーして固定します
 - E005 の `slip_pips` は one-way 表示です
 - E005 では entry / exit の両方に slip を乗せるので、実質往復 penalty は `2 * slip_pips` です
-- E007 の risk grid は `SL5 -> risk_fraction 0.5%` を基準に、中心値を `0.5% * (sl_pips / 5)` で算出してください
-- 例: `SL20` なら中心 risk は `2.0%`、`SL30` なら中心 risk は `3.0%` です
-- E007 の比較点は、中心値の前後に保守側 / 中心 / 攻め側が分かるように置いてください
-- E007 の結論は CAGR 最大ではなく、`min_maintenance_margin_pct >= 150` を満たしたうえでの安全側採用を優先してください
-- E007 の結果分析では各 risk について、少なくとも `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_150_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct` を本文に数値で出してください
-- `annualized_pips` は `10 pips ≒ 1%/年` を目安として `cagr` と照合してください
-- `CAGR` がこの目安から大きく乖離する場合は、複利計算、ロット換算、risk_fraction 適用のどこで差が出ているかを説明してください
-- `min_maintenance_margin_pct` が研究憲法の運用目安 150% と比べて不自然に高い、または低い場合は、採用判断の前に列定義または計算仕様の確認が必要と明記してください
+- E007 は risk_fraction の最適化ではなく、採用する `target_maintenance_margin_pct` を決める審査です
+- E007 の通常候補は `target_maintenance_margin_candidates: [150, 180, 200]` としてください
+- 150/180/200 で問題が消えない、または弱い edge を捨てたくない setting では `[150, 180, 200, 230, 260]` まで拡張してよいです
+- E007 の採用判断は CAGR 最大ではなく、低い維持率候補から順に見て安全条件を満たした最初の候補を採用してください
+- `maintenance_below_100_count > 0` は一発NGです
+- `stop_triggered == true` または `maintenance_below_130_count > 0` は、その維持率が強すぎるシグナルとして一段上の候補を確認してください
+- 120%ラインは採用判定に使わないでください
+- E007 の結果分析では各 target maintenance margin について、少なくとも `target_maintenance_margin_pct`, `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_130_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct`, `pips_year_rate_pct_at_150usd` を本文に数値で出してください
+- `pips_year_rate_pct_at_150usd` は `166.67 / target_maintenance_margin_pct` の近似指標として、`annualized_pips` と `cagr` の関係を読む補助にしてください
 
 ## あなたに依頼したいこと
 
 1. E005-E008 のうち、今回実行対象にする experiment を決めてください
 2. E005 の `slippage_values` を決めてください
 3. E008 の `entry_delay_values` を決めてください
-4. E007 の `risk_fractions` と `kill_switch_dd_pct` を決めてください
+4. E007 の `target_maintenance_margin_candidates` と `kill_switch_dd_pct` を決めてください
 5. E005 の one-way 表示と往復 penalty の読み替えを明記してください
-6. E007 の基準 risk、計算式、その前後の比較点を明記してください
+6. E007 の維持率候補、130%警戒線、100%絶対NG、採用順序を明記してください
 7. 最後に `E005-E008` 用 JSON を必ず `json` コードブロックで出してください
 
 ## 出力形式
@@ -50,10 +51,10 @@
 
 1. 結論
 2. E005-E008 の実行方針
-3. sweep / risk grid
+3. sweep / maintenance margin grid
 4. 評価観点
 5. E005 の slip 解釈
-6. E007 の risk grid
+6. E007 の maintenance margin grid
 7. Codex 実行用 JSON
 
 ## JSON 形式
@@ -80,7 +81,7 @@
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 30, 60, 120],
-  "risk_fractions": [0.015, 0.03, 0.06],
+  "target_maintenance_margin_candidates": [150, 180, 200],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
   "notes": "short rationale"
@@ -88,4 +89,4 @@
 ```
 
 `slippage_values` は one-way の値です。
-`risk_fractions` は `SL5 -> 0.5%` を基準に、中心値 `0.5% * (sl_pips / 5)` とその前後で決めてください。
+`target_maintenance_margin_candidates` は通常 `[150, 180, 200]` とし、必要な場合だけ `[150, 180, 200, 230, 260]` へ拡張してください。

@@ -35,7 +35,7 @@ def test_promote_qualify_result_to_runtime_config(tmp_path: Path) -> None:
                 "e007_passed": True,
                 "e008_passed": True,
                 "approved_for_runtime": True,
-                "selected_risk_fraction": 0.0015,
+                "selected_target_maintenance_margin_pct": 150.0,
                 "kill_switch_dd_pct": -0.2,
                 "min_maintenance_margin_pct": 150.0,
                 "initial_capital_jpy": 100000.0,
@@ -79,6 +79,7 @@ def test_promote_qualify_result_to_runtime_config(tmp_path: Path) -> None:
     assert config["unit_level_updated_by"] == "promotion"
     assert "right_strength_balance" in str(config["filter_spec_json"])
     assert "source_result_id" in str(config["execution_spec_json"])
+    assert "selected_target_maintenance_margin_pct" in str(config["execution_spec_json"])
     assert "final_equity_jpy" in str(config["execution_spec_json"])
 
 
@@ -123,7 +124,7 @@ def test_promote_vol_percentile_filter_uses_source_threshold_metadata(tmp_path: 
                 "e007_passed": True,
                 "e008_passed": True,
                 "approved_for_runtime": True,
-                "selected_risk_fraction": 0.015,
+                "selected_target_maintenance_margin_pct": 180.0,
                 "kill_switch_dd_pct": -0.2,
                 "min_maintenance_margin_pct": 150.0,
                 "initial_capital_jpy": 100000.0,
