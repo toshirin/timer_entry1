@@ -221,6 +221,7 @@ kill switch 設定:
 - `max_concurrent_positions`
 - 初期運用では `1` を推奨
 - `1` の場合、Oanda 口座上に open trade が 1 本でも残っていれば新規 entry を見送る
+- ただし `labels` に `watch` が付いた setting 由来の open trade は、監視枠として concurrency count から除外する
 - 見送りは `decision_log` に `skipped_concurrency` として残す
 
 除外 window:

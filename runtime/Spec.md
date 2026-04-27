@@ -146,6 +146,8 @@ setting は以下の条件をすべて満たした場合のみ実行対象とす
 
 - 先に broker 上で open trade を作った setting が優先される
 - 後続 setting は open trade 数により `skipped_concurrency` として不発にする
+- ただし、open trade の `setting_id` を broker `clientExtensions.id` から復元でき、対応する setting に `label=watch` が付いている場合、その open trade は concurrency count から除外する
+- `setting_id` を復元できない open trade、または setting_config を参照できない open trade は安全側で concurrency count に含める
 - 同一 setting / 同一 trade date の二重発注は `trade_state` の conditional write で防ぐ
 
 ただし、複数 setting が同時起動し、どちらも broker open trade 作成前に concurrency check を通過する race は残りうる。将来、同一 bucket 内の候補を厳密に排他したい場合は、account / instrument / strategy group 単位の lock item を DynamoDB に持つ。
@@ -379,8 +381,11 @@ status 例:
 - `decision`
 - `reason`
 - `blocking_trade_id`
-- `blocking_setting_id`
 - `open_trade_count`
+- `open_trade_setting_ids`
+- `blocking_open_trade_count`
+- `blocking_trade_setting_id`
+- `ignored_watch_open_trade_count`
 - `filter_results`
 - `created_at`
 - `ttl`

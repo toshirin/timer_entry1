@@ -1,14 +1,14 @@
 {
   "experiment_code": "E005-E008",
   "variant_code": null,
-  "slot_id": "tyo13",
+  "slot_id": "tyo11",
   "side": "buy",
   "baseline": {
-    "entry_clock_local": "13:40",
-    "forced_exit_clock_local": "14:35",
+    "entry_clock_local": "11:10",
+    "forced_exit_clock_local": "12:15",
     "tp_pips": 20,
-    "sl_pips": 15,
-    "filter_labels": ["trend_ge_0_7"]
+    "sl_pips": 25,
+    "filter_labels": ["right_stronger"]
   },
   "pass_stability_gate": true,
   "selected_experiments": ["E005", "E006", "E007", "E008"],
@@ -20,5 +20,5 @@
   "target_maintenance_margin_candidates": [150, 180, 200],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "E004 tick replay passed with small degradation. Run standard E005-E008 robustness suite: one-way slippage 0.0-0.3, entry delay 0-120s, maintenance margin candidates 150/180/200 with -20% kill switch."
+  "notes": "E004 tick replay通過済み。E005はone-way 0.0-0.3、実質往復0.0-0.6pipsを確認。E007は標準候補150/180/200で、100%割れは一発NG、130%割れまたはkill-switchは一段上確認。E008は0-120秒遅延を確認する。"
 }

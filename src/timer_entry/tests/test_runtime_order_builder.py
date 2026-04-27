@@ -18,7 +18,7 @@ from timer_entry_runtime.order_builder import (
     requested_entry_from_snapshot,
     trade_protection_order_body,
 )
-from timer_entry_runtime.runtime import _create_entry_trade, _exclude_window_check
+from timer_entry_runtime.runtime import _concurrency_check, _create_entry_trade, _exclude_window_check
 from timer_entry_runtime.sizing import compute_units
 
 
@@ -71,6 +71,50 @@ def test_requested_entry_uses_ask_for_buy_and_bid_for_sell() -> None:
     assert buy_entry.price == 150.005
     assert sell_entry.price_side == "bid"
     assert sell_entry.price == 149.990
+
+
+def test_concurrency_ignores_open_trades_from_watch_settings() -> None:
+    class FakeOanda:
+        def get_open_trades(self) -> list[dict[str, object]]:
+            return [{"id": "101", "clientExtensions": {"id": "watch_setting"}}]
+
+    class FakeAws:
+        def get_setting_config(self, setting_id: str) -> SettingConfig | None:
+            assert setting_id == "watch_setting"
+            return SettingConfig(**{**_setting("buy").__dict__, "setting_id": setting_id, "labels": ["watch"]})
+
+    allowed, details = _concurrency_check(
+        setting=_setting("sell"),
+        oanda_client=FakeOanda(),  # type: ignore[arg-type]
+        aws_runtime=FakeAws(),  # type: ignore[arg-type]
+    )
+
+    assert allowed is True
+    assert details["open_trade_count"] == 1
+    assert details["blocking_open_trade_count"] == 0
+    assert details["ignored_watch_open_trade_ids"] == ["101"]
+    assert details["trigger_reason"] is None
+
+
+def test_concurrency_blocks_unknown_open_trades_safely() -> None:
+    class FakeOanda:
+        def get_open_trades(self) -> list[dict[str, object]]:
+            return [{"id": "102"}]
+
+    class FakeAws:
+        def get_setting_config(self, setting_id: str) -> SettingConfig | None:
+            raise AssertionError("unknown open trades should not query setting_config")
+
+    allowed, details = _concurrency_check(
+        setting=_setting("sell"),
+        oanda_client=FakeOanda(),  # type: ignore[arg-type]
+        aws_runtime=FakeAws(),  # type: ignore[arg-type]
+    )
+
+    assert allowed is False
+    assert details["blocking_open_trade_count"] == 1
+    assert details["blocking_trade_id"] == "102"
+    assert details["trigger_reason"] == "open_position_limit_reached"
 
 
 def test_buy_protection_uses_bid_tp_and_ask_sl_from_fill_price() -> None:

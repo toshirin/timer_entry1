@@ -8,16 +8,18 @@
     "forced_exit_clock_local": "13:45",
     "tp_pips": 25,
     "sl_pips": 15,
-    "filter_labels": ["opposite_sign"]
+    "filter_labels": ["all"],
+    "exclude_windows": ["us_uk_dst_mismatch"]
   },
-  "comparison_family": "shape_balance",
+  "comparison_family": "trend_ratio",
   "comparison_labels": [
     "all",
-    "opposite_sign",
-    "opp_right_dom_ge2",
-    "opp_right_dom_ge4",
-    "opp_right_dom_ge6"
+    "range_lt_0_20",
+    "range_lt_0_25",
+    "range_lt_0_3",
+    "range_lt_0_35",
+    "range_lt_0_4"
   ],
   "pass_stability_gate": true,
-  "notes": "lon12 buy mainline. Baseline is scan-best gate-passing row: 12:50 / TP25 / SL15 / opposite_sign. Keep all only as comparator. New labels deepen opposite_sign by requiring stronger right-side dominance under opposite-sign condition. same_bar_conflict_count=1 and same_bar_unresolved_count=0 on baseline row."
+  "notes": "DST gap excluded lon12 rescan. Buy 12:50 range_lt_0_3 SL15 TP25 is preferred over opposite_sign because out_gross, PF, and maxDD are better despite slightly lower gross. Keep all only as comparison baseline, not as promotion candidate."
 }

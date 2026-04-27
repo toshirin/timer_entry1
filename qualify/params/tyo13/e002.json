@@ -4,14 +4,14 @@
   "slot_id": "tyo13",
   "side": "buy",
   "baseline": {
-    "entry_clock_local": "13:00",
-    "forced_exit_clock_local": "13:55",
-    "tp_pips": 15,
-    "sl_pips": 10,
-    "filter_labels": ["ge4"]
+    "entry_clock_local": "13:40",
+    "forced_exit_clock_local": "14:35",
+    "tp_pips": 20,
+    "sl_pips": 15,
+    "filter_labels": ["trend_ge_0_7"]
   },
   "tp_values": [15, 20, 25],
-  "sl_values": [5, 10, 15],
+  "sl_values": [10, 15, 20],
   "pass_stability_gate": true,
-  "notes": "E001 adopted ge4 as the safer filter versus ge2 due to better PF and shallower maxDD with only small gross sacrifice. E002 keeps entry/exit/filter fixed and runs a small TP/SL neighborhood sweep around the proven 13:00 scan cluster."
+  "notes": "trend_ge_0_7 shows out-dominant structure; prioritize TP extension with slightly tighter SL, avoid widening SL due to already low maxDD"
 }

@@ -4,15 +4,15 @@
   "slot_id": "tyo13",
   "side": "buy",
   "baseline": {
-    "entry_clock_local": "13:00",
-    "forced_exit_clock_local": "14:05",
-    "tp_pips": 15,
-    "sl_pips": 10,
-    "filter_labels": ["ge4"]
+    "entry_clock_local": "13:40",
+    "forced_exit_clock_local": "14:35",
+    "tp_pips": 20,
+    "sl_pips": 15,
+    "filter_labels": ["trend_ge_0_7"]
   },
   "pass_stability_gate": true,
   "slippage_mode": "none",
   "fixed_slippage_pips": 0.0,
   "entry_delay_seconds": 0,
-  "notes": "Pure tick replay validation of E003 winner. No slippage or delay to isolate execution consistency between bar model and tick model."
+  "notes": "E003 selected 14:35 forced exit. Run baseline tick replay with no slippage and no entry delay; slippage and delay robustness are deferred to E005 and E008."
 }

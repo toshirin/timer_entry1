@@ -11,6 +11,7 @@ from timer_entry.direction import get_direction_spec
 from .aws_runtime import RuntimeAws
 from .config import RuntimeConfig
 from .filtering import evaluate_filters
+from .level_policy import WATCH_LABEL
 from .logging_utils import emit_log
 from .models import HandlerResult, SettingConfig, TriggerContext, pnl_pips
 from .oanda_client import OandaApiError, OandaClient
@@ -186,20 +187,71 @@ def _exclude_window_check(*, setting: SettingConfig, now_utc: datetime) -> tuple
     return not excluded, details
 
 
-def _concurrency_check(*, setting: SettingConfig, oanda_client: OandaClient) -> tuple[bool, dict[str, Any]]:
+def _open_trade_setting_id(open_trade: dict[str, Any]) -> str | None:
+    for key in ("clientExtensions", "tradeClientExtensions"):
+        extensions = open_trade.get(key)
+        if isinstance(extensions, dict) and extensions.get("id"):
+            return str(extensions["id"])
+    return None
+
+
+def _has_watch_label(setting: SettingConfig | None) -> bool:
+    if setting is None:
+        return False
+    return any(str(label).strip().lower() == WATCH_LABEL for label in setting.labels)
+
+
+def _concurrency_check(
+    *,
+    setting: SettingConfig,
+    oanda_client: OandaClient,
+    aws_runtime: RuntimeAws,
+) -> tuple[bool, dict[str, Any]]:
     max_concurrent_positions = setting.max_concurrent_positions
     open_trades = oanda_client.get_open_trades()
+    blocking_trades: list[dict[str, Any]] = []
+    ignored_watch_trades: list[dict[str, Any]] = []
+    open_trade_setting_ids: list[str | None] = []
+    setting_cache: dict[str, SettingConfig | None] = {}
+
+    for trade in open_trades:
+        trade_setting_id = _open_trade_setting_id(trade)
+        open_trade_setting_ids.append(trade_setting_id)
+        trade_setting = None
+        if trade_setting_id:
+            if trade_setting_id not in setting_cache:
+                setting_cache[trade_setting_id] = aws_runtime.get_setting_config(trade_setting_id)
+            trade_setting = setting_cache[trade_setting_id]
+        if _has_watch_label(trade_setting):
+            ignored_watch_trades.append(trade)
+        else:
+            blocking_trades.append(trade)
+
     details: dict[str, Any] = {
         "max_concurrent_positions": max_concurrent_positions,
         "open_trade_count": len(open_trades),
         "open_trade_ids": [str(item.get("id")) for item in open_trades if item.get("id") is not None],
+        "open_trade_setting_ids": open_trade_setting_ids,
+        "blocking_open_trade_count": len(blocking_trades),
+        "blocking_open_trade_ids": [str(item.get("id")) for item in blocking_trades if item.get("id") is not None],
+        "ignored_watch_open_trade_count": len(ignored_watch_trades),
+        "ignored_watch_open_trade_ids": [
+            str(item.get("id")) for item in ignored_watch_trades if item.get("id") is not None
+        ],
     }
     if max_concurrent_positions is None:
         details["trigger_reason"] = None
         return True, details
-    if len(open_trades) >= max_concurrent_positions:
+    if len(blocking_trades) >= max_concurrent_positions:
         details["trigger_reason"] = "open_position_limit_reached"
-        details["blocking_trade_id"] = str(open_trades[0].get("id")) if open_trades and open_trades[0].get("id") is not None else None
+        details["blocking_trade_id"] = (
+            str(blocking_trades[0].get("id"))
+            if blocking_trades and blocking_trades[0].get("id") is not None
+            else None
+        )
+        details["blocking_trade_setting_id"] = (
+            _open_trade_setting_id(blocking_trades[0]) if blocking_trades else None
+        )
         return False, details
     details["trigger_reason"] = None
     return True, details
@@ -567,7 +619,11 @@ def run_entry_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 results.append({"setting_id": setting.setting_id, "status": "skipped_market_closed"})
                 continue
 
-            concurrency_allowed, concurrency_details = _concurrency_check(setting=setting, oanda_client=oanda_client)
+            concurrency_allowed, concurrency_details = _concurrency_check(
+                setting=setting,
+                oanda_client=oanda_client,
+                aws_runtime=aws_runtime,
+            )
             emit_log("SETTING_CHECK", setting_id=setting.setting_id, check_name="concurrency", **concurrency_details, passed=concurrency_allowed)
             if not concurrency_allowed:
                 emit_log("SETTING_SKIP", setting_id=setting.setting_id, reason="open_position_exists", concurrency_details=concurrency_details)

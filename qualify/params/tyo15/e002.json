@@ -1,0 +1,17 @@
+{
+  "experiment_code": "E002",
+  "variant_code": null,
+  "slot_id": "tyo15",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "15:50",
+    "forced_exit_clock_local": "16:45",
+    "tp_pips": 20,
+    "sl_pips": 10,
+    "filter_labels": ["range_lt_0_20"]
+  },
+  "tp_values": [15, 20, 25, 30],
+  "sl_values": [10, 12, 15],
+  "pass_stability_gate": true,
+  "notes": "E001でrange_lt_0_20が最良。out優勢のためTP上方向を確認しつつ、SLは軽微に拡張してDD耐性のみチェックする。探索ではなく近傍安定性確認。"
+}
