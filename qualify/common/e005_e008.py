@@ -237,7 +237,10 @@ def _build_target_maintenance_margin_outputs(
             else 0.0
         )
         required_margin_jpy = units * entry_price * 0.04
-        maintenance_margin_pct = equity_before / required_margin_jpy * 100.0 if required_margin_jpy > 0.0 else math.inf
+        entry_maintenance_margin_pct = equity_before / required_margin_jpy * 100.0 if required_margin_jpy > 0.0 else math.inf
+        expected_loss_at_sl_jpy = units * float(sl_pips) * 0.01
+        equity_at_sl_jpy = equity_before - expected_loss_at_sl_jpy
+        maintenance_margin_pct = equity_at_sl_jpy / required_margin_jpy * 100.0 if required_margin_jpy > 0.0 else math.inf
         pnl_pips = float(trade["pnl_pips"])
         pnl_jpy = units * pnl_pips * 0.01
         equity += pnl_jpy
@@ -257,8 +260,10 @@ def _build_target_maintenance_margin_outputs(
                 "sl_pips": float(sl_pips),
                 "pip_value_jpy_per_unit": 0.01,
                 "units": units,
-                "expected_loss_at_sl_jpy": units * float(sl_pips) * 0.01,
+                "expected_loss_at_sl_jpy": expected_loss_at_sl_jpy,
                 "required_margin_jpy": required_margin_jpy,
+                "entry_maintenance_margin_pct": entry_maintenance_margin_pct,
+                "equity_at_sl_jpy": equity_at_sl_jpy,
                 "maintenance_margin_pct": maintenance_margin_pct,
                 "pnl_jpy": pnl_jpy,
                 "equity_jpy": equity,
@@ -624,6 +629,7 @@ def _run_e007(
         "kill_switch_dd_pct": float(kill_switch_dd_pct),
         "maintenance_warning_threshold_pct": 130.0,
         "maintenance_absolute_ng_threshold_pct": 100.0,
+        "maintenance_margin_pct_definition": "projected maintenance margin after an immediate SL-sized loss at entry",
         "pips_year_rate_pct_at_150usd_formula": "166.67 / target_maintenance_margin_pct",
     }
     write_json(paths["metadata_json"], metadata)

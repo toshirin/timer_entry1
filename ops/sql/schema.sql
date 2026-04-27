@@ -279,12 +279,13 @@ select
       / count(*) filter (where pnl_pips is not null)
   end as win_rate,
   sum(pnl_pips) as pnl_pips,
-  sum(pnl_jpy) as pnl_jpy,
+  sum(pnl_jpy) filter (where pnl_pips is not null) as pnl_jpy,
   avg(expected_trade_rate) as expected_trade_rate,
   avg(actual_trade_rate) as actual_trade_rate,
   avg(expected_win_rate) as expected_win_rate,
   avg(actual_win_rate) as actual_win_rate
 from ops_main.runtime_oanda_event_fact
+where decision_id is not null
 group by setting_id, setting_labels, trade_date_local;
 
 create table if not exists ops_demo.import_cursor (like ops_main.import_cursor including all);
@@ -387,12 +388,13 @@ select
       / count(*) filter (where pnl_pips is not null)
   end as win_rate,
   sum(pnl_pips) as pnl_pips,
-  sum(pnl_jpy) as pnl_jpy,
+  sum(pnl_jpy) filter (where pnl_pips is not null) as pnl_jpy,
   avg(expected_trade_rate) as expected_trade_rate,
   avg(actual_trade_rate) as actual_trade_rate,
   avg(expected_win_rate) as expected_win_rate,
   avg(actual_win_rate) as actual_win_rate
 from ops_demo.runtime_oanda_event_fact
+where decision_id is not null
 group by setting_id, setting_labels, trade_date_local;
 
 create or replace view ops_demo.oanda_latest_account_balance as

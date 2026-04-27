@@ -1,6 +1,6 @@
 {
   "experiment_code": "E005-E008",
-  "variant_code": null,
+  "variant_code": "E007A",
   "slot_id": "lon16",
   "side": "buy",
   "baseline": {
@@ -11,14 +11,14 @@
     "filter_labels": ["opposite_sign"]
   },
   "pass_stability_gate": true,
-  "selected_experiments": ["E005", "E006", "E007", "E008"],
+  "selected_experiments": ["E007"],
   "slippage_mode": "none",
   "fixed_slippage_pips": 0.0,
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 5, 10, 30],
-  "risk_fractions": [0.02, 0.03, 0.04],
+  "target_maintenance_margin_candidates": [150, 180, 200],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "E004通過設定を固定してE005-E008を一括実行。SL30の中心riskは3.0%で、保守2.0%・中心3.0%・攻め4.0%を比較。slippageはone-way 0.0-0.3、entry delayは0-30秒で初回ロバスト性を確認する。"
+  "notes": "E007のrisk_fraction廃止に伴うE007A再実験。既存E005/E006/E008は合格済みのため再実行せず、E004通過settingを固定してE007のみをtarget_maintenance_margin_pct審査で再実行する。通常候補150/180/200を低い順に確認し、maintenance_below_100_count>0は一発NG、stop_triggeredまたはmaintenance_below_130_count>0は一段上確認とする。120%ラインは採用判定に使わない。summaryのmin_maintenance_margin_pct/below countは各tradeが即時SL到達した場合の想定維持率として読む。Codex側では --only E007 --output-alias E007=E007A を想定。"
 }

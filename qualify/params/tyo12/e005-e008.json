@@ -1,6 +1,6 @@
 {
   "experiment_code": "E005-E008",
-  "variant_code": null,
+  "variant_code": "E007A",
   "slot_id": "tyo12",
   "side": "buy",
   "baseline": {
@@ -11,14 +11,14 @@
     "filter_labels": ["ge0"]
   },
   "pass_stability_gate": true,
-  "selected_experiments": ["E005", "E006", "E007", "E008"],
+  "selected_experiments": ["E007"],
   "slippage_mode": "none",
   "fixed_slippage_pips": 0.0,
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 30, 60, 120],
-  "risk_fractions": [0.01, 0.015, 0.02, 0.025],
+  "target_maintenance_margin_candidates": [150, 180, 200],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "E004通過後のrobustness suite。一括でE005-E008を実行する。E005のslip_pipsはone-way表示で、実質往復penaltyは2*slip_pips。E007はSL15なので中心riskは1.5%。gridは0.01, 0.015, 0.02, 0.025で保守側から攻め側まで確認する。採用判断はCAGR最大ではなくmin_maintenance_margin_pct>=150を満たす安全側優先。"
+  "notes": "E007 was redesigned from risk_fraction optimization to target maintenance margin review. Re-run only E007 as E007A using --only E007 --output-alias E007=E007A. Evaluate 150 -> 180 -> 200 in order. maintenance_below_100_count > 0 is immediate NG. stop_triggered == true or maintenance_below_130_count > 0 requires checking the next higher candidate. Do not use the 120% line for adoption. Adopt the first safe candidate, not the maximum CAGR."
 }

@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const requestedSetting = parseSettingParam(url.searchParams.get("setting"));
     const bounds = periodBounds(period, at);
     const commonWhere = [localDatePredicate(bounds), labelPredicate(labelMode, selectedLabels)].filter(Boolean).join(" and ");
-    const summaryWhere = ["trade_date_local is not null", commonWhere].filter(Boolean).join(" and ");
+    const summaryWhere = ["decision_id is not null", "trade_date_local is not null", commonWhere].filter(Boolean).join(" and ");
     const summaryWhereClause = `where ${summaryWhere}`;
     const eventWhereClause = commonWhere ? `where ${commonWhere}` : "";
     const unitLevelCurrentWhere = labelPredicate(labelMode, selectedLabels);
@@ -61,24 +61,28 @@ export async function GET(request: Request) {
           setting_id,
           setting_labels::text as setting_labels,
           trade_date_local,
-          decision_count,
-          entered_count,
-          skipped_count,
-          conflict_count,
-          filter_skip_count,
-          closed_entry_count,
-          winning_entry_count,
-          conflict_rate,
-          trade_rate,
-          win_rate,
-          pnl_pips,
-          pnl_jpy,
-          expected_trade_rate,
-          actual_trade_rate,
-          expected_win_rate,
-          actual_win_rate
-        from ${schema}.daily_setting_summary
+          count(*) as decision_count,
+          count(*) filter (where decision = 'entered') as entered_count,
+          count(*) filter (where decision like 'skipped%') as skipped_count,
+          count(*) filter (where decision = 'skipped_concurrency') as conflict_count,
+          count(*) filter (where decision = 'skipped_filter' or reason = 'filter_rejected') as filter_skip_count,
+          count(*) filter (where pnl_pips is not null) as closed_entry_count,
+          count(*) filter (where pnl_pips > 0) as winning_entry_count,
+          case when count(*) = 0 then null else count(*) filter (where decision = 'skipped_concurrency')::numeric / count(*) end as conflict_rate,
+          case when count(*) = 0 then null else count(*) filter (where decision = 'entered')::numeric / count(*) end as trade_rate,
+          case
+            when count(*) filter (where pnl_pips is not null) = 0 then null
+            else count(*) filter (where pnl_pips > 0)::numeric / count(*) filter (where pnl_pips is not null)
+          end as win_rate,
+          coalesce(sum(pnl_pips), 0) as pnl_pips,
+          coalesce(sum(pnl_jpy) filter (where pnl_pips is not null), 0) as pnl_jpy,
+          avg(expected_trade_rate) as expected_trade_rate,
+          avg(actual_trade_rate) as actual_trade_rate,
+          avg(expected_win_rate) as expected_win_rate,
+          avg(actual_win_rate) as actual_win_rate
+        from ${schema}.runtime_oanda_event_fact
         ${summaryWhereClause}
+        group by setting_id, setting_labels, trade_date_local
         order by trade_date_local desc, setting_id
         limit 120
       `),
@@ -131,7 +135,7 @@ export async function GET(request: Request) {
           count(*) filter (where pnl_pips is not null) as closed_entry_count,
           count(*) filter (where pnl_pips > 0) as winning_entry_count,
           coalesce(sum(pnl_pips), 0) as pnl_pips,
-          coalesce(sum(pnl_jpy), 0) as pnl_jpy
+          coalesce(sum(pnl_jpy) filter (where pnl_pips is not null), 0) as pnl_jpy
         from ${schema}.runtime_oanda_event_fact
         ${summaryWhereClause}
         group by 1
@@ -157,7 +161,7 @@ export async function GET(request: Request) {
           count(*) filter (where f.decision = 'skipped_kill_switch') as kill_count,
           max(f.trade_date_local) filter (where f.decision = 'skipped_kill_switch') as last_kill_date,
           coalesce(sum(f.pnl_pips), 0) as pnl_pips,
-          coalesce(sum(f.pnl_jpy), 0) as pnl_jpy
+          coalesce(sum(f.pnl_jpy) filter (where f.pnl_pips is not null), 0) as pnl_jpy
         from (
           select *
           from ${schema}.runtime_oanda_event_fact

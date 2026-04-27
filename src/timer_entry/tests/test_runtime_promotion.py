@@ -84,6 +84,57 @@ def test_promote_qualify_result_to_runtime_config(tmp_path: Path) -> None:
     assert "final_equity_jpy" in str(config["execution_spec_json"])
 
 
+def test_promote_rejects_mismatched_runtime_margin_threshold(tmp_path: Path) -> None:
+    result_path = tmp_path / "mismatch_result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "result_type": "qualify_promotion_result",
+                "schema_version": 1,
+                "result_id": "lon15_buy_v1",
+                "slot_id": "lon15",
+                "side": "buy",
+                "market_tz": "Europe/London",
+                "entry_clock_local": "15:40",
+                "forced_exit_clock_local": "16:30",
+                "tp_pips": 15,
+                "sl_pips": 25,
+                "filter_labels": ["right_dom_ge4"],
+                "pass_stability_gate": True,
+                "e004_passed": True,
+                "e005_passed": True,
+                "e006_passed": True,
+                "e007_passed": True,
+                "e008_passed": True,
+                "approved_for_runtime": True,
+                "selected_target_maintenance_margin_pct": 200.0,
+                "kill_switch_dd_pct": -0.2,
+                "min_maintenance_margin_pct": 150.0,
+                "initial_capital_jpy": 100000.0,
+                "final_equity_jpy": 101000.0,
+                "annualized_pips": 12.3,
+                "cagr": 0.01,
+                "trade_rate": 0.42,
+                "gross_pips": 86.1,
+                "in_gross_pips": 55.0,
+                "out_gross_pips": 31.1,
+                "win_rate": 0.54,
+                "source_params_files": {},
+                "source_output_dirs": {},
+                "evidence": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        promote_qualify_result_to_runtime_config(result_path, setting_id="lon15_buy_runtime_v1")
+    except ValueError as exc:
+        assert "min_maintenance_margin_pct" in str(exc)
+    else:
+        raise AssertionError("expected mismatched runtime margin threshold to be rejected")
+
+
 def test_promote_vol_percentile_filter_uses_source_threshold_metadata(tmp_path: Path) -> None:
     e004_dir = tmp_path / "qualify" / "out" / "tyo09" / "E004" / "latest"
     e004_dir.mkdir(parents=True)
@@ -127,7 +178,7 @@ def test_promote_vol_percentile_filter_uses_source_threshold_metadata(tmp_path: 
                 "approved_for_runtime": True,
                 "selected_target_maintenance_margin_pct": 180.0,
                 "kill_switch_dd_pct": -0.2,
-                "min_maintenance_margin_pct": 150.0,
+                "min_maintenance_margin_pct": 180.0,
                 "initial_capital_jpy": 100000.0,
                 "final_equity_jpy": 101000.0,
                 "annualized_pips": 12.3,

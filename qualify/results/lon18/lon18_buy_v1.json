@@ -18,14 +18,14 @@
   "e007_passed": true,
   "e008_passed": true,
   "approved_for_runtime": true,
-  "selected_risk_fraction": 0.01,
   "selected_entry_delay_seconds": 30,
+  "selected_target_maintenance_margin_pct": 150.0,
   "kill_switch_dd_pct": -0.2,
-  "min_maintenance_margin_pct": 154.604429,
+  "min_maintenance_margin_pct": 150.0,
   "initial_capital_jpy": 100000,
-  "final_equity_jpy": 189037.816956,
+  "final_equity_jpy": 215334.637917,
   "annualized_pips": 84.1375,
-  "cagr": 0.082851,
+  "cagr": 0.100625,
   "trade_rate": 0.560506,
   "gross_pips": 678.8,
   "in_gross_pips": 330.3,
@@ -158,67 +158,58 @@
       "summary": "Walk-forward accepted with 4 positive test years out of 5; 2025 holdout was weak but near flat."
     },
     "E007": {
-      "min_maintenance_margin_pct": 154.604429,
+      "selected_target_maintenance_margin_pct": 150.0,
+      "min_maintenance_margin_pct": 150.0,
+      "summary_min_maintenance_margin_pct_at_immediate_sl": 147.574605,
       "annualized_pips": 84.1375,
       "trade_rate": 0.560506,
       "win_rate": 0.520118,
-      "cagr": 0.082851,
-      "risk_sweep": [
+      "cagr": 0.100625,
+      "maintenance_margin_sweep": [
         {
-          "risk_fraction": 0.005,
-          "final_equity_jpy": 138743.268282,
-          "total_return_pct": 0.387433,
-          "cagr": 0.041781,
+          "target_maintenance_margin_pct": 150.0,
+          "final_equity_jpy": 215334.637917,
+          "total_return_pct": 1.153346,
+          "cagr": 0.100625,
           "annualized_pips": 84.1375,
           "trade_rate": 0.560506,
           "win_rate": 0.520118,
-          "max_dd_pct": -0.060962,
-          "min_maintenance_margin_pct": 309.208858,
-          "maintenance_below_150_count": 0,
+          "max_dd_pct": -0.143466,
+          "min_maintenance_margin_pct": 147.574605,
+          "maintenance_below_130_count": 0,
           "maintenance_below_100_count": 0,
-          "stop_triggered": false
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 1.111133
         },
         {
-          "risk_fraction": 0.0075,
-          "final_equity_jpy": 162316.428633,
-          "total_return_pct": 0.623164,
-          "cagr": 0.062418,
+          "target_maintenance_margin_pct": 180.0,
+          "final_equity_jpy": 191057.446006,
+          "total_return_pct": 0.910574,
+          "cagr": 0.08429,
           "annualized_pips": 84.1375,
           "trade_rate": 0.560506,
           "win_rate": 0.520118,
-          "max_dd_pct": -0.090239,
-          "min_maintenance_margin_pct": 206.139239,
-          "maintenance_below_150_count": 0,
+          "max_dd_pct": -0.120703,
+          "min_maintenance_margin_pct": 177.574605,
+          "maintenance_below_130_count": 0,
           "maintenance_below_100_count": 0,
-          "stop_triggered": false
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.925944
         },
         {
-          "risk_fraction": 0.01,
-          "final_equity_jpy": 189037.816956,
-          "total_return_pct": 0.890378,
-          "cagr": 0.082851,
+          "target_maintenance_margin_pct": 200.0,
+          "final_equity_jpy": 179744.292928,
+          "total_return_pct": 0.797443,
+          "cagr": 0.076049,
           "annualized_pips": 84.1375,
           "trade_rate": 0.560506,
           "win_rate": 0.520118,
-          "max_dd_pct": -0.118736,
-          "min_maintenance_margin_pct": 154.604429,
-          "maintenance_below_150_count": 0,
+          "max_dd_pct": -0.109152,
+          "min_maintenance_margin_pct": 197.574605,
+          "maintenance_below_130_count": 0,
           "maintenance_below_100_count": 0,
-          "stop_triggered": false
-        },
-        {
-          "risk_fraction": 0.0125,
-          "final_equity_jpy": 219166.775435,
-          "total_return_pct": 1.191668,
-          "cagr": 0.103054,
-          "annualized_pips": 84.1375,
-          "trade_rate": 0.560506,
-          "win_rate": 0.520118,
-          "max_dd_pct": -0.14647,
-          "min_maintenance_margin_pct": 123.683543,
-          "maintenance_below_150_count": 471,
-          "maintenance_below_100_count": 0,
-          "stop_triggered": false
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.83335
         }
       ]
     },
@@ -261,5 +252,5 @@
       ]
     }
   },
-  "notes": "Promote lon18 buy setting to runtime. E004 execution integrity passed, E005 retained positive edge through one-way 0.2 pips, E006 walk-forward was acceptable though 2025 was weak, E007 selected 1.0% risk as the highest-return choice that still kept minimum maintenance margin above 150%, and E008 improved performance with a 30-second entry delay."
+  "notes": "Promote lon18 buy setting to runtime. E004 tick replay passed, E005 retained positive edge through one-way 0.2 pips, E006 walk-forward was accepted with weak but near-flat 2025, E007A selected the first safe target maintenance margin candidate at 150%, and E008 confirmed delay tolerance with best result at 30 seconds. Runtime promotion will initialize this setting as unit_level=0 / fixed_units=10; monthly unit changes are handled by Unit Level Policy."
 }

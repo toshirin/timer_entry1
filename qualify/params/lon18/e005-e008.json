@@ -17,8 +17,8 @@
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 10, 30, 60],
-  "risk_fractions": [0.005, 0.0075, 0.01, 0.0125],
+  "target_maintenance_margin_candidates": [150, 180, 200],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "Run full E005-E008 suite on the E004-passed lon18 buy setting. One-way slippage values correspond to round-trip penalties of 2x. For SL10, center risk is 1.0% based on SL5->0.5%, so compare conservative to mildly aggressive risk points while prioritizing min_maintenance_margin_pct >= 150."
+  "notes": "E004-passed lon18 buy setting. Re-run E007 under the new target-maintenance-margin policy; if preserving old E007 output, run with --only E007 --output-alias E007=E007A. E007 adoption order is 150 -> 180 -> 200; maintenance_below_100_count > 0 is hard fail, stop_triggered or maintenance_below_130_count > 0 requires checking the next higher margin candidate. E005 slippage values are one-way, so round-trip penalty is 2x."
 }

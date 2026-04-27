@@ -394,12 +394,16 @@ class E005E008Params:
         if raw_margin_candidates is None:
             legacy_risk_fractions = tuple(float(value) for value in data.get("risk_fractions", []))
             sl_pips = float(dict(data["baseline"])["sl_pips"])
+            # Legacy compatibility only: convert old risk_fraction grids to
+            # target maintenance margin using the same USDJPY=150 approximation
+            # as pips_year_rate_pct_at_150usd. New params must use
+            # target_maintenance_margin_candidates directly.
             raw_margin_candidates = [
                 25.0 * sl_pips / (risk_fraction * 150.0)
                 for risk_fraction in legacy_risk_fractions
                 if risk_fraction > 0.0
             ]
-        target_maintenance_margin_candidates = tuple(float(value) for value in raw_margin_candidates)
+        target_maintenance_margin_candidates = tuple(sorted(float(value) for value in raw_margin_candidates))
         if not slippage_values:
             raise ValueError("slippage_values must not be empty")
         if not entry_delay_values:
@@ -445,12 +449,6 @@ class E005E008Params:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-    @property
-    def risk_fractions(self) -> tuple[float, ...]:
-        # Backward-compatible alias for old tests/callers. New params should use
-        # target_maintenance_margin_candidates.
-        return self.target_maintenance_margin_candidates
 
 
 def load_e001_params(path: str | Path) -> E001Params:

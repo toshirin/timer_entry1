@@ -1,6 +1,6 @@
 {
   "experiment_code": "E005-E008",
-  "variant_code": null,
+  "variant_code": "E007A",
   "slot_id": "lon10",
   "side": "buy",
   "baseline": {
@@ -11,14 +11,14 @@
     "filter_labels": ["opp_right_dom_ge2"]
   },
   "pass_stability_gate": true,
-  "selected_experiments": ["E005", "E006", "E007", "E008"],
+  "selected_experiments": ["E007"],
   "slippage_mode": "none",
   "fixed_slippage_pips": 0.0,
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 10, 30, 60],
-  "risk_fractions": [0.01, 0.015, 0.02],
+  "target_maintenance_margin_candidates": [150, 180, 200],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "Run the full post-E004 robustness suite on the approved lon10 buy setting. Use one-way slippage sweep up to 0.3 pips, entry delay sweep up to 60 seconds, and a conservative risk grid around the SL15-based center risk of 1.5%."
+  "notes": "Re-run only E007 as E007A because risk_fraction has been abolished. Evaluate target maintenance margin candidates in ascending order: 150, 180, 200. Adopt the first candidate with maintenance_below_100_count == 0, maintenance_below_130_count == 0, and stop_triggered == false. Interpret min_maintenance_margin_pct and below counts as the assumed maintenance margin if each trade immediately reaches SL, not as post-entry margin."
 }

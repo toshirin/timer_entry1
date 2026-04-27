@@ -1,6 +1,6 @@
 {
   "experiment_code": "E005-E008",
-  "variant_code": null,
+  "variant_code": "E007A",
   "slot_id": "tyo14",
   "side": "buy",
   "baseline": {
@@ -11,14 +11,14 @@
     "filter_labels": ["le6"]
   },
   "pass_stability_gate": true,
-  "selected_experiments": ["E005", "E006", "E007", "E008"],
+  "selected_experiments": ["E007"],
   "slippage_mode": "none",
   "fixed_slippage_pips": 0.0,
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 10, 30, 60],
-  "risk_fractions": [0.015, 0.02, 0.025, 0.035],
+  "target_maintenance_margin_candidates": [150, 180, 200, 230, 260],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "E004通過settingを固定し、E005-E008を一括実行する。E005のslip_pipsはone-way表示で、実質往復penaltyは2*slip_pips。E007の中心riskはSL25に対して2.5%で、1.5%/2.5%/3.5%の安全側比較を行う。"
+  "notes": "E007はrisk_fraction最適化ではなくtarget maintenance margin審査としてE007Aで再実施する。tyo14 buyは旧E007でkill-switch発火が見えている監視枠寄りsettingのため、通常候補150/180/200に加えて230/260まで拡張する。採用はCAGR最大ではなく、150から順に100%割れなし、130%割れなし、stop未発火を満たした最初の候補とする。"
 }

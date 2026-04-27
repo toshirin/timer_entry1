@@ -27,12 +27,14 @@
 - E001 で問題があれば、派生実験 `E001A` のように新しい params JSON を出してよいです
 - E005 の `slip_pips` は one-way 表示で、実質往復 penalty は `2 * slip_pips` です
 - E007 では各 `target_maintenance_margin_pct` ごとに、`annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_130_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct`, `pips_year_rate_pct_at_150usd` を本文に数値で列挙してください
+- E007 summary の `min_maintenance_margin_pct` / below count は、entry 直後の維持率ではなく、各 trade が即時 SL 到達した場合の想定維持率で評価してください
 - E007 では 150 -> 180 -> 200 -> 必要なら 230 -> 260 の順に、安全条件を満たした最初の維持率を採用してください
 - `maintenance_below_100_count > 0` は一発NGです
 - `stop_triggered == true` または `maintenance_below_130_count > 0` は一発アウトではなく、一段上の維持率確認シグナルとして読んでください
 - 120%ラインと `maintenance_below_150_count` は採用判定の主役にしないでください
 - `pips_year_rate_pct_at_150usd` は `166.67 / target_maintenance_margin_pct` の近似指標として、`annualized_pips` と `cagr` の関係を読む補助にしてください
 - E007 の結論は CAGR 最大ではなく、安全条件を満たした最小の維持率候補を優先してください
+- `stop_triggered == true` の候補では、`cagr` と `annualized_pips` が kill-switch 停止時点までの部分期間集計であることを明記してください
 
 ## 添付する資料
 

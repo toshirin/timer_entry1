@@ -1,6 +1,6 @@
 {
   "experiment_code": "E005-E008",
-  "variant_code": "E007A",
+  "variant_code": "E007B",
   "slot_id": "tyo09",
   "side": "sell",
   "baseline": {
@@ -17,8 +17,8 @@
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 10, 30, 60],
-  "target_maintenance_margin_candidates": [150, 180, 200, 230, 260],
+  "target_maintenance_margin_candidates": [260, 300, 350, 400],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "risk_fraction廃止後のE007A。既存E005/E006/E008は維持し、E007のみtarget maintenance margin審査として再実行する。150から順に確認し、maintenance_below_100_count>0は一発NG、stop_triggeredまたはmaintenance_below_130_count>0なら一段上へ進む。120%ラインは採用判定に使わない。"
+  "notes": "E007Aでは150/180/200/230/260の全候補でstop_triggered=true。100%割れと130%割れはないため維持率不足ではなくDD kill-switch起因。260以上でstopが消えるかを確認する診断再実験。"
 }

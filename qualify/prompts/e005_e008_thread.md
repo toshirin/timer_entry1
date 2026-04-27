@@ -34,6 +34,7 @@
 - `stop_triggered == true` または `maintenance_below_130_count > 0` は、その維持率が強すぎるシグナルとして一段上の候補を確認してください
 - 120%ラインは採用判定に使わないでください
 - E007 の結果分析では各 target maintenance margin について、少なくとも `target_maintenance_margin_pct`, `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_130_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct`, `pips_year_rate_pct_at_150usd` を本文に数値で出してください
+- E007 summary の `min_maintenance_margin_pct` / below count は entry 直後ではなく、各 trade が即時 SL 到達した場合の想定維持率として解釈してください
 - `pips_year_rate_pct_at_150usd` は `166.67 / target_maintenance_margin_pct` の近似指標として、`annualized_pips` と `cagr` の関係を読む補助にしてください
 
 ## あなたに依頼したいこと

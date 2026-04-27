@@ -479,10 +479,13 @@ class QualifyPromotionResult:
             "win_rate",
         )
         missing_metrics = [name for name in required_metric_names if getattr(self, name) is None]
-        if self.selected_target_maintenance_margin_pct is None and self.selected_risk_fraction is not None:
-            missing_metrics = [name for name in missing_metrics if name != "selected_target_maintenance_margin_pct"]
         if missing_metrics:
             raise ValueError(f"promotion result metrics must be set before promotion: {missing_metrics}")
+        if self.min_maintenance_margin_pct != self.selected_target_maintenance_margin_pct:
+            raise ValueError(
+                "min_maintenance_margin_pct must match selected_target_maintenance_margin_pct "
+                "for runtime promotion"
+            )
 
     def to_strategy_setting(self) -> StrategySetting:
         return StrategySetting(

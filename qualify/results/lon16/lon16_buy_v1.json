@@ -18,13 +18,13 @@
   "e007_passed": true,
   "e008_passed": true,
   "approved_for_runtime": true,
-  "selected_risk_fraction": 0.03,
+  "selected_target_maintenance_margin_pct": 180.0,
   "kill_switch_dd_pct": -0.2,
-  "min_maintenance_margin_pct": 150.0,
+  "min_maintenance_margin_pct": 180.0,
   "initial_capital_jpy": 100000.0,
-  "final_equity_jpy": 179755.498935,
+  "final_equity_jpy": 174283.382081,
   "annualized_pips": 90.771429,
-  "cagr": 0.087385,
+  "cagr": 0.082593,
   "trade_rate": 0.500275,
   "gross_pips": 635.4,
   "in_gross_pips": 365.1,
@@ -154,53 +154,57 @@
       ]
     },
     "E007": {
-      "min_maintenance_margin_pct": 154.851497,
+      "selected_target_maintenance_margin_pct": 180.0,
+      "min_maintenance_margin_pct": 172.693548,
       "annualized_pips": 90.771429,
       "trade_rate": 0.500275,
       "win_rate": 0.533553,
-      "cagr": 0.087385,
-      "risk_sweep": [
+      "cagr": 0.082593,
+      "maintenance_margin_sweep": [
         {
-          "risk_fraction": 0.02,
-          "final_equity_jpy": 149457.229833,
-          "total_return_pct": 0.494572,
-          "cagr": 0.059085,
+          "target_maintenance_margin_pct": 150.0,
+          "final_equity_jpy": 81101.880075,
+          "total_return_pct": -0.188981,
+          "cagr": -0.06744,
+          "annualized_pips": -40.833333,
+          "trade_rate": 0.181618,
+          "win_rate": 0.472727,
+          "max_dd_pct": -0.2039,
+          "min_maintenance_margin_pct": 142.693548,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": true,
+          "pips_year_rate_pct_at_150usd": 1.111133
+        },
+        {
+          "target_maintenance_margin_pct": 180.0,
+          "final_equity_jpy": 174283.382081,
+          "total_return_pct": 0.742834,
+          "cagr": 0.082593,
           "annualized_pips": 90.771429,
           "trade_rate": 0.500275,
           "win_rate": 0.533553,
-          "max_dd_pct": -0.109909,
-          "min_maintenance_margin_pct": 232.277246,
-          "maintenance_below_150_count": 0,
+          "max_dd_pct": -0.181253,
+          "min_maintenance_margin_pct": 172.693548,
+          "maintenance_below_130_count": 0,
           "maintenance_below_100_count": 0,
-          "stop_triggered": false
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.925944
         },
         {
-          "risk_fraction": 0.03,
-          "final_equity_jpy": 179755.498935,
-          "total_return_pct": 0.797555,
-          "cagr": 0.087385,
+          "target_maintenance_margin_pct": 200.0,
+          "final_equity_jpy": 165657.412415,
+          "total_return_pct": 0.656574,
+          "cagr": 0.074771,
           "annualized_pips": 90.771429,
           "trade_rate": 0.500275,
           "win_rate": 0.533553,
-          "max_dd_pct": -0.161373,
-          "min_maintenance_margin_pct": 154.851497,
-          "maintenance_below_150_count": 0,
+          "max_dd_pct": -0.163662,
+          "min_maintenance_margin_pct": 192.693548,
+          "maintenance_below_130_count": 0,
           "maintenance_below_100_count": 0,
-          "stop_triggered": false
-        },
-        {
-          "risk_fraction": 0.04,
-          "final_equity_jpy": 153848.34834,
-          "total_return_pct": 0.538483,
-          "cagr": 0.07444,
-          "annualized_pips": 61.55,
-          "trade_rate": 0.404513,
-          "win_rate": 0.529252,
-          "max_dd_pct": -0.204542,
-          "min_maintenance_margin_pct": 116.138623,
-          "maintenance_below_150_count": 306,
-          "maintenance_below_100_count": 0,
-          "stop_triggered": true
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.83335
         }
       ]
     },
@@ -242,5 +246,5 @@
       ]
     }
   },
-  "notes": "E004-E008 all passed. Adopt lon16 buy baseline with opposite_sign, TP20, SL30, forced exit 17:55. E007 adopts risk_fraction 0.03 under user's 100% lower-bound interpretation, with kill-switch -20% and no maintenance-below-100 or stop trigger. E008 shows 10s entry delay is best, but strategy remains robust across tested delays."
+  "notes": "E004-E008 all passed. Adopt lon16 buy with opposite_sign, TP20, SL30, forced exit 17:55. E007A adopts target maintenance margin 180 because 150 triggered kill-switch and 180 is the first candidate with no 100% breach, no 130% breach, and no stop trigger. Runtime promotion will initialize this setting as unit_level=0 / fixed_units=10; monthly unit level changes are handled by Unit Level Policy."
 }

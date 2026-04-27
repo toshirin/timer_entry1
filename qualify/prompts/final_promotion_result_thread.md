@@ -13,6 +13,8 @@
 - E005 の `slip_pips` は one-way 表示で、実質往復 penalty は `2 * slip_pips` です
 - E007 では `selected_target_maintenance_margin_pct`, `kill_switch_dd_pct`, `min_maintenance_margin_pct`, `initial_capital_jpy` を明示してください
 - E007 の採用判断は CAGR 最大ではなく、100%割れなし、kill-switchなし、130%割れなしを最初に満たした最小の維持率候補で行ってください
+- top-level の `min_maintenance_margin_pct` は runtime の entry 前ガード閾値として `selected_target_maintenance_margin_pct` と同じ値にしてください
+- E007 summary row の `min_maintenance_margin_pct` は、各 trade が即時 SL 到達した場合の想定維持率として `evidence.E007.maintenance_margin_sweep` に残してください
 - `labels` は原則として空配列 `[]` にしてください。監視対象など、運用上の意味がある場合だけ `"watch"` などのラベルを入れてください。初期 unit size を表す `"fix10"` は入れないでください
 - unit level は runtime promotion 側で初期 `unit_level=0` / `fixed_units=10` として付与します。この最終昇格結果 JSON には `unit_level`、`unit_level_policy_name`、`unit_level_policy_version`、`size_scale_pct` を入れないでください
 - 結果 JSON では、後から取り出したい主要指標を `evidence` の中だけでなく top-level にも入れてください

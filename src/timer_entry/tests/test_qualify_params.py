@@ -212,7 +212,7 @@ def test_e005_e008_params_convert_to_e004_baseline() -> None:
             "selected_experiments": ["E005", "E007"],
             "slippage_values": [0.0, 0.2, 0.3],
             "entry_delay_values": [0, 30, 60],
-            "target_maintenance_margin_candidates": [150, 180, 200],
+            "target_maintenance_margin_candidates": [200, 150, 180],
             "kill_switch_dd_pct": -0.2,
             "initial_capital_jpy": 100000,
             "slippage_mode": "none",
@@ -225,7 +225,6 @@ def test_e005_e008_params_convert_to_e004_baseline() -> None:
     assert params.slippage_values == (0.0, 0.2, 0.3)
     assert params.entry_delay_values == (0, 30, 60)
     assert params.target_maintenance_margin_candidates == (150, 180, 200)
-    assert params.risk_fractions == (150, 180, 200)
     assert baseline.experiment_code == "E004"
     assert baseline.comparison_label() == "buy0840_vol_ge_p70_tp10_sl30_fx0945"
 

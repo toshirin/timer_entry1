@@ -1,6 +1,6 @@
 {
   "experiment_code": "E005-E008",
-  "variant_code": null,
+  "variant_code": "E007A",
   "slot_id": "lon08",
   "side": "buy",
   "baseline": {
@@ -11,14 +11,14 @@
     "filter_labels": ["ge0"]
   },
   "pass_stability_gate": true,
-  "selected_experiments": ["E005", "E006", "E007", "E008"],
+  "selected_experiments": ["E007"],
   "slippage_mode": "fixed",
   "fixed_slippage_pips": 0.0,
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 10, 30, 60],
-  "risk_fractions": [0.01, 0.015, 0.02, 0.025, 0.03],
+  "target_maintenance_margin_candidates": [150, 180, 200],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "E004 passed. Run full robustness suite on the approved lon08 buy setting. E005 slippage values are one-way; round-trip penalty equals 2x slip_pips. E007 center risk is 2.0% because SL20 maps from the SL5->0.5% rule."
+  "notes": "Re-run only E007 as E007A because risk_fraction-based E007 was retired. Use target maintenance margin review with standard candidates 150/180/200. Adopt the first candidate that has no maintenance_below_100, no maintenance_below_130, and no stop_triggered. min_maintenance_margin_pct and below counts are interpreted as projected maintenance margin if each trade immediately hits SL."
 }

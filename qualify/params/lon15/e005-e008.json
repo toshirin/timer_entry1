@@ -1,6 +1,6 @@
 {
   "experiment_code": "E005-E008",
-  "variant_code": null,
+  "variant_code": "E007A",
   "slot_id": "lon15",
   "side": "buy",
   "baseline": {
@@ -17,8 +17,8 @@
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 5, 10, 15],
-  "risk_fractions": [0.01, 0.02, 0.03],
+  "target_maintenance_margin_candidates": [150, 180, 200],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "Run the full post-E004 robustness suite on the promoted lon15 buy setting. E005 slippage_values are one-way slips, so round-trip penalty is 2x each value. E007 risk grid is centered around the SL-adjusted reference from SL5->0.5%, which implies about 0.125% for SL20, then tested with a small conservative-to-slightly-aggressive grid."
+  "notes": "Rerun E007 as E007A under the new target-maintenance-margin policy. Baseline is fixed from the E004-passed lon15 buy setting. E007 is no longer risk_fraction optimization. Evaluate target maintenance margins in ascending order [150, 180, 200]; maintenance_below_100_count > 0 is immediate fail; stop_triggered or maintenance_below_130_count > 0 requires stepping up to the next candidate. Ignore the 120% line for adoption. Interpret min_maintenance_margin_pct and below counts as hypothetical maintenance margin if each trade immediately reaches SL."
 }

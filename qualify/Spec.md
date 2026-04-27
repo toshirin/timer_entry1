@@ -214,6 +214,7 @@ E005 と E007 では、以下を追加原則とする。
   - maintenance margin grid は通常 `[150, 180, 200]`、必要に応じて `[150, 180, 200, 230, 260]` とする
   - params では `target_maintenance_margin_candidates` を使う
   - summary には少なくとも `target_maintenance_margin_pct`, `annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_130_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct`, `pips_year_rate_pct_at_150usd` を出す
+  - E007 summary の `min_maintenance_margin_pct` と below count は、entry 直後ではなく即時 SL 到達時の想定維持率で評価する
   - `maintenance_below_100_count > 0` は一発NGとする
   - `stop_triggered` または `maintenance_below_130_count > 0` は、その維持率が強すぎるシグナルとして一段上の候補を確認する
   - 採用判断は CAGR 最大ではなく、安全条件を満たした最初の維持率候補を優先する

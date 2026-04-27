@@ -1,6 +1,6 @@
 {
   "experiment_code": "E005-E008",
-  "variant_code": null,
+  "variant_code": "E007A",
   "slot_id": "lon19",
   "side": "buy",
   "baseline": {
@@ -11,14 +11,14 @@
     "filter_labels": ["le0"]
   },
   "pass_stability_gate": true,
-  "selected_experiments": ["E005", "E006", "E007", "E008"],
+  "selected_experiments": ["E007"],
   "slippage_mode": "none",
   "fixed_slippage_pips": 0.0,
   "entry_delay_seconds": 0,
   "slippage_values": [0.0, 0.1, 0.2, 0.3],
   "entry_delay_values": [0, 30, 60, 120],
-  "risk_fractions": [0.015, 0.03, 0.045],
+  "target_maintenance_margin_candidates": [150, 180, 200],
   "kill_switch_dd_pct": -0.2,
   "initial_capital_jpy": 100000,
-  "notes": "E004通過済みのlon19 buy settingを固定し、E005-E008を一括実行する。slippageはone-way 0.0-0.3、entry delayは0-120秒、riskはSL30に対する中心3.0%の前後で1.5%/3.0%/4.5%を確認する。採用判断はCAGR最大ではなくmin_maintenance_margin_pct>=150を満たす安全側を優先する。"
+  "notes": "E007をrisk_fraction最適化ではなくtarget maintenance margin審査としてE007Aで再実行する。既存E005/E006/E008結果は維持し、今回はE007のみを --only E007 --output-alias E007=E007A で分離保存する前提。採用順序は150→180→200。maintenance_below_100_count>0は一発NG、maintenance_below_130_count>0またはstop_triggered=trueは一段上確認。min_maintenance_margin_pct/below countはentry直後ではなく即時SL到達時の想定維持率として解釈する。"
 }
