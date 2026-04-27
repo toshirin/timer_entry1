@@ -23,8 +23,8 @@
 
 ## 添付する資料
 
-- `qualify/params/{slot_id}/e004.json`
-- `qualify/params/{slot_id}/e005-e008.json`
+- `qualify/params/{slot_id}/{version_id}/e004.json`
+- `qualify/params/{slot_id}/{version_id}/e005-e008.json`
 - E004 の `summary.csv` / `sanity_summary.csv`
 - E005-E008 の各 `summary.csv`
 - E007 の `equity_curve.csv` が必要なら添付
@@ -82,12 +82,12 @@ Codex 側では以下に保存します。
   "out_gross_pips": 31.1,
   "win_rate": 0.54,
   "source_params_files": {
-    "E004": "qualify/params/{slot_id}/e004.json",
-    "E005-E008": "qualify/params/{slot_id}/e005-e008.json"
+    "E004": "qualify/params/{slot_id}/{version_id}/e004.json",
+    "E005-E008": "qualify/params/{slot_id}/{version_id}/e005-e008.json"
   },
   "source_output_dirs": {
-    "E004": "qualify/out/{slot_id}/E004/latest",
-    "E005-E008": "qualify/out/{slot_id}"
+    "E004": "qualify/out/{slot_id}/{version_id}/E004/latest",
+    "E005-E008": "qualify/out/{slot_id}/{version_id}"
   },
   "evidence": {
     "E004": {

@@ -10,7 +10,9 @@
   "forced_exit_clock_local": "09:25",
   "tp_pips": 25.0,
   "sl_pips": 12.0,
-  "filter_labels": ["vol_ge_p80"],
+  "filter_labels": [
+    "vol_ge_p80"
+  ],
   "pass_stability_gate": true,
   "e004_passed": true,
   "e005_passed": true,
@@ -31,12 +33,12 @@
   "out_gross_pips": 375.6,
   "win_rate": 0.445055,
   "source_params_files": {
-    "E004": "qualify/params/tyo08/e004.json",
-    "E005-E008": "qualify/params/tyo08/e005-e008.json"
+    "E004": "qualify/params/tyo08/v1/e004.json",
+    "E005-E008": "qualify/params/tyo08/v1/e005-e008.json"
   },
   "source_output_dirs": {
-    "E004": "qualify/out/tyo08/E004/latest",
-    "E005-E008": "qualify/out/tyo08"
+    "E004": "qualify/out/tyo08/v1/E004/latest",
+    "E005-E008": "qualify/out/tyo08/v1"
   },
   "evidence": {
     "E004": {

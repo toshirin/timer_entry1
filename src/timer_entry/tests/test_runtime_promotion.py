@@ -48,12 +48,12 @@ def test_promote_qualify_result_to_runtime_config(tmp_path: Path) -> None:
                 "out_gross_pips": 31.1,
                 "win_rate": 0.54,
                 "source_params_files": {
-                    "E004": "qualify/params/lon15/e004.json",
-                    "E005-E008": "qualify/params/lon15/e005-e008.json",
+                    "E004": "qualify/params/lon15/v1/e004.json",
+                    "E005-E008": "qualify/params/lon15/v1/e005-e008.json",
                 },
                 "source_output_dirs": {
-                    "E004": "qualify/out/lon15/E004/latest",
-                    "E005-E008": "qualify/out/lon15",
+                    "E004": "qualify/out/lon15/v1/E004/latest",
+                    "E005-E008": "qualify/out/lon15/v1",
                 },
                 "evidence": {"E007": {"min_maintenance_margin_pct": 200.0}},
             }

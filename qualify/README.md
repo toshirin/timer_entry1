@@ -22,6 +22,36 @@
 - experiment ごとの対話テンプレート
   - `qualify/prompts/slot_thread_template.md`
 
+## ディレクトリ規約
+
+`qualify` は 1 slot に複数 setting 候補を持てるよう、`params` と `out` では `slot_id` の下に `vN` ディレクトリを挟む。
+
+- params
+  - `qualify/params/{slot_id}/v1/e001.json`
+  - `qualify/params/{slot_id}/v2/e001.json`
+- out
+  - `qualify/out/{slot_id}/v1/E001/latest`
+  - `qualify/out/{slot_id}/v2/E001/latest`
+- results
+  - `qualify/results/{slot_id}/{result_id}.json`
+- runtime config
+  - `runtime/config/{slot_id}/{result_id}.json`
+
+ここでの `vN` は slot 内 candidate version を表す。slot 自体を `lon08a` のように枝番化しない。
+初回候補は `v1` を使う。
+
+現役ではない候補や旧成果物は `archived` 配下へ退避する。
+
+- archived params
+  - `qualify/params/archived/{slot_id}/{version_id}/e001.json`
+- archived out
+  - `qualify/out/archived/{slot_id}/{version_id}/E001/latest`
+- archived results
+  - `qualify/results/archived/{slot_id}/{version_id}/{result_id}.json`
+
+`archived` には、不合格だった候補、やり直し前の旧候補、regime 変更などで現役から外れた候補を置く。
+`version_id` は active と同様に version を表す。既存の旧候補アーカイブは `v0` を使う。
+
 ## Docker 実行
 
 ビルド:
@@ -39,10 +69,10 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e001.py \
-    --params-file qualify/params/{slot_id}/e001.json \
+    --params-file qualify/params/{slot_id}/{version_id}/e001.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
-    --out-dir qualify/out/{slot_id}/E001/latest
+    --out-dir qualify/out/{slot_id}/{version_id}/E001/latest
 ```
 
 E002:
@@ -52,10 +82,10 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e002.py \
-    --params-file qualify/params/{slot_id}/e002.json \
+    --params-file qualify/params/{slot_id}/{version_id}/e002.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
-    --out-dir qualify/out/{slot_id}/E002/latest
+    --out-dir qualify/out/{slot_id}/{version_id}/E002/latest
 ```
 
 E003:
@@ -65,10 +95,10 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e003.py \
-    --params-file qualify/params/{slot_id}/e003.json \
+    --params-file qualify/params/{slot_id}/{version_id}/e003.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
-    --out-dir qualify/out/{slot_id}/E003/latest
+    --out-dir qualify/out/{slot_id}/{version_id}/E003/latest
 ```
 
 E004:
@@ -78,11 +108,11 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e004.py \
-    --params-file qualify/params/{slot_id}/e004.json \
+    --params-file qualify/params/{slot_id}/{version_id}/e004.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
     --ticks-dir ticks/USDJPY \
-    --out-dir qualify/out/{slot_id}/E004/latest \
+    --out-dir qualify/out/{slot_id}/{version_id}/E004/latest \
     --jobs 4
 ```
 
@@ -93,15 +123,15 @@ docker run --rm \
   -v "$PWD:/work" \
   timer_entry1 \
   python qualify/e005-e008.py \
-    --params-file qualify/params/{slot_id}/e005-e008.json \
+    --params-file qualify/params/{slot_id}/{version_id}/e005-e008.json \
     --years 2019 2020 2021 2022 2023 2024 2025 \
     --dataset-dir dataset \
     --ticks-dir ticks/USDJPY \
-    --out-dir qualify/out/{slot_id} \
+    --out-dir qualify/out/{slot_id}/{version_id} \
     --only E005 E008
 ```
 
-E005-E008 の sweep / risk 条件は `qualify/params/{slot_id}/e005-e008.json` に書きます。
+E005-E008 の sweep / risk 条件は `qualify/params/{slot_id}/{version_id}/e005-e008.json` に書きます。
 `--only` は部分再実行したい場合だけ使います。
 
 E008 合格後は `qualify/prompts/final_promotion_result_thread.md` を使い、最終昇格結果を `qualify/results/{slot_id}/{result_id}.json` に保存します。

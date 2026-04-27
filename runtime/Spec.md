@@ -664,7 +664,7 @@ CloudWatch 上で setting ごとの判定経緯を追跡できるように、検
 
 ## 16.1 qualify から runtime config への変換
 
-`qualify/params/{slot_id}/*.json` は研究・検証側の入力であり、そのまま `setting_config` へ投入しない。
+`qualify/params/{slot_id}/{version_id}/*.json` は研究・検証側の入力であり、そのまま `setting_config` へ投入しない。
 
 責務分担は以下とする。
 

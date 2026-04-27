@@ -10,7 +10,9 @@
   "forced_exit_clock_local": "11:45",
   "tp_pips": 10.0,
   "sl_pips": 15.0,
-  "filter_labels": ["opp_right_dom_ge2"],
+  "filter_labels": [
+    "opp_right_dom_ge2"
+  ],
   "pass_stability_gate": true,
   "e004_passed": true,
   "e005_passed": true,
@@ -31,15 +33,15 @@
   "out_gross_pips": 91.8,
   "win_rate": 0.608696,
   "source_params_files": {
-    "E004": "qualify/params/lon10/e004.json",
-    "E005-E008": "qualify/params/lon10/e005-e008.json"
+    "E004": "qualify/params/lon10/v1/e004.json",
+    "E005-E008": "qualify/params/lon10/v1/e005-e008.json"
   },
   "source_output_dirs": {
-    "E004": "qualify/out/lon10/E004/latest",
-    "E005": "qualify/out/lon10/E005",
-    "E006": "qualify/out/lon10/E006",
-    "E007": "qualify/out/lon10/E007A",
-    "E008": "qualify/out/lon10/E008"
+    "E004": "qualify/out/lon10/v1/E004/latest",
+    "E005": "qualify/out/lon10/v1/E005",
+    "E006": "qualify/out/lon10/v1/E006",
+    "E007": "qualify/out/lon10/v1/E007A",
+    "E008": "qualify/out/lon10/v1/E008"
   },
   "evidence": {
     "E004": {

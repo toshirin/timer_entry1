@@ -1,0 +1,203 @@
+{
+  "result_type": "qualify_promotion_result",
+  "schema_version": 1,
+  "result_id": "tyo11_buy_v1",
+  "slot_id": "tyo11",
+  "side": "buy",
+  "labels": [],
+  "market_tz": "Asia/Tokyo",
+  "entry_clock_local": "11:10",
+  "forced_exit_clock_local": "12:15",
+  "tp_pips": 20,
+  "sl_pips": 25,
+  "filter_labels": [
+    "right_stronger"
+  ],
+  "pass_stability_gate": true,
+  "e004_passed": true,
+  "e005_passed": true,
+  "e006_passed": true,
+  "e007_passed": true,
+  "e008_passed": true,
+  "approved_for_runtime": true,
+  "selected_target_maintenance_margin_pct": 180.0,
+  "kill_switch_dd_pct": -0.2,
+  "min_maintenance_margin_pct": 180.0,
+  "initial_capital_jpy": 100000,
+  "final_equity_jpy": 147768.0,
+  "annualized_pips": 62.06,
+  "cagr": 0.0574,
+  "trade_rate": 0.4698,
+  "gross_pips": 434.4,
+  "in_gross_pips": 75.0,
+  "out_gross_pips": 359.4,
+  "win_rate": 0.5205,
+  "source_params_files": {
+    "E004": "qualify/params/tyo11/v1/e004.json",
+    "E005-E008": "qualify/params/tyo11/v1/e005-e008.json"
+  },
+  "source_output_dirs": {
+    "E004": "qualify/out/tyo11/v1/E004/latest",
+    "E005-E008": "qualify/out/tyo11/v1"
+  },
+  "evidence": {
+    "E004": {
+      "summary": "tick replay passed",
+      "trade_count": 855,
+      "gross_pips": 434.4,
+      "in_gross_pips": 75.0,
+      "out_gross_pips": 359.4,
+      "annualized_pips": 62.06,
+      "profit_factor": 1.1516,
+      "max_dd_pips": -160.8,
+      "win_rate": 0.5205,
+      "same_bar_conflict_count": 0,
+      "same_bar_unresolved_count": 0,
+      "tick_not_found_count": 0,
+      "forced_exit_missing_count": 0
+    },
+    "E005": {
+      "max_one_way_slip_pips_passed": 0.3,
+      "max_round_trip_slip_pips_passed": 0.6,
+      "slippage_sweep": [
+        {
+          "slip_pips": 0.0,
+          "round_trip_slip_pips": 0.0,
+          "gross_pips": 359.4,
+          "annualized_pips": 119.8,
+          "profit_factor": 1.238,
+          "max_dd_pips": -127.2,
+          "win_rate": 0.55
+        },
+        {
+          "slip_pips": 0.1,
+          "round_trip_slip_pips": 0.2,
+          "gross_pips": 293.9,
+          "annualized_pips": 97.97,
+          "profit_factor": 1.19,
+          "max_dd_pips": -134.1,
+          "win_rate": 0.536
+        },
+        {
+          "slip_pips": 0.2,
+          "round_trip_slip_pips": 0.4,
+          "gross_pips": 224.1,
+          "annualized_pips": 74.7,
+          "profit_factor": 1.142,
+          "max_dd_pips": -146.1,
+          "win_rate": 0.536
+        },
+        {
+          "slip_pips": 0.3,
+          "round_trip_slip_pips": 0.6,
+          "gross_pips": 153.8,
+          "annualized_pips": 51.27,
+          "profit_factor": 1.096,
+          "max_dd_pips": -160.2,
+          "win_rate": 0.525
+        }
+      ]
+    },
+    "E006": {
+      "summary": "walk-forward accepted; test years 2021-2025 all positive",
+      "test_years_positive_count": 5,
+      "test_years_total": 5,
+      "full_gross_pips": 434.4,
+      "full_profit_factor": 1.152,
+      "full_max_dd_pips": -160.8
+    },
+    "E007": {
+      "selected_target_maintenance_margin_pct": 180.0,
+      "min_maintenance_margin_pct": 173.8996,
+      "annualized_pips": 62.06,
+      "trade_rate": 0.4698,
+      "win_rate": 0.5205,
+      "cagr": 0.0574,
+      "maintenance_margin_sweep": [
+        {
+          "target_maintenance_margin_pct": 150.0,
+          "final_equity_jpy": 84817.0,
+          "total_return_pct": -0.1518,
+          "cagr": -0.079,
+          "annualized_pips": -51.0,
+          "trade_rate": 0.0819,
+          "win_rate": 0.4497,
+          "max_dd_pct": -0.2148,
+          "min_maintenance_margin_pct": 143.9,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": true,
+          "pips_year_rate_pct_at_150usd": 1.1111
+        },
+        {
+          "target_maintenance_margin_pct": 180.0,
+          "final_equity_jpy": 147768.0,
+          "total_return_pct": 0.4777,
+          "cagr": 0.0574,
+          "annualized_pips": 62.06,
+          "trade_rate": 0.4698,
+          "win_rate": 0.5205,
+          "max_dd_pct": -0.1932,
+          "min_maintenance_margin_pct": 173.8996,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.9259
+        },
+        {
+          "target_maintenance_margin_pct": 200.0,
+          "final_equity_jpy": 142700.0,
+          "total_return_pct": 0.427,
+          "cagr": 0.0521,
+          "annualized_pips": 62.06,
+          "trade_rate": 0.4698,
+          "win_rate": 0.5205,
+          "max_dd_pct": -0.1749,
+          "min_maintenance_margin_pct": 193.9,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.8334
+        }
+      ]
+    },
+    "E008": {
+      "max_entry_delay_seconds_passed": 120,
+      "entry_delay_sweep": [
+        {
+          "entry_delay_seconds": 0,
+          "gross_pips": 359.4,
+          "annualized_pips": 119.8,
+          "profit_factor": 1.238,
+          "max_dd_pips": -127.2,
+          "win_rate": 0.55
+        },
+        {
+          "entry_delay_seconds": 30,
+          "gross_pips": 353.1,
+          "annualized_pips": 117.7,
+          "profit_factor": 1.236,
+          "max_dd_pips": -135.8,
+          "win_rate": null
+        },
+        {
+          "entry_delay_seconds": 60,
+          "gross_pips": 418.7,
+          "annualized_pips": 139.6,
+          "profit_factor": 1.284,
+          "max_dd_pips": -116.8,
+          "win_rate": null
+        },
+        {
+          "entry_delay_seconds": 120,
+          "gross_pips": 313.8,
+          "annualized_pips": 104.6,
+          "profit_factor": 1.203,
+          "max_dd_pips": -158.2,
+          "win_rate": null
+        }
+      ]
+    }
+  },
+  "notes": "E004-E008 passed. Runtime promotion will initialize this setting as unit_level=0 / fixed_units=10; monthly unit level changes are handled by Unit Level Policy."
+}

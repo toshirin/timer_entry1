@@ -4,13 +4,17 @@
   "result_id": "lon18_buy_v1",
   "slot_id": "lon18",
   "side": "buy",
-  "labels": ["watch"],
+  "labels": [
+    "watch"
+  ],
   "market_tz": "Europe/London",
   "entry_clock_local": "18:20",
   "forced_exit_clock_local": "19:20",
   "tp_pips": 20,
   "sl_pips": 10,
-  "filter_labels": ["le1"],
+  "filter_labels": [
+    "le1"
+  ],
   "pass_stability_gate": true,
   "e004_passed": true,
   "e005_passed": true,
@@ -32,12 +36,12 @@
   "out_gross_pips": 348.5,
   "win_rate": 0.520118,
   "source_params_files": {
-    "E004": "qualify/params/lon18/e004.json",
-    "E005-E008": "qualify/params/lon18/e005-e008.json"
+    "E004": "qualify/params/lon18/v1/e004.json",
+    "E005-E008": "qualify/params/lon18/v1/e005-e008.json"
   },
   "source_output_dirs": {
-    "E004": "qualify/out/lon18/E004/latest",
-    "E005-E008": "qualify/out/lon18"
+    "E004": "qualify/out/lon18/v1/E004/latest",
+    "E005-E008": "qualify/out/lon18/v1"
   },
   "evidence": {
     "E004": {

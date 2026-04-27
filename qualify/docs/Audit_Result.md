@@ -405,7 +405,7 @@ short の canonical 規約は以下である。
 `qualify/E005-E008` の定義は以下がよい。
 
 - 入力
-  - 原則として `qualify/params/{slot_id}/e004.json`
+  - 原則として `qualify/params/{slot_id}/{version_id}/e004.json`
   - E004 通過済みの baseline setting
 - 実行入口
   - `qualify/e005-e008.py`

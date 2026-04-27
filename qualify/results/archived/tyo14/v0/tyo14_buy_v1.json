@@ -4,13 +4,17 @@
   "result_id": "tyo14_buy_v1",
   "slot_id": "tyo14",
   "side": "buy",
-  "labels": ["watch"],
+  "labels": [
+    "watch"
+  ],
   "market_tz": "Asia/Tokyo",
   "entry_clock_local": "14:10",
   "forced_exit_clock_local": "15:05",
   "tp_pips": 15,
   "sl_pips": 25,
-  "filter_labels": ["le6"],
+  "filter_labels": [
+    "le6"
+  ],
   "pass_stability_gate": true,
   "e004_passed": true,
   "e005_passed": true,
@@ -31,12 +35,12 @@
   "out_gross_pips": 196.5,
   "win_rate": 0.5236,
   "source_params_files": {
-    "E004": "qualify/params/tyo14/e004.json",
-    "E005-E008": "qualify/params/tyo14/e005-e008.json"
+    "E004": "qualify/params/archived/tyo14/v0/e004.json",
+    "E005-E008": "qualify/params/archived/tyo14/v0/e005-e008.json"
   },
   "source_output_dirs": {
-    "E004": "qualify/out/tyo14/E004/latest",
-    "E005-E008": "qualify/out/tyo14"
+    "E004": "qualify/out/archived/tyo14/v0/E004/latest",
+    "E005-E008": "qualify/out/archived/tyo14/v0"
   },
   "evidence": {
     "E004": {
