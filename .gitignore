@@ -22,4 +22,4 @@ ops/web/*.tsbuildinfo
 ops/web/config/dashboard.json
 **/__pycache__/
 .pycache/
-qualify/results/all_results.json
+qualify/results/all_results.json*
