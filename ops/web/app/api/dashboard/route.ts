@@ -32,8 +32,56 @@ export async function GET(request: Request) {
     const requestedSetting = parseSettingParam(url.searchParams.get("setting"));
     const bounds = periodBounds(period, at);
     const commonWhere = [localDatePredicate(bounds), labelPredicate(labelMode, selectedLabels)].filter(Boolean).join(" and ");
-    const summaryWhere = ["decision_id is not null", "trade_date_local is not null", commonWhere].filter(Boolean).join(" and ");
-    const summaryWhereClause = `where ${summaryWhere}`;
+    const rawLabelWhere = labelPredicate(labelMode, selectedLabels);
+    const decisionSummaryWhere = [localDatePredicate(bounds, "trade_date_local"), weekdayPredicate("trade_date_local")]
+      .filter(Boolean)
+      .join(" and ");
+    const decisionSummaryCte = `
+      with decision_summary as (
+        select
+          coalesce(
+            nullif(correlation_id, ''),
+            nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+            nullif(decision_id, ''),
+            fact_event_id
+          ) as logical_event_id,
+          max(setting_id) as setting_id,
+          max(setting_labels::text) as setting_labels,
+          coalesce(
+            min(trade_date_local) filter (where decision <> 'exited'),
+            min(trade_date_local)
+          ) as trade_date_local,
+          bool_or(decision is not null and decision not in ('exited', 'oanda_only', 'skipped_no_entered_state')) as has_primary_decision,
+          bool_or(decision = 'entered') as has_entered,
+          bool_or(decision like 'skipped%') as has_skipped,
+          bool_or(decision = 'skipped_concurrency') as has_conflict,
+          bool_or(decision = 'skipped_filter' or reason = 'filter_rejected') as has_filter_skip,
+          bool_or(decision = 'skipped_kill_switch') as has_kill,
+          max(trade_date_local) filter (where decision = 'skipped_kill_switch') as last_kill_date,
+          max(pnl_pips) filter (where pnl_pips is not null) as pnl_pips,
+          max(pnl_jpy) filter (where pnl_pips is not null) as pnl_jpy,
+          avg(expected_trade_rate) as expected_trade_rate,
+          avg(actual_trade_rate) as actual_trade_rate,
+          avg(expected_win_rate) as expected_win_rate,
+          avg(actual_win_rate) as actual_win_rate
+        from ${schema}.runtime_oanda_event_fact
+        where coalesce(
+            nullif(correlation_id, ''),
+            nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+            nullif(decision_id, ''),
+            fact_event_id
+          ) is not null
+          ${rawLabelWhere ? `and ${rawLabelWhere}` : ""}
+        group by logical_event_id
+      ),
+      decision_summary_filtered as (
+        select *
+        from decision_summary
+        where has_primary_decision
+          and trade_date_local is not null
+          ${decisionSummaryWhere ? `and ${decisionSummaryWhere}` : ""}
+      )
+    `;
     const eventWhereClause = commonWhere ? `where ${commonWhere}` : "";
     const unitLevelCurrentWhere = labelPredicate(labelMode, selectedLabels);
     const unitLevelCurrentWhereClause = unitLevelCurrentWhere ? `where ${unitLevelCurrentWhere}` : "";
@@ -57,19 +105,26 @@ export async function GET(request: Request) {
       firstBalanceRows
     ] = await Promise.all([
       queryRows(`
+        ${decisionSummaryCte}
         select
           setting_id,
-          setting_labels::text as setting_labels,
+          setting_labels,
           trade_date_local,
           count(*) as decision_count,
-          count(*) filter (where decision = 'entered') as entered_count,
-          count(*) filter (where decision like 'skipped%') as skipped_count,
-          count(*) filter (where decision = 'skipped_concurrency') as conflict_count,
-          count(*) filter (where decision = 'skipped_filter' or reason = 'filter_rejected') as filter_skip_count,
+          count(*) filter (where has_entered) as entered_count,
+          count(*) filter (where has_skipped) as skipped_count,
+          count(*) filter (where has_conflict) as conflict_count,
+          count(*) filter (where has_filter_skip) as filter_skip_count,
           count(*) filter (where pnl_pips is not null) as closed_entry_count,
           count(*) filter (where pnl_pips > 0) as winning_entry_count,
-          case when count(*) = 0 then null else count(*) filter (where decision = 'skipped_concurrency')::numeric / count(*) end as conflict_rate,
-          case when count(*) = 0 then null else count(*) filter (where decision = 'entered')::numeric / count(*) end as trade_rate,
+          case
+            when count(*) = 0 then null
+            else count(*) filter (where has_conflict)::numeric / count(*)
+          end as conflict_rate,
+          case
+            when count(*) = 0 then null
+            else count(*) filter (where has_entered)::numeric / count(*)
+          end as trade_rate,
           case
             when count(*) filter (where pnl_pips is not null) = 0 then null
             else count(*) filter (where pnl_pips > 0)::numeric / count(*) filter (where pnl_pips is not null)
@@ -80,8 +135,7 @@ export async function GET(request: Request) {
           avg(actual_trade_rate) as actual_trade_rate,
           avg(expected_win_rate) as expected_win_rate,
           avg(actual_win_rate) as actual_win_rate
-        from ${schema}.runtime_oanda_event_fact
-        ${summaryWhereClause}
+        from decision_summary_filtered
         group by setting_id, setting_labels, trade_date_local
         order by trade_date_local desc, setting_id
         limit 120
@@ -125,26 +179,27 @@ export async function GET(request: Request) {
         order by label
       `),
       queryRows(`
+        ${decisionSummaryCte}
         select
           ${periodBucketExpression(period)} as bucket,
           count(*) as decision_count,
-          count(*) filter (where decision = 'entered') as entered_count,
-          count(*) filter (where decision like 'skipped%') as skipped_count,
-          count(*) filter (where decision = 'skipped_concurrency') as conflict_count,
-          count(*) filter (where decision = 'skipped_filter' or reason = 'filter_rejected') as filter_skip_count,
+          count(*) filter (where has_entered) as entered_count,
+          count(*) filter (where has_skipped) as skipped_count,
+          count(*) filter (where has_conflict) as conflict_count,
+          count(*) filter (where has_filter_skip) as filter_skip_count,
           count(*) filter (where pnl_pips is not null) as closed_entry_count,
           count(*) filter (where pnl_pips > 0) as winning_entry_count,
           coalesce(sum(pnl_pips), 0) as pnl_pips,
           coalesce(sum(pnl_jpy) filter (where pnl_pips is not null), 0) as pnl_jpy
-        from ${schema}.runtime_oanda_event_fact
-        ${summaryWhereClause}
+        from decision_summary_filtered
         group by 1
         order by bucket
       `),
       queryRows(`
+        ${decisionSummaryCte}
         select
           f.setting_id,
-          coalesce(sm.setting_labels::text, max(f.setting_labels::text)) as setting_labels,
+          coalesce(sm.setting_labels::text, max(f.setting_labels)) as setting_labels,
           sm.unit_level,
           sm.expected_trade_rate,
           sm.expected_win_rate,
@@ -152,21 +207,17 @@ export async function GET(request: Request) {
           sm.expected_cagr,
           ${periodBucketExpression(period, "f")} as bucket,
           count(*) as decision_count,
-          count(*) filter (where f.decision = 'entered') as entered_count,
-          count(*) filter (where f.decision like 'skipped%') as skipped_count,
-          count(*) filter (where f.decision = 'skipped_concurrency') as conflict_count,
-          count(*) filter (where f.decision = 'skipped_filter' or f.reason = 'filter_rejected') as filter_skip_count,
+          count(*) filter (where f.has_entered) as entered_count,
+          count(*) filter (where f.has_skipped) as skipped_count,
+          count(*) filter (where f.has_conflict) as conflict_count,
+          count(*) filter (where f.has_filter_skip) as filter_skip_count,
           count(*) filter (where f.pnl_pips is not null) as closed_entry_count,
           count(*) filter (where f.pnl_pips > 0) as winning_entry_count,
-          count(*) filter (where f.decision = 'skipped_kill_switch') as kill_count,
-          max(f.trade_date_local) filter (where f.decision = 'skipped_kill_switch') as last_kill_date,
+          count(*) filter (where f.has_kill) as kill_count,
+          max(f.last_kill_date) as last_kill_date,
           coalesce(sum(f.pnl_pips), 0) as pnl_pips,
           coalesce(sum(f.pnl_jpy) filter (where f.pnl_pips is not null), 0) as pnl_jpy
-        from (
-          select *
-          from ${schema}.runtime_oanda_event_fact
-          ${summaryWhereClause}
-        ) f
+        from decision_summary_filtered f
         left join ${schema}.setting_metadata sm on sm.setting_id = f.setting_id
         group by
           f.setting_id,
@@ -410,15 +461,19 @@ function periodBounds(period: Period, at: string): { start: string | null; end: 
   return { start: dateText(start), end: dateText(end) };
 }
 
-function localDatePredicate(bounds: { start: string | null; end: string | null }): string {
+function localDatePredicate(bounds: { start: string | null; end: string | null }, column = "trade_date_local"): string {
   const clauses = [];
   if (bounds.start) {
-    clauses.push(`trade_date_local >= '${bounds.start}'`);
+    clauses.push(`${column} >= '${bounds.start}'`);
   }
   if (bounds.end) {
-    clauses.push(`trade_date_local < '${bounds.end}'`);
+    clauses.push(`${column} < '${bounds.end}'`);
   }
   return clauses.join(" and ");
+}
+
+function weekdayPredicate(column: string): string {
+  return `extract(isodow from ${column}::date) between 1 and 5`;
 }
 
 function transactionTimePredicate(bounds: { start: string | null; end: string | null }): string {

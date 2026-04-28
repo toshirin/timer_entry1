@@ -260,19 +260,59 @@ order by account_id, transaction_time desc, transaction_id desc;
 drop view if exists ops_main.daily_setting_summary;
 
 create or replace view ops_main.daily_setting_summary as
+with decision_summary as (
+  select
+    coalesce(
+      nullif(correlation_id, ''),
+      nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+      nullif(decision_id, ''),
+      fact_event_id
+    ) as logical_event_id,
+    max(setting_id) as setting_id,
+    max(setting_labels::text)::jsonb as setting_labels,
+    coalesce(
+      min(trade_date_local) filter (where decision <> 'exited'),
+      min(trade_date_local)
+    ) as trade_date_local,
+    bool_or(decision is not null and decision not in ('exited', 'oanda_only', 'skipped_no_entered_state')) as has_primary_decision,
+    bool_or(decision = 'entered') as has_entered,
+    bool_or(decision like 'skipped%') as has_skipped,
+    bool_or(decision = 'skipped_concurrency') as has_conflict,
+    bool_or(decision = 'skipped_filter' or reason = 'filter_rejected') as has_filter_skip,
+    max(pnl_pips) filter (where pnl_pips is not null) as pnl_pips,
+    max(pnl_jpy) filter (where pnl_pips is not null) as pnl_jpy,
+    avg(expected_trade_rate) as expected_trade_rate,
+    avg(actual_trade_rate) as actual_trade_rate,
+    avg(expected_win_rate) as expected_win_rate,
+    avg(actual_win_rate) as actual_win_rate
+  from ops_main.runtime_oanda_event_fact
+  where coalesce(
+      nullif(correlation_id, ''),
+      nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+      nullif(decision_id, ''),
+      fact_event_id
+    ) is not null
+  group by logical_event_id
+)
 select
   setting_id,
   setting_labels,
   trade_date_local,
   count(*) as decision_count,
-  count(*) filter (where decision = 'entered') as entered_count,
-  count(*) filter (where decision like 'skipped%') as skipped_count,
-  count(*) filter (where decision = 'skipped_concurrency') as conflict_count,
-  count(*) filter (where decision = 'skipped_filter' or reason = 'filter_rejected') as filter_skip_count,
+  count(*) filter (where has_entered) as entered_count,
+  count(*) filter (where has_skipped) as skipped_count,
+  count(*) filter (where has_conflict) as conflict_count,
+  count(*) filter (where has_filter_skip) as filter_skip_count,
   count(*) filter (where pnl_pips is not null) as closed_entry_count,
   count(*) filter (where pnl_pips > 0) as winning_entry_count,
-  case when count(*) = 0 then null else count(*) filter (where decision = 'skipped_concurrency')::numeric / count(*) end as conflict_rate,
-  case when count(*) = 0 then null else count(*) filter (where decision = 'entered')::numeric / count(*) end as trade_rate,
+  case
+    when count(*) = 0 then null
+    else count(*) filter (where has_conflict)::numeric / count(*)
+  end as conflict_rate,
+  case
+    when count(*) = 0 then null
+    else count(*) filter (where has_entered)::numeric / count(*)
+  end as trade_rate,
   case
     when count(*) filter (where pnl_pips is not null) = 0 then null
     else count(*) filter (where pnl_pips > 0)::numeric
@@ -284,8 +324,10 @@ select
   avg(actual_trade_rate) as actual_trade_rate,
   avg(expected_win_rate) as expected_win_rate,
   avg(actual_win_rate) as actual_win_rate
-from ops_main.runtime_oanda_event_fact
-where decision_id is not null
+from decision_summary
+where has_primary_decision
+  and trade_date_local is not null
+  and extract(isodow from trade_date_local::date) between 1 and 5
 group by setting_id, setting_labels, trade_date_local;
 
 create table if not exists ops_demo.import_cursor (like ops_main.import_cursor including all);
@@ -369,19 +411,59 @@ create index if not exists idx_ops_demo_unit_level_decision_created_at
 drop view if exists ops_demo.daily_setting_summary;
 
 create or replace view ops_demo.daily_setting_summary as
+with decision_summary as (
+  select
+    coalesce(
+      nullif(correlation_id, ''),
+      nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+      nullif(decision_id, ''),
+      fact_event_id
+    ) as logical_event_id,
+    max(setting_id) as setting_id,
+    max(setting_labels::text)::jsonb as setting_labels,
+    coalesce(
+      min(trade_date_local) filter (where decision <> 'exited'),
+      min(trade_date_local)
+    ) as trade_date_local,
+    bool_or(decision is not null and decision not in ('exited', 'oanda_only', 'skipped_no_entered_state')) as has_primary_decision,
+    bool_or(decision = 'entered') as has_entered,
+    bool_or(decision like 'skipped%') as has_skipped,
+    bool_or(decision = 'skipped_concurrency') as has_conflict,
+    bool_or(decision = 'skipped_filter' or reason = 'filter_rejected') as has_filter_skip,
+    max(pnl_pips) filter (where pnl_pips is not null) as pnl_pips,
+    max(pnl_jpy) filter (where pnl_pips is not null) as pnl_jpy,
+    avg(expected_trade_rate) as expected_trade_rate,
+    avg(actual_trade_rate) as actual_trade_rate,
+    avg(expected_win_rate) as expected_win_rate,
+    avg(actual_win_rate) as actual_win_rate
+  from ops_demo.runtime_oanda_event_fact
+  where coalesce(
+      nullif(correlation_id, ''),
+      nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+      nullif(decision_id, ''),
+      fact_event_id
+    ) is not null
+  group by logical_event_id
+)
 select
   setting_id,
   setting_labels,
   trade_date_local,
   count(*) as decision_count,
-  count(*) filter (where decision = 'entered') as entered_count,
-  count(*) filter (where decision like 'skipped%') as skipped_count,
-  count(*) filter (where decision = 'skipped_concurrency') as conflict_count,
-  count(*) filter (where decision = 'skipped_filter' or reason = 'filter_rejected') as filter_skip_count,
+  count(*) filter (where has_entered) as entered_count,
+  count(*) filter (where has_skipped) as skipped_count,
+  count(*) filter (where has_conflict) as conflict_count,
+  count(*) filter (where has_filter_skip) as filter_skip_count,
   count(*) filter (where pnl_pips is not null) as closed_entry_count,
   count(*) filter (where pnl_pips > 0) as winning_entry_count,
-  case when count(*) = 0 then null else count(*) filter (where decision = 'skipped_concurrency')::numeric / count(*) end as conflict_rate,
-  case when count(*) = 0 then null else count(*) filter (where decision = 'entered')::numeric / count(*) end as trade_rate,
+  case
+    when count(*) = 0 then null
+    else count(*) filter (where has_conflict)::numeric / count(*)
+  end as conflict_rate,
+  case
+    when count(*) = 0 then null
+    else count(*) filter (where has_entered)::numeric / count(*)
+  end as trade_rate,
   case
     when count(*) filter (where pnl_pips is not null) = 0 then null
     else count(*) filter (where pnl_pips > 0)::numeric
@@ -393,8 +475,10 @@ select
   avg(actual_trade_rate) as actual_trade_rate,
   avg(expected_win_rate) as expected_win_rate,
   avg(actual_win_rate) as actual_win_rate
-from ops_demo.runtime_oanda_event_fact
-where decision_id is not null
+from decision_summary
+where has_primary_decision
+  and trade_date_local is not null
+  and extract(isodow from trade_date_local::date) between 1 and 5
 group by setting_id, setting_labels, trade_date_local;
 
 create or replace view ops_demo.oanda_latest_account_balance as
