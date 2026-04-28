@@ -69,6 +69,7 @@ create table if not exists ops_main.runtime_oanda_event_fact (
   oanda_client_id text,
   entry_transaction_id text,
   exit_transaction_id text,
+  exit_reason text,
   entry_at timestamptz,
   exit_at timestamptz,
   entry_price numeric,
@@ -139,7 +140,8 @@ alter table ops_main.runtime_oanda_event_fact
   add column if not exists effective_margin_ratio numeric,
   add column if not exists estimated_margin_ratio_after_entry numeric,
   add column if not exists margin_price numeric,
-  add column if not exists margin_price_side text;
+  add column if not exists margin_price_side text,
+  add column if not exists exit_reason text;
 
 alter table ops_main.setting_metadata
   add column if not exists enabled boolean not null default false,
@@ -350,7 +352,8 @@ alter table ops_demo.runtime_oanda_event_fact
   add column if not exists effective_margin_ratio numeric,
   add column if not exists estimated_margin_ratio_after_entry numeric,
   add column if not exists margin_price numeric,
-  add column if not exists margin_price_side text;
+  add column if not exists margin_price_side text,
+  add column if not exists exit_reason text;
 
 alter table ops_demo.setting_metadata
   add column if not exists enabled boolean not null default false,

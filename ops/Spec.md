@@ -328,6 +328,7 @@ runtime 側 DynamoDB log は、日次 Lambda が scan / query により取得す
 - `oanda_client_id`
 - `entry_transaction_id`
 - `exit_transaction_id`
+- `exit_reason`
 - `entry_at`
 - `exit_at`
 - `entry_price`

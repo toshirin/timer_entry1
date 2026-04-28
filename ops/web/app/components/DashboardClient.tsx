@@ -276,6 +276,9 @@ function SettingPerformanceSection({
               <th>conflict</th>
               <th>trade</th>
               <th>win</th>
+              <th>tp</th>
+              <th>sl</th>
+              <th>forced</th>
               <th>kill</th>
             </tr>
           </thead>
@@ -304,6 +307,9 @@ function SettingPerformanceSection({
                 <td>{formatRateWithCount(row.conflict_rate, row.conflict_count, row.decision_count)}</td>
                 <td>{formatRateWithCount(row.trade_rate, row.entered_count, row.decision_count, row.expected_trade_rate)}</td>
                 <td>{formatRateWithCount(row.win_rate, row.winning_entry_count, row.closed_entry_count, row.expected_win_rate)}</td>
+                <td>{formatRateWithCount(row.tp_hit_rate, row.tp_hit_count, row.closed_entry_count)}</td>
+                <td>{formatRateWithCount(row.sl_hit_rate, row.sl_hit_count, row.closed_entry_count)}</td>
+                <td>{formatRateWithCount(row.forced_exit_rate, row.forced_exit_count, row.closed_entry_count)}</td>
                 <td>{formatKill(row.kill_count, row.days_since_last_kill)}</td>
               </tr>
             ))}
@@ -487,6 +493,9 @@ function PeriodPerformanceTable({ rows }: { rows: DashboardResponse["periodPerfo
             <th>conflict</th>
             <th>trade</th>
             <th>win</th>
+            <th>tp</th>
+            <th>sl</th>
+            <th>forced</th>
           </tr>
         </thead>
         <tbody>
@@ -501,6 +510,9 @@ function PeriodPerformanceTable({ rows }: { rows: DashboardResponse["periodPerfo
               <td>{formatRateWithCount(row.conflict_rate, row.conflict_count, row.decision_count)}</td>
               <td>{formatRateWithCount(row.trade_rate, row.entered_count, row.decision_count)}</td>
               <td>{formatRateWithCount(row.win_rate, row.winning_entry_count, row.closed_entry_count)}</td>
+              <td>{formatRateWithCount(row.tp_hit_rate, row.tp_hit_count, row.closed_entry_count)}</td>
+              <td>{formatRateWithCount(row.sl_hit_rate, row.sl_hit_count, row.closed_entry_count)}</td>
+              <td>{formatRateWithCount(row.forced_exit_rate, row.forced_exit_count, row.closed_entry_count)}</td>
             </tr>
           ))}
         </tbody>
@@ -632,6 +644,7 @@ function EventTable({ rows }: { rows: DashboardEvent[] }) {
             <th>slot</th>
             <th>decision</th>
             <th>reason</th>
+            <th>exit</th>
             <th>match</th>
             <th>units</th>
             <th>pips</th>
@@ -654,6 +667,9 @@ function EventTable({ rows }: { rows: DashboardEvent[] }) {
               </td>
               <td className="clip-cell reason-cell" title={row.reason ?? "-"}>
                 {row.reason ?? "-"}
+              </td>
+              <td className="clip-cell reason-cell" title={row.exit_reason ?? "-"}>
+                {row.exit_reason ?? "-"}
               </td>
               <td>
                 <span className={`pill ${matchTone(row.match_status)}`}>{row.match_status ?? "-"}</span>

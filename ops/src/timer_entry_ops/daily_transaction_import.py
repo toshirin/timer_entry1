@@ -67,6 +67,41 @@ def _client_extensions(transaction: dict[str, Any]) -> dict[str, Any]:
     return _nested_dict(transaction.get("clientExtensions"))
 
 
+def _decision_exit_reason(decision: str, reason: str) -> str:
+    if decision != "exited":
+        return ""
+    if reason == "forced_exit":
+        return "forced_exit"
+    if reason == "broker_closed":
+        return "broker_closed_other"
+    return "unknown"
+
+
+def _is_exit_transaction(transaction: dict[str, Any], values: dict[str, str]) -> bool:
+    if _first_closed_trade(transaction):
+        return True
+    return values["transaction_type"] == "ORDER_FILL" and values["reason"] in {
+        "MARKET_ORDER_TRADE_CLOSE",
+        "TAKE_PROFIT_ORDER",
+        "STOP_LOSS_ORDER",
+        "TRAILING_STOP_LOSS_ORDER",
+    }
+
+
+def _oanda_exit_reason(values: dict[str, str]) -> str:
+    if values["transaction_type"] != "ORDER_FILL":
+        return ""
+    if values["reason"] == "TAKE_PROFIT_ORDER":
+        return "tp_hit"
+    if values["reason"] == "STOP_LOSS_ORDER":
+        return "sl_hit"
+    if values["reason"] == "MARKET_ORDER_TRADE_CLOSE":
+        return "forced_exit"
+    if values["reason"] == "TRAILING_STOP_LOSS_ORDER":
+        return "broker_closed_other"
+    return ""
+
+
 def _cursor_sql(schema: str) -> str:
     return f"""
 select cursor_value
@@ -297,6 +332,7 @@ insert into {schema}.runtime_oanda_event_fact (
   oanda_client_id,
   entry_transaction_id,
   exit_transaction_id,
+  exit_reason,
   entry_at,
   exit_at,
   entry_price,
@@ -328,6 +364,7 @@ values (
   nullif(:client_ext_id, ''),
   nullif(:entry_transaction_id, ''),
   nullif(:exit_transaction_id, ''),
+  nullif(:exit_reason, ''),
   nullif(:entry_at, '')::timestamptz,
   nullif(:exit_at, '')::timestamptz,
   nullif(:entry_price, '')::numeric,
@@ -348,6 +385,7 @@ on conflict (fact_event_id) do update set
   oanda_client_id = excluded.oanda_client_id,
   entry_transaction_id = coalesce(excluded.entry_transaction_id, {schema}.runtime_oanda_event_fact.entry_transaction_id),
   exit_transaction_id = coalesce(excluded.exit_transaction_id, {schema}.runtime_oanda_event_fact.exit_transaction_id),
+  exit_reason = coalesce(excluded.exit_reason, {schema}.runtime_oanda_event_fact.exit_reason),
   entry_at = coalesce(excluded.entry_at, {schema}.runtime_oanda_event_fact.entry_at),
   exit_at = coalesce(excluded.exit_at, {schema}.runtime_oanda_event_fact.exit_at),
   entry_price = coalesce(excluded.entry_price, {schema}.runtime_oanda_event_fact.entry_price),
@@ -370,6 +408,7 @@ on conflict (fact_event_id) do update set
             text_param("client_ext_id", values["client_ext_id"]),
             text_param("entry_transaction_id", "" if is_exit else values["transaction_id"]),
             text_param("exit_transaction_id", values["transaction_id"] if is_exit else ""),
+            text_param("exit_reason", _oanda_exit_reason(values) if is_exit else ""),
             text_param("entry_at", "" if is_exit else values["transaction_time"]),
             text_param("exit_at", values["transaction_time"] if is_exit else ""),
             text_param("entry_price", "" if is_exit else values["price"]),
@@ -389,7 +428,7 @@ def _update_fact_from_oanda_transaction(
     transaction: dict[str, Any],
     values: dict[str, str],
 ) -> None:
-    is_exit = bool(_first_closed_trade(transaction)) or values["pl"] != ""
+    is_exit = _is_exit_transaction(transaction, values)
     entry_assignments = """
   entry_transaction_id = coalesce(entry_transaction_id, :transaction_id),
   entry_at = coalesce(entry_at, cast(:transaction_time as timestamptz)),
@@ -397,6 +436,7 @@ def _update_fact_from_oanda_transaction(
 """
     exit_assignments = """
   exit_transaction_id = coalesce(exit_transaction_id, :transaction_id),
+  exit_reason = coalesce(nullif(:exit_reason, ''), exit_reason),
   exit_at = coalesce(exit_at, cast(:transaction_time as timestamptz)),
   exit_price = coalesce(exit_price, nullif(:price, '')::numeric),
   pnl_jpy = coalesce(nullif(:pl, '')::numeric, pnl_jpy),
@@ -416,18 +456,16 @@ set
 {_matching_oanda_where()}
 """,
         [
-            text_param(name, values[name])
-            for name in (
-                "transaction_id",
-                "transaction_time",
-                "order_id",
-                "trade_id",
-                "client_ext_id",
-                "units",
-                "price",
-                "pl",
-                "account_balance",
-            )
+            text_param("transaction_id", values["transaction_id"]),
+            text_param("transaction_time", values["transaction_time"]),
+            text_param("order_id", values["order_id"]),
+            text_param("trade_id", values["trade_id"]),
+            text_param("client_ext_id", values["client_ext_id"]),
+            text_param("units", values["units"]),
+            text_param("price", values["price"]),
+            text_param("pl", values["pl"]),
+            text_param("account_balance", values["account_balance"]),
+            text_param("exit_reason", _oanda_exit_reason(values) if is_exit else ""),
         ],
     )
     if int(response.get("numberOfRecordsUpdated", 0)) == 0:
@@ -595,6 +633,7 @@ insert into {schema}.runtime_oanda_event_fact (
   blocking_trade_id,
   blocking_setting_id,
   oanda_trade_id,
+  exit_reason,
   exit_at,
   exit_price,
   pnl_pips,
@@ -621,6 +660,7 @@ values (
   :blocking_trade_id,
   :blocking_setting_id,
   nullif(:oanda_trade_id, ''),
+  nullif(:exit_reason, ''),
   nullif(:exit_at, '')::timestamptz,
   nullif(:exit_price, '')::numeric,
   nullif(:pnl_pips, '')::numeric,
@@ -638,6 +678,7 @@ on conflict (fact_event_id) do update set
   blocking_trade_id = excluded.blocking_trade_id,
   blocking_setting_id = excluded.blocking_setting_id,
   oanda_trade_id = coalesce(excluded.oanda_trade_id, {schema}.runtime_oanda_event_fact.oanda_trade_id),
+  exit_reason = coalesce(excluded.exit_reason, {schema}.runtime_oanda_event_fact.exit_reason),
   exit_at = coalesce(excluded.exit_at, {schema}.runtime_oanda_event_fact.exit_at),
   exit_price = coalesce(excluded.exit_price, {schema}.runtime_oanda_event_fact.exit_price),
   pnl_pips = coalesce(excluded.pnl_pips, {schema}.runtime_oanda_event_fact.pnl_pips),
@@ -662,6 +703,7 @@ on conflict (fact_event_id) do update set
             text_param("blocking_trade_id", str(item.get("blocking_trade_id", ""))),
             text_param("blocking_setting_id", str(item.get("blocking_setting_id", ""))),
             text_param("oanda_trade_id", _first_text(item.get("entry_trade_id"), item.get("oanda_trade_id"))),
+            text_param("exit_reason", _decision_exit_reason(str(item.get("decision", "")), str(item.get("reason", "")))),
             text_param("exit_at", str(item.get("created_at", item.get("actual_invoked_at_utc", ""))) if item.get("decision") == "exited" else ""),
             text_param("exit_price", _text(item.get("exit_price"))),
             text_param("pnl_pips", _text(item.get("pnl_pips"))),

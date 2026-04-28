@@ -57,6 +57,10 @@ export async function GET(request: Request) {
           bool_or(decision = 'skipped_concurrency') as has_conflict,
           bool_or(decision = 'skipped_filter' or reason = 'filter_rejected') as has_filter_skip,
           bool_or(decision = 'skipped_kill_switch') as has_kill,
+          bool_or(exit_reason = 'tp_hit') as has_tp_hit,
+          bool_or(exit_reason = 'sl_hit') as has_sl_hit,
+          bool_or(exit_reason = 'forced_exit') as has_forced_exit,
+          bool_or(exit_reason = 'broker_closed_other') as has_broker_closed_other,
           max(trade_date_local) filter (where decision = 'skipped_kill_switch') as last_kill_date,
           max(pnl_pips) filter (where pnl_pips is not null) as pnl_pips,
           max(pnl_jpy) filter (where pnl_pips is not null) as pnl_jpy,
@@ -117,6 +121,10 @@ export async function GET(request: Request) {
           count(*) filter (where has_filter_skip) as filter_skip_count,
           count(*) filter (where pnl_pips is not null) as closed_entry_count,
           count(*) filter (where pnl_pips > 0) as winning_entry_count,
+          count(*) filter (where has_tp_hit) as tp_hit_count,
+          count(*) filter (where has_sl_hit) as sl_hit_count,
+          count(*) filter (where has_forced_exit) as forced_exit_count,
+          count(*) filter (where has_broker_closed_other) as broker_closed_other_count,
           case
             when count(*) = 0 then null
             else count(*) filter (where has_conflict)::numeric / count(*)
@@ -149,6 +157,7 @@ export async function GET(request: Request) {
           trade_date_local,
           decision,
           reason,
+          exit_reason,
           match_status,
           units,
           pnl_pips,
@@ -189,6 +198,10 @@ export async function GET(request: Request) {
           count(*) filter (where has_filter_skip) as filter_skip_count,
           count(*) filter (where pnl_pips is not null) as closed_entry_count,
           count(*) filter (where pnl_pips > 0) as winning_entry_count,
+          count(*) filter (where has_tp_hit) as tp_hit_count,
+          count(*) filter (where has_sl_hit) as sl_hit_count,
+          count(*) filter (where has_forced_exit) as forced_exit_count,
+          count(*) filter (where has_broker_closed_other) as broker_closed_other_count,
           coalesce(sum(pnl_pips), 0) as pnl_pips,
           coalesce(sum(pnl_jpy) filter (where pnl_pips is not null), 0) as pnl_jpy
         from decision_summary_filtered
@@ -213,6 +226,10 @@ export async function GET(request: Request) {
           count(*) filter (where f.has_filter_skip) as filter_skip_count,
           count(*) filter (where f.pnl_pips is not null) as closed_entry_count,
           count(*) filter (where f.pnl_pips > 0) as winning_entry_count,
+          count(*) filter (where f.has_tp_hit) as tp_hit_count,
+          count(*) filter (where f.has_sl_hit) as sl_hit_count,
+          count(*) filter (where f.has_forced_exit) as forced_exit_count,
+          count(*) filter (where f.has_broker_closed_other) as broker_closed_other_count,
           count(*) filter (where f.has_kill) as kill_count,
           max(f.last_kill_date) as last_kill_date,
           coalesce(sum(f.pnl_pips), 0) as pnl_pips,
@@ -630,6 +647,10 @@ function buildPeriodPerformance(rows: QueryRow[]) {
     const conflictCount = numberOrZero(row.conflict_count);
     const closedEntryCount = numberOrZero(row.closed_entry_count);
     const winningEntryCount = numberOrZero(row.winning_entry_count);
+    const tpHitCount = numberOrZero(row.tp_hit_count);
+    const slHitCount = numberOrZero(row.sl_hit_count);
+    const forcedExitCount = numberOrZero(row.forced_exit_count);
+    const brokerClosedOtherCount = numberOrZero(row.broker_closed_other_count);
     const pnlPips = numberOrZero(row.pnl_pips);
     const pnlJpy = numberOrZero(row.pnl_jpy);
     cumulativePips += pnlPips;
@@ -646,6 +667,10 @@ function buildPeriodPerformance(rows: QueryRow[]) {
       closed_entry_count: closedEntryCount,
       winning_entry_count: winningEntryCount,
       losing_entry_count: Math.max(0, closedEntryCount - winningEntryCount),
+      tp_hit_count: tpHitCount,
+      sl_hit_count: slHitCount,
+      forced_exit_count: forcedExitCount,
+      broker_closed_other_count: brokerClosedOtherCount,
       pnl_pips: pnlPips,
       cumulative_pnl_pips: cumulativePips,
       pnl_jpy: pnlJpy,
@@ -653,7 +678,11 @@ function buildPeriodPerformance(rows: QueryRow[]) {
       max_dd_pips: maxDdPips,
       conflict_rate: decisionCount === 0 ? null : conflictCount / decisionCount,
       trade_rate: decisionCount === 0 ? null : enteredCount / decisionCount,
-      win_rate: closedEntryCount === 0 ? null : winningEntryCount / closedEntryCount
+      win_rate: closedEntryCount === 0 ? null : winningEntryCount / closedEntryCount,
+      tp_hit_rate: closedEntryCount === 0 ? null : tpHitCount / closedEntryCount,
+      sl_hit_rate: closedEntryCount === 0 ? null : slHitCount / closedEntryCount,
+      forced_exit_rate: closedEntryCount === 0 ? null : forcedExitCount / closedEntryCount,
+      broker_closed_other_rate: closedEntryCount === 0 ? null : brokerClosedOtherCount / closedEntryCount
     };
   });
 }
@@ -677,6 +706,10 @@ function buildSettingPerformance(rows: QueryRow[], period: Period, config: Dashb
       const conflictCount = series.reduce((sum, row) => sum + row.conflict_count, 0);
       const closedEntryCount = series.reduce((sum, row) => sum + row.closed_entry_count, 0);
       const winningEntryCount = series.reduce((sum, row) => sum + row.winning_entry_count, 0);
+      const tpHitCount = series.reduce((sum, row) => sum + row.tp_hit_count, 0);
+      const slHitCount = series.reduce((sum, row) => sum + row.sl_hit_count, 0);
+      const forcedExitCount = series.reduce((sum, row) => sum + row.forced_exit_count, 0);
+      const brokerClosedOtherCount = series.reduce((sum, row) => sum + row.broker_closed_other_count, 0);
       const killCount = settingRows.reduce((sum, row) => sum + numberOrZero(row.kill_count), 0);
       const lastKillDate = latestDate(settingRows.map((row) => row.last_kill_date));
       const cumulativePnlJpy = last?.cumulative_pnl_jpy ?? 0;
@@ -689,6 +722,10 @@ function buildSettingPerformance(rows: QueryRow[], period: Period, config: Dashb
         conflict_count: conflictCount,
         closed_entry_count: closedEntryCount,
         winning_entry_count: winningEntryCount,
+        tp_hit_count: tpHitCount,
+        sl_hit_count: slHitCount,
+        forced_exit_count: forcedExitCount,
+        broker_closed_other_count: brokerClosedOtherCount,
         pnl_pips: last?.cumulative_pnl_pips ?? 0,
         cumulative_pnl_pips: last?.cumulative_pnl_pips ?? 0,
         pnl_jpy: cumulativePnlJpy,
@@ -697,6 +734,10 @@ function buildSettingPerformance(rows: QueryRow[], period: Period, config: Dashb
         conflict_rate: decisionCount === 0 ? null : conflictCount / decisionCount,
         trade_rate: decisionCount === 0 ? null : enteredCount / decisionCount,
         win_rate: closedEntryCount === 0 ? null : winningEntryCount / closedEntryCount,
+        tp_hit_rate: closedEntryCount === 0 ? null : tpHitCount / closedEntryCount,
+        sl_hit_rate: closedEntryCount === 0 ? null : slHitCount / closedEntryCount,
+        forced_exit_rate: closedEntryCount === 0 ? null : forcedExitCount / closedEntryCount,
+        broker_closed_other_rate: closedEntryCount === 0 ? null : brokerClosedOtherCount / closedEntryCount,
         expected_trade_rate: numberOrNull(firstRow.expected_trade_rate),
         expected_win_rate: numberOrNull(firstRow.expected_win_rate),
         expected_annualized_pips: numberOrNull(firstRow.expected_annualized_pips),

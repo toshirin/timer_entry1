@@ -9,6 +9,10 @@ export type DashboardSummary = {
   filter_skip_count: number;
   closed_entry_count: number;
   winning_entry_count: number;
+  tp_hit_count: number;
+  sl_hit_count: number;
+  forced_exit_count: number;
+  broker_closed_other_count: number;
   conflict_rate: number | null;
   trade_rate: number | null;
   win_rate: number | null;
@@ -28,6 +32,7 @@ export type DashboardEvent = {
   trade_date_local: string | null;
   decision: string | null;
   reason: string | null;
+  exit_reason: string | null;
   match_status: string | null;
   units: number | null;
   pnl_pips: number | null;
@@ -67,6 +72,10 @@ export type DashboardPeriodPerformance = {
   closed_entry_count: number;
   winning_entry_count: number;
   losing_entry_count: number;
+  tp_hit_count: number;
+  sl_hit_count: number;
+  forced_exit_count: number;
+  broker_closed_other_count: number;
   pnl_pips: number;
   cumulative_pnl_pips: number;
   pnl_jpy: number;
@@ -75,6 +84,10 @@ export type DashboardPeriodPerformance = {
   conflict_rate: number | null;
   trade_rate: number | null;
   win_rate: number | null;
+  tp_hit_rate: number | null;
+  sl_hit_rate: number | null;
+  forced_exit_rate: number | null;
+  broker_closed_other_rate: number | null;
 };
 
 export type DashboardSettingPerformance = {
@@ -86,6 +99,10 @@ export type DashboardSettingPerformance = {
   conflict_count: number;
   closed_entry_count: number;
   winning_entry_count: number;
+  tp_hit_count: number;
+  sl_hit_count: number;
+  forced_exit_count: number;
+  broker_closed_other_count: number;
   pnl_pips: number;
   cumulative_pnl_pips: number;
   pnl_jpy: number;
@@ -94,6 +111,10 @@ export type DashboardSettingPerformance = {
   conflict_rate: number | null;
   trade_rate: number | null;
   win_rate: number | null;
+  tp_hit_rate: number | null;
+  sl_hit_rate: number | null;
+  forced_exit_rate: number | null;
+  broker_closed_other_rate: number | null;
   expected_trade_rate: number | null;
   expected_win_rate: number | null;
   expected_annualized_pips: number | null;
