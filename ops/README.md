@@ -214,6 +214,89 @@ select * from ops_main.oanda_latest_account_balance;
 
 runtime 側は `decision_log` と `execution_log` を取り込み、`runtime_oanda_event_fact` に補完します。Oanda transaction と runtime log は `oanda_trade_id`, `oanda_order_id`, `oanda_client_id` を使って best-effort で突合します。
 
+ops の日次集計は `broker_trade_date` を優先します。
+これは runtime 由来の `trade_date_local` を置き換えるものではなく、ops 側の集計専用の日次キーです。
+
+- `broker_trade_date = その fact row が発生した時刻を New York 17:00 境界で切った日付`
+- 基準時刻:
+  - `exit_at` if `decision = 'exited'`
+  - `entry_at` if `decision = 'entered'`
+  - それ以外は `created_at`
+
+## backfill
+
+過去データの補正は dry-run 付きスクリプトで行います。
+
+### exit transaction / exit reason
+
+```bash
+PYTHONPATH=ops/src \
+OPS_DB_CLUSTER_ARN=... \
+OPS_DB_SECRET_ARN=... \
+OPS_DB_NAME=timer_entry_ops \
+OANDA_SECRET_NAME=oanda_rest_api_key \
+DECISION_LOG_TABLE_NAME=timer-entry-runtime-decision-log \
+EXECUTION_LOG_TABLE_NAME=timer-entry-runtime-execution-log \
+python3 ops/scripts/backfill_exit_fields.py
+```
+
+Docker 実行:
+
+```bash
+docker run --rm \
+  --entrypoint /bin/bash \
+  -v "$PWD:/work" \
+  -v "$HOME/.aws:/root/.aws:ro" \
+  -w /work \
+  -e AWS_PROFILE \
+  -e AWS_REGION=ap-northeast-1 \
+  -e OPS_DB_CLUSTER_ARN='...' \
+  -e OPS_DB_SECRET_ARN='...' \
+  -e OPS_DB_NAME=timer_entry_ops \
+  -e OANDA_SECRET_NAME=oanda_rest_api_key \
+  -e DECISION_LOG_TABLE_NAME=timer-entry-runtime-decision-log \
+  -e EXECUTION_LOG_TABLE_NAME=timer-entry-runtime-execution-log \
+  python:3.12-slim \
+  -lc "pip install boto3 && PYTHONPATH=ops/src python3 ops/scripts/backfill_exit_fields.py"
+```
+
+実更新は `--apply` を付けます。
+
+### broker trade date
+
+```bash
+PYTHONPATH=ops/src \
+OPS_DB_CLUSTER_ARN=... \
+OPS_DB_SECRET_ARN=... \
+OPS_DB_NAME=timer_entry_ops \
+OANDA_SECRET_NAME=oanda_rest_api_key \
+DECISION_LOG_TABLE_NAME=timer-entry-runtime-decision-log \
+EXECUTION_LOG_TABLE_NAME=timer-entry-runtime-execution-log \
+python3 ops/scripts/backfill_broker_trade_date.py
+```
+
+Docker 実行:
+
+```bash
+docker run --rm \
+  --entrypoint /bin/bash \
+  -v "$PWD:/work" \
+  -v "$HOME/.aws:/root/.aws:ro" \
+  -w /work \
+  -e AWS_PROFILE \
+  -e AWS_REGION=ap-northeast-1 \
+  -e OPS_DB_CLUSTER_ARN='...' \
+  -e OPS_DB_SECRET_ARN='...' \
+  -e OPS_DB_NAME=timer_entry_ops \
+  -e OANDA_SECRET_NAME=oanda_rest_api_key \
+  -e DECISION_LOG_TABLE_NAME=timer-entry-runtime-decision-log \
+  -e EXECUTION_LOG_TABLE_NAME=timer-entry-runtime-execution-log \
+  python:3.12-slim \
+  -lc "pip install boto3 && PYTHONPATH=ops/src python3 ops/scripts/backfill_broker_trade_date.py"
+```
+
+実更新は `--apply` を付けます。
+
 ## setting metadata
 
 dashboard が `execution_spec_json` の期待値や labels を安定参照できるよう、runtime config JSON を `setting_metadata` へ取り込みます。

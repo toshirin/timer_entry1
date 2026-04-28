@@ -639,6 +639,7 @@ function EventTable({ rows }: { rows: DashboardEvent[] }) {
         <thead>
           <tr>
             <th>time</th>
+            <th>broker day</th>
             <th>setting</th>
             <th>labels</th>
             <th>slot</th>
@@ -655,6 +656,7 @@ function EventTable({ rows }: { rows: DashboardEvent[] }) {
           {rows.map((row) => (
             <tr key={row.fact_event_id}>
               <td>{compactDate(row.created_at)}</td>
+              <td>{row.broker_trade_date ?? "-"}</td>
               <td className="clip-cell" title={row.setting_id}>
                 {row.setting_id}
               </td>

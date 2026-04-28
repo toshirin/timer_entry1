@@ -48,6 +48,7 @@ create table if not exists ops_main.runtime_oanda_event_fact (
   slot_id text,
   setting_labels jsonb not null default '[]'::jsonb,
   trade_date_local text,
+  broker_trade_date text,
   market_tz text,
   instrument text,
   side text,
@@ -141,7 +142,8 @@ alter table ops_main.runtime_oanda_event_fact
   add column if not exists estimated_margin_ratio_after_entry numeric,
   add column if not exists margin_price numeric,
   add column if not exists margin_price_side text,
-  add column if not exists exit_reason text;
+  add column if not exists exit_reason text,
+  add column if not exists broker_trade_date text;
 
 alter table ops_main.setting_metadata
   add column if not exists enabled boolean not null default false,
@@ -266,16 +268,16 @@ with decision_summary as (
   select
     coalesce(
       nullif(correlation_id, ''),
-      nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+      nullif(concat_ws('#', setting_id, broker_trade_date, decision, reason), ''),
       nullif(decision_id, ''),
       fact_event_id
     ) as logical_event_id,
     max(setting_id) as setting_id,
     max(setting_labels::text)::jsonb as setting_labels,
     coalesce(
-      min(trade_date_local) filter (where decision <> 'exited'),
-      min(trade_date_local)
-    ) as trade_date_local,
+      min(broker_trade_date) filter (where decision <> 'exited'),
+      min(broker_trade_date)
+    ) as broker_trade_date,
     bool_or(decision is not null and decision not in ('exited', 'oanda_only', 'skipped_no_entered_state')) as has_primary_decision,
     bool_or(decision = 'entered') as has_entered,
     bool_or(decision like 'skipped%') as has_skipped,
@@ -290,7 +292,7 @@ with decision_summary as (
   from ops_main.runtime_oanda_event_fact
   where coalesce(
       nullif(correlation_id, ''),
-      nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+      nullif(concat_ws('#', setting_id, broker_trade_date, decision, reason), ''),
       nullif(decision_id, ''),
       fact_event_id
     ) is not null
@@ -299,7 +301,7 @@ with decision_summary as (
 select
   setting_id,
   setting_labels,
-  trade_date_local,
+  broker_trade_date,
   count(*) as decision_count,
   count(*) filter (where has_entered) as entered_count,
   count(*) filter (where has_skipped) as skipped_count,
@@ -328,9 +330,9 @@ select
   avg(actual_win_rate) as actual_win_rate
 from decision_summary
 where has_primary_decision
-  and trade_date_local is not null
-  and extract(isodow from trade_date_local::date) between 1 and 5
-group by setting_id, setting_labels, trade_date_local;
+  and broker_trade_date is not null
+  and extract(isodow from broker_trade_date::date) between 1 and 5
+group by setting_id, setting_labels, broker_trade_date;
 
 create table if not exists ops_demo.import_cursor (like ops_main.import_cursor including all);
 create table if not exists ops_demo.oanda_transactions_raw (like ops_main.oanda_transactions_raw including all);
@@ -353,7 +355,8 @@ alter table ops_demo.runtime_oanda_event_fact
   add column if not exists estimated_margin_ratio_after_entry numeric,
   add column if not exists margin_price numeric,
   add column if not exists margin_price_side text,
-  add column if not exists exit_reason text;
+  add column if not exists exit_reason text,
+  add column if not exists broker_trade_date text;
 
 alter table ops_demo.setting_metadata
   add column if not exists enabled boolean not null default false,
@@ -418,16 +421,16 @@ with decision_summary as (
   select
     coalesce(
       nullif(correlation_id, ''),
-      nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+      nullif(concat_ws('#', setting_id, broker_trade_date, decision, reason), ''),
       nullif(decision_id, ''),
       fact_event_id
     ) as logical_event_id,
     max(setting_id) as setting_id,
     max(setting_labels::text)::jsonb as setting_labels,
     coalesce(
-      min(trade_date_local) filter (where decision <> 'exited'),
-      min(trade_date_local)
-    ) as trade_date_local,
+      min(broker_trade_date) filter (where decision <> 'exited'),
+      min(broker_trade_date)
+    ) as broker_trade_date,
     bool_or(decision is not null and decision not in ('exited', 'oanda_only', 'skipped_no_entered_state')) as has_primary_decision,
     bool_or(decision = 'entered') as has_entered,
     bool_or(decision like 'skipped%') as has_skipped,
@@ -442,7 +445,7 @@ with decision_summary as (
   from ops_demo.runtime_oanda_event_fact
   where coalesce(
       nullif(correlation_id, ''),
-      nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+      nullif(concat_ws('#', setting_id, broker_trade_date, decision, reason), ''),
       nullif(decision_id, ''),
       fact_event_id
     ) is not null
@@ -451,7 +454,7 @@ with decision_summary as (
 select
   setting_id,
   setting_labels,
-  trade_date_local,
+  broker_trade_date,
   count(*) as decision_count,
   count(*) filter (where has_entered) as entered_count,
   count(*) filter (where has_skipped) as skipped_count,
@@ -480,9 +483,9 @@ select
   avg(actual_win_rate) as actual_win_rate
 from decision_summary
 where has_primary_decision
-  and trade_date_local is not null
-  and extract(isodow from trade_date_local::date) between 1 and 5
-group by setting_id, setting_labels, trade_date_local;
+  and broker_trade_date is not null
+  and extract(isodow from broker_trade_date::date) between 1 and 5
+group by setting_id, setting_labels, broker_trade_date;
 
 create or replace view ops_demo.oanda_latest_account_balance as
 select distinct on (account_id)

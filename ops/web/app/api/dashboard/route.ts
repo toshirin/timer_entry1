@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     const bounds = periodBounds(period, at);
     const commonWhere = [localDatePredicate(bounds), labelPredicate(labelMode, selectedLabels)].filter(Boolean).join(" and ");
     const rawLabelWhere = labelPredicate(labelMode, selectedLabels);
-    const decisionSummaryWhere = [localDatePredicate(bounds, "trade_date_local"), weekdayPredicate("trade_date_local")]
+    const decisionSummaryWhere = [localDatePredicate(bounds, "broker_trade_date"), weekdayPredicate("broker_trade_date")]
       .filter(Boolean)
       .join(" and ");
     const decisionSummaryCte = `
@@ -41,16 +41,16 @@ export async function GET(request: Request) {
         select
           coalesce(
             nullif(correlation_id, ''),
-            nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+            nullif(concat_ws('#', setting_id, broker_trade_date, decision, reason), ''),
             nullif(decision_id, ''),
             fact_event_id
           ) as logical_event_id,
           max(setting_id) as setting_id,
           max(setting_labels::text) as setting_labels,
           coalesce(
-            min(trade_date_local) filter (where decision <> 'exited'),
-            min(trade_date_local)
-          ) as trade_date_local,
+            min(broker_trade_date) filter (where decision <> 'exited'),
+            min(broker_trade_date)
+          ) as broker_trade_date,
           bool_or(decision is not null and decision not in ('exited', 'oanda_only', 'skipped_no_entered_state')) as has_primary_decision,
           bool_or(decision = 'entered') as has_entered,
           bool_or(decision like 'skipped%') as has_skipped,
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
         from ${schema}.runtime_oanda_event_fact
         where coalesce(
             nullif(correlation_id, ''),
-            nullif(concat_ws('#', setting_id, trade_date_local, decision, reason), ''),
+            nullif(concat_ws('#', setting_id, broker_trade_date, decision, reason), ''),
             nullif(decision_id, ''),
             fact_event_id
           ) is not null
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
         select *
         from decision_summary
         where has_primary_decision
-          and trade_date_local is not null
+          and broker_trade_date is not null
           ${decisionSummaryWhere ? `and ${decisionSummaryWhere}` : ""}
       )
     `;
@@ -113,7 +113,8 @@ export async function GET(request: Request) {
         select
           setting_id,
           setting_labels,
-          trade_date_local,
+          null::text as trade_date_local,
+          broker_trade_date,
           count(*) as decision_count,
           count(*) filter (where has_entered) as entered_count,
           count(*) filter (where has_skipped) as skipped_count,
@@ -144,8 +145,8 @@ export async function GET(request: Request) {
           avg(expected_win_rate) as expected_win_rate,
           avg(actual_win_rate) as actual_win_rate
         from decision_summary_filtered
-        group by setting_id, setting_labels, trade_date_local
-        order by trade_date_local desc, setting_id
+        group by setting_id, setting_labels, broker_trade_date
+        order by broker_trade_date desc, setting_id
         limit 120
       `),
       queryRows(`
@@ -155,6 +156,7 @@ export async function GET(request: Request) {
           setting_labels::text as setting_labels,
           slot_id,
           trade_date_local,
+          broker_trade_date,
           decision,
           reason,
           exit_reason,
@@ -478,7 +480,7 @@ function periodBounds(period: Period, at: string): { start: string | null; end: 
   return { start: dateText(start), end: dateText(end) };
 }
 
-function localDatePredicate(bounds: { start: string | null; end: string | null }, column = "trade_date_local"): string {
+function localDatePredicate(bounds: { start: string | null; end: string | null }, column = "broker_trade_date"): string {
   const clauses = [];
   if (bounds.start) {
     clauses.push(`${column} >= '${bounds.start}'`);
@@ -535,7 +537,7 @@ function assetBucketExpression(period: Period): string {
 }
 
 function periodBucketExpression(period: Period, alias?: string): string {
-  const column = alias ? `${alias}.trade_date_local` : "trade_date_local";
+  const column = alias ? `${alias}.broker_trade_date` : "broker_trade_date";
   if (period === "all") {
     return `date_trunc('year', ${column}::date)::date::text`;
   }

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import json
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from timer_entry_runtime.level_policy import UnitLevelDecision, decide_emergency_demotion, infer_level_from_sizing
 from timer_entry_runtime.models import SettingConfig
@@ -23,6 +24,10 @@ from .oanda_transactions import fetch_latest_transaction_id, fetch_transactions_
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+BROKER_DAY_TZ = ZoneInfo("America/New_York")
+BROKER_DAY_BOUNDARY_HOUR = 17
 
 
 def _load_secret(client: Any, secret_name: str) -> dict[str, Any]:
@@ -65,6 +70,38 @@ def _trade_opened(transaction: dict[str, Any]) -> dict[str, Any]:
 
 def _client_extensions(transaction: dict[str, Any]) -> dict[str, Any]:
     return _nested_dict(transaction.get("clientExtensions"))
+
+
+def _parse_timestamp(value: str) -> datetime | None:
+    normalized = value.strip()
+    if not normalized:
+        return None
+    try:
+        parsed = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _broker_trade_date_from_timestamp(value: str) -> str:
+    parsed = _parse_timestamp(value)
+    if parsed is None:
+        return ""
+    local_dt = parsed.astimezone(BROKER_DAY_TZ)
+    local_date = local_dt.date()
+    if local_dt.hour >= BROKER_DAY_BOUNDARY_HOUR:
+        local_date += timedelta(days=1)
+    return local_date.isoformat()
+
+
+def _resolved_broker_trade_date(*, decision: str, entry_at: str, exit_at: str, created_at: str) -> str:
+    if decision == "exited":
+        return _broker_trade_date_from_timestamp(exit_at or created_at)
+    if decision == "entered":
+        return _broker_trade_date_from_timestamp(entry_at or created_at)
+    return _broker_trade_date_from_timestamp(created_at)
 
 
 def _decision_exit_reason(decision: str, reason: str) -> str:
@@ -323,6 +360,7 @@ insert into {schema}.runtime_oanda_event_fact (
   slot_id,
   setting_labels,
   trade_date_local,
+  broker_trade_date,
   market_tz,
   instrument,
   side,
@@ -355,6 +393,7 @@ values (
   nullif(:slot_id, ''),
   '[]'::jsonb,
   null,
+  nullif(:broker_trade_date, ''),
   null,
   nullif(:instrument, ''),
   null,
@@ -383,6 +422,7 @@ on conflict (fact_event_id) do update set
   oanda_order_id = excluded.oanda_order_id,
   oanda_trade_id = excluded.oanda_trade_id,
   oanda_client_id = excluded.oanda_client_id,
+  broker_trade_date = coalesce(excluded.broker_trade_date, {schema}.runtime_oanda_event_fact.broker_trade_date),
   entry_transaction_id = coalesce(excluded.entry_transaction_id, {schema}.runtime_oanda_event_fact.entry_transaction_id),
   exit_transaction_id = coalesce(excluded.exit_transaction_id, {schema}.runtime_oanda_event_fact.exit_transaction_id),
   exit_reason = coalesce(excluded.exit_reason, {schema}.runtime_oanda_event_fact.exit_reason),
@@ -401,6 +441,7 @@ on conflict (fact_event_id) do update set
             text_param("setting_id", _first_text(values["client_ext_id"], "unknown_oanda_only")),
             text_param("strategy_id", values["client_ext_tag"]),
             text_param("slot_id", ""),
+            text_param("broker_trade_date", _broker_trade_date_from_timestamp(values["transaction_time"])),
             text_param("instrument", values["instrument"]),
             text_param("units", values["units"]),
             text_param("order_id", values["order_id"]),
@@ -430,11 +471,13 @@ def _update_fact_from_oanda_transaction(
 ) -> None:
     is_exit = _is_exit_transaction(transaction, values)
     entry_assignments = """
+  broker_trade_date = coalesce(nullif(:broker_trade_date, ''), broker_trade_date),
   entry_transaction_id = coalesce(entry_transaction_id, :transaction_id),
   entry_at = coalesce(entry_at, cast(:transaction_time as timestamptz)),
   entry_price = coalesce(entry_price, nullif(:price, '')::numeric),
 """
     exit_assignments = """
+  broker_trade_date = coalesce(nullif(:broker_trade_date, ''), broker_trade_date),
   exit_transaction_id = coalesce(exit_transaction_id, :transaction_id),
   exit_reason = coalesce(nullif(:exit_reason, ''), exit_reason),
   exit_at = coalesce(exit_at, cast(:transaction_time as timestamptz)),
@@ -466,6 +509,7 @@ set
             text_param("pl", values["pl"]),
             text_param("account_balance", values["account_balance"]),
             text_param("exit_reason", _oanda_exit_reason(values) if is_exit else ""),
+            text_param("broker_trade_date", _broker_trade_date_from_timestamp(values["transaction_time"])),
         ],
     )
     if int(response.get("numberOfRecordsUpdated", 0)) == 0:
@@ -483,6 +527,15 @@ def _upsert_fact_from_execution(data_api: DataApi, schema: str, item: dict[str, 
         text_param("slot_id", _text(item.get("slot_id"))),
         text_param("setting_labels", _json_dumps(item.get("setting_labels", []))),
         text_param("trade_date_local", _text(item.get("trade_date_local"))),
+        text_param(
+            "broker_trade_date",
+            _resolved_broker_trade_date(
+                decision="entered",
+                entry_at=_text(item.get("entry_filled_at")),
+                exit_at="",
+                created_at=_first_text(item.get("created_at"), item.get("requested_entry_time_utc"), _utc_now().isoformat()),
+            ),
+        ),
         text_param("market_tz", _text(item.get("market_tz"))),
         text_param("instrument", _text(item.get("instrument"))),
         text_param("side", _text(item.get("side"))),
@@ -522,6 +575,7 @@ set
   oanda_order_id = coalesce(nullif(:oanda_order_id, ''), oanda_order_id),
   oanda_trade_id = coalesce(nullif(:oanda_trade_id, ''), oanda_trade_id),
   oanda_client_id = coalesce(nullif(:oanda_client_id, ''), oanda_client_id),
+  broker_trade_date = coalesce(nullif(:broker_trade_date, ''), broker_trade_date),
   entry_at = coalesce(nullif(:entry_at, '')::timestamptz, entry_at),
   entry_price = coalesce(nullif(:entry_price, '')::numeric, entry_price),
   status = coalesce(nullif(:status, ''), status),
@@ -545,6 +599,7 @@ insert into {schema}.runtime_oanda_event_fact (
   slot_id,
   setting_labels,
   trade_date_local,
+  broker_trade_date,
   market_tz,
   instrument,
   side,
@@ -577,6 +632,7 @@ values (
   nullif(:slot_id, ''),
   cast(:setting_labels as jsonb),
   nullif(:trade_date_local, ''),
+  nullif(:broker_trade_date, ''),
   nullif(:market_tz, ''),
   nullif(:instrument, ''),
   nullif(:side, ''),
@@ -625,6 +681,7 @@ insert into {schema}.runtime_oanda_event_fact (
   slot_id,
   setting_labels,
   trade_date_local,
+  broker_trade_date,
   market_tz,
   instrument,
   side,
@@ -652,6 +709,7 @@ values (
   :slot_id,
   cast(:setting_labels as jsonb),
   :trade_date_local,
+  nullif(:broker_trade_date, ''),
   :market_tz,
   :instrument,
   :side,
@@ -678,6 +736,7 @@ on conflict (fact_event_id) do update set
   blocking_trade_id = excluded.blocking_trade_id,
   blocking_setting_id = excluded.blocking_setting_id,
   oanda_trade_id = coalesce(excluded.oanda_trade_id, {schema}.runtime_oanda_event_fact.oanda_trade_id),
+  broker_trade_date = coalesce(excluded.broker_trade_date, {schema}.runtime_oanda_event_fact.broker_trade_date),
   exit_reason = coalesce(excluded.exit_reason, {schema}.runtime_oanda_event_fact.exit_reason),
   exit_at = coalesce(excluded.exit_at, {schema}.runtime_oanda_event_fact.exit_at),
   exit_price = coalesce(excluded.exit_price, {schema}.runtime_oanda_event_fact.exit_price),
@@ -695,6 +754,15 @@ on conflict (fact_event_id) do update set
             text_param("slot_id", str(item.get("slot_id", ""))),
             text_param("setting_labels", json.dumps(item.get("setting_labels", []), separators=(",", ":"))),
             text_param("trade_date_local", str(item.get("trade_date_local", ""))),
+            text_param(
+                "broker_trade_date",
+                _resolved_broker_trade_date(
+                    decision=str(item.get("decision", "")),
+                    entry_at="",
+                    exit_at=str(item.get("created_at", item.get("actual_invoked_at_utc", ""))) if item.get("decision") == "exited" else "",
+                    created_at=str(item.get("created_at", item.get("actual_invoked_at_utc", _utc_now().isoformat()))),
+                ),
+            ),
             text_param("market_tz", str(item.get("market_tz", ""))),
             text_param("instrument", str(item.get("instrument", ""))),
             text_param("side", str(item.get("side", ""))),

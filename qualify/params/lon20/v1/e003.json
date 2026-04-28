@@ -1,5 +1,5 @@
 {
-  "experiment_code": "E002",
+  "experiment_code": "E003",
   "variant_code": null,
   "slot_id": "lon20",
   "side": "buy",
@@ -10,8 +10,7 @@
     "sl_pips": 20,
     "filter_labels": ["vol_ge_p70"]
   },
-  "tp_values": [15, 20, 25],
-  "sl_values": [15, 20, 25],
+  "forced_exit_values": ["20:45", "20:55", "21:05"],
   "pass_stability_gate": true,
-  "notes": "E001 selected vol_ge_p70 as the only stability-gate passing filter. Sweep TP/SL around TP25/SL20 while keeping entry, forced exit, side, and filter fixed."
+  "notes": "High forced-exit dependency (~86%), so sweep narrow +/-10min around baseline to optimize time-based edge without changing strategy nature"
 }

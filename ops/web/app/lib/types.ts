@@ -2,6 +2,7 @@ export type DashboardSummary = {
   setting_id: string;
   setting_labels: string[];
   trade_date_local: string | null;
+  broker_trade_date: string | null;
   decision_count: number;
   entered_count: number;
   skipped_count: number;
@@ -30,6 +31,7 @@ export type DashboardEvent = {
   setting_labels: string[];
   slot_id: string | null;
   trade_date_local: string | null;
+  broker_trade_date: string | null;
   decision: string | null;
   reason: string | null;
   exit_reason: string | null;

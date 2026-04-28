@@ -307,6 +307,7 @@ runtime 側 DynamoDB log は、日次 Lambda が scan / query により取得す
 - `strategy_id`
 - `slot_id`
 - `trade_date_local`
+- `broker_trade_date`
 - `market_tz`
 - `instrument`
 - `side`
@@ -363,6 +364,7 @@ runtime 側 DynamoDB log は、日次 Lambda が scan / query により取得す
 - `strategy_id`
 - `slot_id`
 - `trade_date_local`
+- `broker_trade_date`
 - `market_tz`
 - `instrument`
 - `side`
@@ -392,6 +394,15 @@ runtime 側 DynamoDB log は、日次 Lambda が scan / query により取得す
 - `reconciliation_summary`
 
 初版ダッシュボードは summary 層を主に参照する。
+
+`broker_trade_date` は ops 集計用の日次キーとし、runtime 由来の `trade_date_local` は別に保持する。
+定義は以下とする。
+
+- `broker_trade_date = その fact row が発生した時刻を New York 17:00 境界で切った日付`
+- 基準時刻:
+  - `exit_at` if `decision = 'exited'`
+  - `entry_at` if `decision = 'entered'`
+  - それ以外は `created_at`
 
 ## 10. 監視ダッシュボード方針
 

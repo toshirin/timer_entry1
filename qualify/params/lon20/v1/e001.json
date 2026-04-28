@@ -1,23 +1,17 @@
 {
   "experiment_code": "E001",
   "variant_code": null,
-  "slot_id": "lon14",
+  "slot_id": "lon20",
   "side": "buy",
   "baseline": {
-    "entry_clock_local": "14:50",
-    "forced_exit_clock_local": "15:45",
+    "entry_clock_local": "20:00",
+    "forced_exit_clock_local": "20:55",
     "tp_pips": 25,
-    "sl_pips": 25,
-    "filter_labels": ["right_stronger"]
+    "sl_pips": 20,
+    "filter_labels": ["vol_ge_med"]
   },
-  "comparison_family": "shape_balance",
-  "comparison_labels": [
-    "all",
-    "right_stronger",
-    "right_dom_ge2",
-    "right_dom_ge4",
-    "right_dom_ge6"
-  ],
+  "comparison_family": "pre_range_regime",
+  "comparison_labels": ["all", "vol_ge_med", "vol_ge_p60", "vol_ge_p70", "vol_ge_p80"],
   "pass_stability_gate": true,
-  "notes": "summary_lon14.csv shows the strongest stable candidate is lon14 buy right_stronger at 14:50 with SL25/TP25: gross_pips=953.1, in_gross_pips=54.8, out_gross_pips=898.3, rank_gap_abs=46, ex_top10_gross_pips=703.1, same_bar_conflict_count=0, same_bar_unresolved_count=0. Keep all only as comparison, not as the main baseline, because all at the same TP/SL fails stability due to negative in_gross."
+  "notes": "Only buy/20:00 vol_ge_med candidates pass stability gate. all is retained as comparison anchor only; high pre_range regime appears to be the active filter family. Baseline uses TP25/SL20 because it has the strongest gross/out performance with positive ex_top10 and zero same-bar conflict."
 }

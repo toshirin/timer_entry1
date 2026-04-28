@@ -5,10 +5,6 @@
 
 ## しばらく
 
-- ops 日次集計を NY Close / broker day 基準へ変更
-  - 現状の `trade_date_local` は setting の `market_tz` 基準
-  - ops 側で閉じる課題なので、runtime / runtime 参照 DB の安定化を優先する
-  - 統合バックテストや異常検知の前に、日次境界を揃える
 - 統合バックテスト
   - E011: conflict競合
   - E012: 自動昇降格シミュレーション
