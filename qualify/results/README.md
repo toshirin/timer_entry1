@@ -16,3 +16,10 @@ E008 合格後の最終昇格結果 JSON を保存する場所です。
 - runtime に必要な採用値は top-level に置きます。
 - E005 / E007 / E008 の sweep 成績は `evidence` に要約して残します。
 - 全 trade や全 equity curve は転記せず、元 CSV への参照と主要 summary row の数値だけを残します。
+
+集約が必要なときは `qualify/export_results.py` を使います。
+
+```bash
+python qualify/export_results.py --output qualify/results/all_results.json --pretty
+python qualify/export_results.py --format jsonl --output qualify/results/all_results.jsonl
+```

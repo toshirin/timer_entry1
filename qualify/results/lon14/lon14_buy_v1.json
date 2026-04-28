@@ -1,0 +1,202 @@
+{
+  "result_type": "qualify_promotion_result",
+  "schema_version": 1,
+  "result_id": "lon14_buy_v1",
+  "slot_id": "lon14",
+  "side": "buy",
+  "labels": [],
+  "market_tz": "Europe/London",
+  "entry_clock_local": "14:50",
+  "forced_exit_clock_local": "15:35",
+  "tp_pips": 25,
+  "sl_pips": 25,
+  "filter_labels": ["right_dom_ge6"],
+  "pass_stability_gate": true,
+  "e004_passed": true,
+  "e005_passed": true,
+  "e006_passed": true,
+  "e007_passed": true,
+  "e008_passed": true,
+  "approved_for_runtime": true,
+  "selected_target_maintenance_margin_pct": 150.0,
+  "kill_switch_dd_pct": -0.2,
+  "min_maintenance_margin_pct": 150.0,
+  "initial_capital_jpy": 100000,
+  "final_equity_jpy": 221841.62,
+  "annualized_pips": 102.96,
+  "cagr": 0.120559,
+  "trade_rate": 0.2217,
+  "gross_pips": 720.7,
+  "in_gross_pips": 243.0,
+  "out_gross_pips": 477.7,
+  "win_rate": 0.5498,
+  "source_params_files": {
+    "E004": "qualify/params/lon14/v1/e004.json",
+    "E005-E008": "qualify/params/lon14/v1/e005-e008.json"
+  },
+  "source_output_dirs": {
+    "E004": "qualify/out/lon14/v1/E004/latest",
+    "E005-E008": "qualify/out/lon14/v1"
+  },
+  "evidence": {
+    "E004": {
+      "summary": "tick replay passed",
+      "trade_count": 402,
+      "gross_pips": 720.7,
+      "minute_gross_pips": 721.003,
+      "gross_delta_vs_minute_pips": -0.303,
+      "profit_factor": 1.291,
+      "max_dd_pips": -161.8,
+      "same_bar_conflict_count": 0,
+      "same_bar_unresolved_count": 0,
+      "forced_exit_missing_count": 0,
+      "tick_not_found_count": 0,
+      "entry_after_forced_exit_count": 0
+    },
+    "E005": {
+      "max_one_way_slip_pips_passed": 0.3,
+      "max_round_trip_slip_pips_passed": 0.6,
+      "slippage_sweep": [
+        {
+          "slip_pips": 0.0,
+          "round_trip_slip_pips": 0.0,
+          "gross_pips": 477.7,
+          "annualized_pips": 159.2,
+          "profit_factor": 1.322,
+          "max_dd_pips": -140.8,
+          "win_rate": 0.556
+        },
+        {
+          "slip_pips": 0.1,
+          "round_trip_slip_pips": 0.2,
+          "gross_pips": 367.6,
+          "annualized_pips": 122.5,
+          "profit_factor": 1.238,
+          "max_dd_pips": -193.8,
+          "win_rate": 0.551
+        },
+        {
+          "slip_pips": 0.2,
+          "round_trip_slip_pips": 0.4,
+          "gross_pips": 328.1,
+          "annualized_pips": 109.4,
+          "profit_factor": 1.21,
+          "max_dd_pips": -196.1,
+          "win_rate": 0.546
+        },
+        {
+          "slip_pips": 0.3,
+          "round_trip_slip_pips": 0.6,
+          "gross_pips": 277.7,
+          "annualized_pips": 92.6,
+          "profit_factor": 1.174,
+          "max_dd_pips": -198.6,
+          "win_rate": 0.528
+        }
+      ]
+    },
+    "E006": {
+      "summary": "walk-forward accepted",
+      "full_gross_pips": 720.7,
+      "in_gross_pips": 243.0,
+      "out_gross_pips": 477.7,
+      "full_profit_factor": 1.291,
+      "out_profit_factor": 1.322,
+      "negative_test_years": [2021],
+      "test_2021_out_pnl": -28.0
+    },
+    "E007": {
+      "selected_target_maintenance_margin_pct": 150.0,
+      "min_maintenance_margin_pct_at_immediate_sl": 143.94,
+      "annualized_pips": 102.96,
+      "trade_rate": 0.2217,
+      "win_rate": 0.5498,
+      "cagr": 0.120559,
+      "maintenance_margin_sweep": [
+        {
+          "target_maintenance_margin_pct": 150.0,
+          "final_equity_jpy": 221841.62,
+          "total_return_pct": 121.84,
+          "cagr": 0.120559,
+          "annualized_pips": 102.96,
+          "trade_rate": 0.2217,
+          "win_rate": 0.5498,
+          "max_dd_pct": -17.9,
+          "min_maintenance_margin_pct": 143.94,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 1.111
+        },
+        {
+          "target_maintenance_margin_pct": 180.0,
+          "final_equity_jpy": 196640.0,
+          "total_return_pct": 96.64,
+          "cagr": 0.1014,
+          "annualized_pips": 102.96,
+          "trade_rate": 0.2217,
+          "win_rate": 0.5498,
+          "max_dd_pct": -15.08,
+          "min_maintenance_margin_pct": 173.94,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.926
+        },
+        {
+          "target_maintenance_margin_pct": 200.0,
+          "final_equity_jpy": 184795.0,
+          "total_return_pct": 84.8,
+          "cagr": 0.0917,
+          "annualized_pips": 102.96,
+          "trade_rate": 0.2217,
+          "win_rate": 0.5498,
+          "max_dd_pct": -13.64,
+          "min_maintenance_margin_pct": 193.94,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.833
+        }
+      ]
+    },
+    "E008": {
+      "max_entry_delay_seconds_passed": 120,
+      "entry_delay_sweep": [
+        {
+          "entry_delay_seconds": 0,
+          "gross_pips": 477.7,
+          "annualized_pips": 159.2,
+          "profit_factor": 1.322,
+          "max_dd_pips": -140.8,
+          "win_rate": 0.556
+        },
+        {
+          "entry_delay_seconds": 30,
+          "gross_pips": 463.9,
+          "annualized_pips": 154.6,
+          "profit_factor": 1.316,
+          "max_dd_pips": -195.0,
+          "win_rate": 0.542
+        },
+        {
+          "entry_delay_seconds": 60,
+          "gross_pips": 406.4,
+          "annualized_pips": 135.5,
+          "profit_factor": 1.274,
+          "max_dd_pips": -141.2,
+          "win_rate": 0.556
+        },
+        {
+          "entry_delay_seconds": 120,
+          "gross_pips": 214.6,
+          "annualized_pips": 71.5,
+          "profit_factor": 1.138,
+          "max_dd_pips": -179.2,
+          "win_rate": 0.537
+        }
+      ]
+    }
+  },
+  "notes": "E004-E008 passed. Runtime promotion should initialize this setting as unit_level=0 / fixed_units=10; monthly unit level changes are handled by Unit Level Policy. Top-level min_maintenance_margin_pct is the runtime pre-entry guard threshold and equals selected_target_maintenance_margin_pct."
+}
