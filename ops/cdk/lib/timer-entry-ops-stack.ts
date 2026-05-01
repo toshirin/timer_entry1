@@ -30,6 +30,7 @@ export class TimerEntryOpsStack extends Stack {
     const importScheduleExpression = process.env.OPS_IMPORT_SCHEDULE_EXPRESSION ?? "cron(15 22 * * ? *)";
     const unitLevelPolicyScheduleExpression =
       process.env.OPS_UNIT_LEVEL_POLICY_SCHEDULE_EXPRESSION ?? "cron(20 22 L * ? *)";
+    const unitLevelDecisionTimezone = process.env.UNIT_LEVEL_DECISION_TIMEZONE ?? "Asia/Tokyo";
     const auroraPostgresVersion = process.env.OPS_AURORA_POSTGRES_VERSION ?? "16.4";
     const serverlessMinCapacity = numberEnv("OPS_AURORA_MIN_ACU", 0);
     const serverlessMaxCapacity = numberEnv("OPS_AURORA_MAX_ACU", 2);
@@ -139,6 +140,7 @@ export class TimerEntryOpsStack extends Stack {
         DECISION_LOG_TABLE_NAME: decisionLogTableName,
         EXECUTION_LOG_TABLE_NAME: executionLogTableName,
         LOG_SCAN_LOOKBACK_HOURS: process.env.LOG_SCAN_LOOKBACK_HOURS ?? "36",
+        UNIT_LEVEL_DECISION_TIMEZONE: unitLevelDecisionTimezone,
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });

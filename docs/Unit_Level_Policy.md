@@ -58,6 +58,7 @@ cron(20 22 L * ? *)
 ```
 
 これは EventBridge cron の UTC 基準で「毎月最終日 22:20」を意味する。JST では翌月 1 日 07:20 であり、前月の NY close 後に前月分の確定損益を判定するための時刻である。
+そのため、`decision_month` の自動解決は UTC ではなく運用タイムゾーン基準で行う。既定は `Asia/Tokyo` とし、必要に応じて `UNIT_LEVEL_DECISION_TIMEZONE` で変更する。
 
 使用する値は以下である。
 

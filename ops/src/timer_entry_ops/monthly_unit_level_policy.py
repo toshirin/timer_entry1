@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 import json
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from timer_entry_runtime.level_policy import (
     MONTHLY_SOURCE,
@@ -60,9 +61,10 @@ def _load_oanda_secret(client: Any, secret_name: str) -> OandaSecret:
     )
 
 
-def _previous_month(now_utc: datetime) -> str:
-    year = now_utc.year
-    month = now_utc.month - 1
+def _previous_month(now_utc: datetime, *, tz_name: str = "Asia/Tokyo") -> str:
+    local_now = now_utc.astimezone(ZoneInfo(tz_name))
+    year = local_now.year
+    month = local_now.month - 1
     if month == 0:
         year -= 1
         month = 12
@@ -398,6 +400,15 @@ def _apply_recorded_decision(
             now_utc=now_utc,
             updated_by=updated_by,
         )
+    _sync_setting_metadata_level(
+        data_api=data_api,
+        schema=schema,
+        decision=decision,
+        decision_month=decision_month,
+        setting_id=setting.setting_id,
+        now_utc=now_utc,
+        updated_by=updated_by,
+    )
     _mark_decision_log_applied(data_api, schema, decision_log_id=decision_log_id, now_utc=now_utc)
     return applied
 
@@ -440,6 +451,46 @@ def _apply_setting_level(
     )
 
 
+def _sync_setting_metadata_level(
+    *,
+    data_api: DataApi,
+    schema: str,
+    decision: UnitLevelDecision,
+    decision_month: str,
+    setting_id: str,
+    now_utc: datetime,
+    updated_by: str,
+) -> None:
+    sizing_fields = level_sizing_fields(decision.next_level)
+    data_api.execute(
+        f"""
+update {schema}.setting_metadata
+set
+  unit_level = cast(:unit_level as integer),
+  unit_level_policy_name = :policy_name,
+  unit_level_policy_version = :policy_version,
+  unit_level_updated_at = cast(:updated_at as timestamptz),
+  unit_level_updated_by = :updated_by,
+  unit_level_decision_month = :decision_month,
+  fixed_units = nullif(:fixed_units, '')::numeric,
+  size_scale_pct = nullif(:size_scale_pct, '')::numeric,
+  imported_at = cast(:updated_at as timestamptz)
+where setting_id = :setting_id
+""",
+        [
+            text_param("setting_id", setting_id),
+            text_param("unit_level", str(decision.next_level)),
+            text_param("policy_name", decision.policy_name),
+            text_param("policy_version", decision.policy_version),
+            text_param("updated_at", now_utc.isoformat()),
+            text_param("updated_by", updated_by),
+            text_param("decision_month", decision_month),
+            text_param("fixed_units", _text(sizing_fields["fixed_units"])),
+            text_param("size_scale_pct", _text(sizing_fields["size_scale_pct"])),
+        ],
+    )
+
+
 def process_setting(
     *,
     data_api: DataApi,
@@ -460,11 +511,22 @@ def process_setting(
         source=MONTHLY_SOURCE,
     )
     if existing and existing["applied"]:
+        decision = _decision_from_log(existing, source=MONTHLY_SOURCE)
+        _sync_setting_metadata_level(
+            data_api=data_api,
+            schema=schema,
+            decision=decision,
+            decision_month=decision_month,
+            setting_id=setting.setting_id,
+            now_utc=now_utc,
+            updated_by="ops_monthly_unit_level_policy",
+        )
         return {
             "setting_id": setting.setting_id,
             "status": "duplicate_skipped",
             "decision_month": decision_month,
             "decision_reason": existing["decision_reason"],
+            "metadata_synced": True,
         }
     if existing:
         decision = _decision_from_log(existing, source=MONTHLY_SOURCE)
@@ -533,6 +595,16 @@ def process_setting(
             decision_month=decision_month,
             now_utc=now_utc,
         )
+    if applied:
+        _sync_setting_metadata_level(
+            data_api=data_api,
+            schema=schema,
+            decision=decision,
+            decision_month=decision_month,
+            setting_id=setting.setting_id,
+            now_utc=now_utc,
+            updated_by="ops_monthly_unit_level_policy",
+        )
     _mark_decision_log_applied(data_api, schema, decision_log_id=decision_log_id, now_utc=now_utc)
     return {
         "setting_id": setting.setting_id,
@@ -551,7 +623,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     config = OpsConfig.from_env()
     now_utc = _utc_now()
-    decision_month = str(event.get("decision_month") or _previous_month(now_utc))
+    decision_month = str(
+        event.get("decision_month")
+        or _previous_month(now_utc, tz_name=config.unit_level_decision_timezone)
+    )
 
     session = boto3.session.Session(region_name=config.aws_region)
     data_api = DataApi(

@@ -24,6 +24,7 @@ class OpsConfig:
     decision_log_table_name: str
     execution_log_table_name: str
     log_scan_lookback_hours: int
+    unit_level_decision_timezone: str
 
     @classmethod
     def from_env(cls) -> "OpsConfig":
@@ -39,4 +40,5 @@ class OpsConfig:
             decision_log_table_name=_require_env("DECISION_LOG_TABLE_NAME"),
             execution_log_table_name=_require_env("EXECUTION_LOG_TABLE_NAME"),
             log_scan_lookback_hours=int(os.getenv("LOG_SCAN_LOOKBACK_HOURS", "36")),
+            unit_level_decision_timezone=os.getenv("UNIT_LEVEL_DECISION_TIMEZONE", "Asia/Tokyo"),
         )

@@ -9,7 +9,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "ops" / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "runtime" / "src"))
 
-from timer_entry_ops.monthly_unit_level_policy import process_setting
+from timer_entry_ops.monthly_unit_level_policy import _previous_month, process_setting
 from timer_entry_runtime.models import AccountSnapshot, SettingConfig
 
 
@@ -20,6 +20,7 @@ class FakeDataApi:
         self.pnl = pnl
         self.inserted_logs: list[list[dict[str, Any]]] = []
         self.applied_logs: list[list[dict[str, Any]]] = []
+        self.metadata_updates: list[list[dict[str, Any]]] = []
 
     def execute(self, sql: str, parameters: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         if "from ops_main.unit_level_decision_log" in sql and "where decision_log_id" in sql:
@@ -47,6 +48,9 @@ class FakeDataApi:
             return {"records": [[{"stringValue": str(self.pnl)}, {"longValue": 1}]]}
         if "insert into ops_main.unit_level_decision_log" in sql:
             self.inserted_logs.append(parameters or [])
+            return {"numberOfRecordsUpdated": 1}
+        if "update ops_main.setting_metadata" in sql:
+            self.metadata_updates.append(parameters or [])
             return {"numberOfRecordsUpdated": 1}
         if "update ops_main.unit_level_decision_log" in sql:
             self.applied_logs.append(parameters or [])
@@ -107,6 +111,10 @@ def _param(parameters: list[dict[str, Any]], name: str) -> str:
     raise AssertionError(f"missing parameter: {name}")
 
 
+def test_previous_month_uses_unit_level_decision_timezone() -> None:
+    assert _previous_month(datetime(2026, 4, 30, 22, 20, tzinfo=timezone.utc)) == "2026-04"
+
+
 def test_process_setting_promotes_level_zero_and_logs_decision() -> None:
     data_api = FakeDataApi(pnl=2.0)
     setting_table = FakeSettingTable()
@@ -135,6 +143,10 @@ def test_process_setting_promotes_level_zero_and_logs_decision() -> None:
     assert len(data_api.inserted_logs) == 1
     assert _param(data_api.inserted_logs[0], "decision_reason") == "monthly_profit_above_threshold"
     assert _param(data_api.inserted_logs[0], "threshold_jpy") == "1.0"
+    assert len(data_api.metadata_updates) == 1
+    assert _param(data_api.metadata_updates[0], "unit_level") == "1"
+    assert _param(data_api.metadata_updates[0], "fixed_units") == ""
+    assert _param(data_api.metadata_updates[0], "size_scale_pct") == "0.1"
     assert len(data_api.applied_logs) == 1
 
 
@@ -155,8 +167,11 @@ def test_process_setting_skips_duplicate_applied_month() -> None:
     )
 
     assert result["status"] == "duplicate_skipped"
+    assert result["metadata_synced"] is True
     assert setting_table.updates == []
     assert data_api.inserted_logs == []
+    assert len(data_api.metadata_updates) == 1
+    assert _param(data_api.metadata_updates[0], "unit_level") == "1"
     assert data_api.applied_logs == []
 
 
@@ -188,4 +203,6 @@ def test_process_setting_resumes_pending_log_without_recomputing_next_level() ->
     assert result["applied"] is False
     assert setting_table.updates == []
     assert data_api.inserted_logs == []
+    assert len(data_api.metadata_updates) == 1
+    assert _param(data_api.metadata_updates[0], "unit_level") == "1"
     assert len(data_api.applied_logs) == 1

@@ -17,6 +17,7 @@ from .monthly_unit_level_policy import (
     _mark_decision_log_applied,
     _record_value,
     _should_apply,
+    _sync_setting_metadata_level,
 )
 from .oanda_transactions import OandaImportError
 from .oanda_transactions import fetch_latest_transaction_id, fetch_transactions_since_id
@@ -940,6 +941,16 @@ def _process_kill_switch_demotions(
                 setting=setting,
                 decision=decision,
                 decision_month=decision_month,
+                now_utc=now_utc,
+                updated_by="ops_kill_switch_unit_level_policy",
+            )
+        if applied or event.get("decision_log_id"):
+            _sync_setting_metadata_level(
+                data_api=data_api,
+                schema=schema,
+                decision=decision,
+                decision_month=decision_month,
+                setting_id=setting.setting_id,
                 now_utc=now_utc,
                 updated_by="ops_kill_switch_unit_level_policy",
             )
