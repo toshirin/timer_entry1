@@ -1,0 +1,24 @@
+{
+  "experiment_code": "E001",
+  "variant_code": null,
+  "slot_id": "tyo07",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "07:50",
+    "forced_exit_clock_local": "08:45",
+    "tp_pips": 5,
+    "sl_pips": 25,
+    "filter_labels": ["trend_ge_0_5"]
+  },
+  "comparison_family": "trend_ratio",
+  "comparison_labels": [
+    "all",
+    "trend_ge_0_4",
+    "trend_ge_0_5",
+    "trend_ge_0_6",
+    "trend_ge_0_7",
+    "trend_ge_0_8"
+  ],
+  "pass_stability_gate": true,
+  "notes": "summary_tyo07.csvではpass_stability_gate=Trueがbuy trend_ge_0_5 07:50 tp5/sl25のみ。allは同条件で大幅マイナスのため対照群として残し、採用候補はtrend_ratioの高トレンド側に限定する。same-bar conflict/unresolvedは0。薄いエッジのためE004/E005で落ちる可能性は高い。"
+}

@@ -1,0 +1,23 @@
+{
+  "experiment_code": "E001",
+  "variant_code": null,
+  "slot_id": "tyo11",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "11:10",
+    "forced_exit_clock_local": "12:05",
+    "tp_pips": 20,
+    "sl_pips": 25,
+    "filter_labels": ["all"]
+  },
+  "comparison_family": "shape_balance",
+  "comparison_labels": [
+    "all",
+    "right_stronger",
+    "right_dom_ge2",
+    "right_dom_ge4",
+    "right_dom_ge6"
+  ],
+  "pass_stability_gate": true,
+  "notes": "summary_tyo11.csvではsell側にgate通過なし。buy側は11:10 right_strongerが最有力で、TP20/SL25はgross 298.3, in 48.0, out 250.3, rank_gap 8, ex_top10 98.3。allは同条件で大幅マイナスのため比較baselineには残すが採用候補からは外す。same-bar conflict/unresolvedはいずれも0。"
+}

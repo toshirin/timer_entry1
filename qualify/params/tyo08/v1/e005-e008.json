@@ -1,0 +1,24 @@
+{
+  "experiment_code": "E005-E008",
+  "variant_code": "E007A",
+  "slot_id": "tyo08",
+  "side": "sell",
+  "baseline": {
+    "entry_clock_local": "08:20",
+    "forced_exit_clock_local": "09:25",
+    "tp_pips": 25,
+    "sl_pips": 12,
+    "filter_labels": ["vol_ge_p80"]
+  },
+  "pass_stability_gate": true,
+  "selected_experiments": ["E007"],
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "slippage_values": [0.0, 0.1, 0.2, 0.3],
+  "entry_delay_values": [0, 10, 30, 60],
+  "target_maintenance_margin_candidates": [150, 180, 200],
+  "kill_switch_dd_pct": -0.2,
+  "initial_capital_jpy": 100000,
+  "notes": "Run only E007 as E007A because E007 was changed from risk_fraction optimization to target maintenance margin selection. Keep the E004-passed baseline fixed. Use standard candidates [150, 180, 200] and adopt the first candidate, checked from low to high, that satisfies safety conditions. maintenance_below_100_count > 0 is immediate NG. stop_triggered or maintenance_below_130_count > 0 means checking the next higher target maintenance margin. 120% line is not used for adoption. E007 summary min_maintenance_margin_pct and below counts should be interpreted as assumed maintenance margin if each trade immediately reaches SL."
+}

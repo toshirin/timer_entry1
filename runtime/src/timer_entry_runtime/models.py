@@ -28,6 +28,16 @@ def _to_str(value: Any) -> str | None:
     return str(value)
 
 
+def _to_str_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return []
+
+
 @dataclass(frozen=True)
 class HandlerResult:
     status: str
@@ -65,6 +75,7 @@ class SettingConfig:
     tp_pips: float
     sl_pips: float
     research_label: str | None
+    labels: list[str]
     market_open_check_seconds: int
     max_concurrent_positions: int | None
     kill_switch_dd_pct: float | None
@@ -73,6 +84,12 @@ class SettingConfig:
     filter_spec_json: str | None
     execution_spec_json: str | None
     notes: str | None
+    unit_level: int | None = None
+    unit_level_policy_name: str | None = None
+    unit_level_policy_version: str | None = None
+    unit_level_updated_at: str | None = None
+    unit_level_updated_by: str | None = None
+    unit_level_decision_month: str | None = None
 
     @classmethod
     def from_item(cls, item: dict[str, Any]) -> "SettingConfig":
@@ -95,6 +112,7 @@ class SettingConfig:
             tp_pips=float(item.get("tp_pips", 0)),
             sl_pips=float(item.get("sl_pips", 0)),
             research_label=_to_str(item.get("research_label")),
+            labels=_to_str_list(item.get("labels")),
             market_open_check_seconds=int(item.get("market_open_check_seconds", 10)),
             max_concurrent_positions=(
                 int(item["max_concurrent_positions"])
@@ -107,6 +125,12 @@ class SettingConfig:
             filter_spec_json=_to_str(item.get("filter_spec_json")),
             execution_spec_json=_to_str(item.get("execution_spec_json")),
             notes=_to_str(item.get("notes")),
+            unit_level=int(item["unit_level"]) if item.get("unit_level") is not None else None,
+            unit_level_policy_name=_to_str(item.get("unit_level_policy_name")),
+            unit_level_policy_version=_to_str(item.get("unit_level_policy_version")),
+            unit_level_updated_at=_to_str(item.get("unit_level_updated_at")),
+            unit_level_updated_by=_to_str(item.get("unit_level_updated_by")),
+            unit_level_decision_month=_to_str(item.get("unit_level_decision_month")),
         )
 
     def parsed_filter_specs(self) -> list[dict[str, Any]]:
@@ -118,6 +142,14 @@ class SettingConfig:
         if isinstance(loaded, dict):
             return [loaded]
         raise ValueError("filter_spec_json must be a JSON object or array")
+
+    def parsed_execution_spec(self) -> dict[str, Any]:
+        if not self.execution_spec_json:
+            return {}
+        loaded = json.loads(self.execution_spec_json)
+        if isinstance(loaded, dict):
+            return loaded
+        raise ValueError("execution_spec_json must be a JSON object")
 
 
 @dataclass(frozen=True)

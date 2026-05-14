@@ -83,6 +83,8 @@ SCAN_FILTER_MAP: dict[str, CanonicalFilter] = {item.label: item for item in SCAN
 _SLOPE_LABEL_RE = re.compile(r"^(ge|le)(-?\d+(?:[._]\d+)?)$")
 _VOL_PERCENTILE_LABEL_RE = re.compile(r"^vol_(ge|lt)_p(100|[1-9]?\d)$")
 _RIGHT_DOMINANCE_LABEL_RE = re.compile(r"^right_dom_ge(-?\d+(?:[._]\d+)?)$")
+_OPPOSITE_RIGHT_DOMINANCE_LABEL_RE = re.compile(r"^opp_right_dom_ge(-?\d+(?:[._]\d+)?)$")
+_TREND_RATIO_LABEL_RE = re.compile(r"^(trend_ge|range_lt)_(\d+(?:[._]\d+)?)$")
 
 
 def canonical_filter_labels() -> list[str]:
@@ -123,6 +125,23 @@ def parse_right_dominance_filter_label(label: str) -> tuple[str, float] | None:
     return "ge", float(match.group(1).replace("_", "."))
 
 
+def parse_opposite_right_dominance_filter_label(label: str) -> tuple[str, float] | None:
+    match = _OPPOSITE_RIGHT_DOMINANCE_LABEL_RE.fullmatch(label)
+    if match is None:
+        return None
+    return "ge", float(match.group(1).replace("_", "."))
+
+
+def parse_trend_ratio_filter_label(label: str) -> tuple[str, float] | None:
+    match = _TREND_RATIO_LABEL_RE.fullmatch(label)
+    if match is None:
+        return None
+    raw_operator, raw_threshold = match.groups()
+    operator = "ge" if raw_operator == "trend_ge" else "lt"
+    threshold = float(raw_threshold.replace("_", "."))
+    return operator, threshold
+
+
 def get_filter_family(label: str) -> FilterFamily:
     canonical = SCAN_FILTER_MAP.get(label)
     if canonical is not None:
@@ -133,6 +152,10 @@ def get_filter_family(label: str) -> FilterFamily:
         return "pre_range_regime"
     if parse_right_dominance_filter_label(label) is not None:
         return "shape_balance"
+    if parse_opposite_right_dominance_filter_label(label) is not None:
+        return "shape_balance"
+    if parse_trend_ratio_filter_label(label) is not None:
+        return "trend_ratio"
     raise ValueError(f"Unsupported filter label: {label}")
 
 
@@ -168,6 +191,10 @@ def evaluate_canonical_filter(
         return features.same_sign
     if label == "opposite_sign":
         return features.opposite_sign
+    opp_right_dom_spec = parse_opposite_right_dominance_filter_label(label)
+    if opp_right_dom_spec is not None:
+        _, threshold = opp_right_dom_spec
+        return features.opposite_sign and features.right_strength_balance_pips >= threshold
     vol_spec = parse_volatility_filter_label(label)
     if vol_spec is not None:
         if resolved_pre_range_threshold is None:
@@ -181,10 +208,14 @@ def evaluate_canonical_filter(
         _, parsed_threshold = right_dom_spec
         resolved_threshold = dynamic_threshold if dynamic_threshold is not None else parsed_threshold
         return features.right_strength_balance_pips >= resolved_threshold
-    if label == "trend_ge_0_5":
-        return features.trend_ratio == features.trend_ratio and features.trend_ratio >= 0.5
-    if label == "range_lt_0_3":
-        return features.trend_ratio == features.trend_ratio and features.trend_ratio < 0.3
+    trend_ratio_spec = parse_trend_ratio_filter_label(label)
+    if trend_ratio_spec is not None:
+        operator, threshold = trend_ratio_spec
+        if features.trend_ratio != features.trend_ratio:
+            return False
+        if operator == "ge":
+            return features.trend_ratio >= threshold
+        return features.trend_ratio < threshold
     raise ValueError(f"Unsupported canonical filter label: {label}")
 
 
@@ -210,6 +241,15 @@ def to_runtime_filter_spec(
         return RuntimeFilterSpec(filter_type="shape_balance", mode="same_sign")
     if label == "opposite_sign":
         return RuntimeFilterSpec(filter_type="shape_balance", mode="opposite_sign")
+    opp_right_dom_spec = parse_opposite_right_dominance_filter_label(label)
+    if opp_right_dom_spec is not None:
+        _, threshold = opp_right_dom_spec
+        return RuntimeFilterSpec(
+            filter_type="shape_balance",
+            operator="ge",
+            mode="opposite_sign_right_strength_balance",
+            threshold=float(threshold),
+        )
     vol_spec = parse_volatility_filter_label(label)
     if vol_spec is not None:
         if pre_range_threshold is None:
@@ -226,10 +266,10 @@ def to_runtime_filter_spec(
             mode="right_strength_balance",
             threshold=float(resolved_threshold),
         )
-    if label == "trend_ge_0_5":
-        return RuntimeFilterSpec(filter_type="trend_ratio", operator="ge", threshold=0.5)
-    if label == "range_lt_0_3":
-        return RuntimeFilterSpec(filter_type="trend_ratio", operator="lt", threshold=0.3)
+    trend_ratio_spec = parse_trend_ratio_filter_label(label)
+    if trend_ratio_spec is not None:
+        operator, threshold = trend_ratio_spec
+        return RuntimeFilterSpec(filter_type="trend_ratio", operator=operator, threshold=threshold)
     raise ValueError(f"Unsupported canonical filter label: {label}")
 
 
@@ -261,8 +301,10 @@ __all__ = [
     "evaluate_canonical_filter",
     "get_filter_family",
     "get_canonical_filter",
+    "parse_opposite_right_dominance_filter_label",
     "parse_slope_filter_label",
     "parse_right_dominance_filter_label",
+    "parse_trend_ratio_filter_label",
     "parse_volatility_filter_label",
     "runtime_filter_dicts",
     "to_runtime_filter_spec",

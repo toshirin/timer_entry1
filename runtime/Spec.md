@@ -106,6 +106,16 @@ runtime は side 文字列から直接 Bid / Ask を分岐せず、core の Dire
 - Lambda 内では setting ごとの local clock を timezone-aware に UTC へ変換して判定する
 - UTC 固定時刻で直接 setting を判定しない
 
+### 5.4 除外 window
+
+`execution_spec_json.exclude_windows` に除外 window が指定された setting は、entry handler の local clock 一致後、Oanda API を呼ぶ前に除外判定を行う。
+
+- 初期対応 window は `us_uk_dst_mismatch`
+- `us_uk_dst_mismatch` は London 系 setting の US / UK DST mismatch 期間を除外する
+- 除外日は `skipped_exclude_window` として `decision_log` に記録する
+- forced exit handler は安全側に倒すため、除外 window では止めない
+- 未知の window 名や不正な `exclude_windows` 型は config error とみなし、`SETTING_ERROR` / handler result `status=error` として目立たせる。現行実装では `skipped_config_error` の decision_log にはしない
+
 ## 6. Setting Config 方針
 
 ### 6.1 命名
@@ -136,6 +146,8 @@ setting は以下の条件をすべて満たした場合のみ実行対象とす
 
 - 先に broker 上で open trade を作った setting が優先される
 - 後続 setting は open trade 数により `skipped_concurrency` として不発にする
+- ただし、open trade の `setting_id` を broker `clientExtensions.id` から復元でき、対応する setting に `label=watch` が付いている場合、その open trade は concurrency count から除外する
+- `setting_id` を復元できない open trade、または setting_config を参照できない open trade は安全側で concurrency count に含める
 - 同一 setting / 同一 trade date の二重発注は `trade_state` の conditional write で防ぐ
 
 ただし、複数 setting が同時起動し、どちらも broker open trade 作成前に concurrency check を通過する race は残りうる。将来、同一 bucket 内の候補を厳密に排他したい場合は、account / instrument / strategy group 単位の lock item を DynamoDB に持つ。
@@ -197,6 +209,7 @@ GSI:
 - `tp_pips`
 - `sl_pips`
 - `research_label`
+- `labels`
 - `market_open_check_seconds`
 - `max_concurrent_positions`
 - `kill_switch_dd_pct`
@@ -216,6 +229,7 @@ GSI:
 - 検索・判定に使う項目はトップレベル属性に置く
 - 将来増える setting 詳細は JSON 文字列または Map 属性で持つ
 - `instrument` は初版では `USD_JPY` 固定だが、属性としては保持する
+- `labels` は ops dashboard のフィルタ用に使う文字列配列とし、runtime の売買判定には使わない
 - 初期運用では `max_concurrent_positions=1` を基本値とし、口座上の open trade が 1 本でも残っていれば新規 entry を見送る
 
 ### 7.2 `trigger_bucket`
@@ -367,8 +381,11 @@ status 例:
 - `decision`
 - `reason`
 - `blocking_trade_id`
-- `blocking_setting_id`
 - `open_trade_count`
+- `open_trade_setting_ids`
+- `blocking_open_trade_count`
+- `blocking_trade_setting_id`
+- `ignored_watch_open_trade_count`
 - `filter_results`
 - `created_at`
 - `ttl`
@@ -384,6 +401,7 @@ status 例:
 - `skipped_duplicate`
 - `skipped_filter`
 - `skipped_kill_switch`
+- `skipped_exclude_window`
 - `skipped_config_error`
 - `entry_failed`
 - `exit_failed`
@@ -396,6 +414,7 @@ status 例:
 - market closed
 - clock mismatch
 - kill switch
+- exclude window
 - config error
 
 ## 8. 時刻と市場セッション
@@ -645,7 +664,7 @@ CloudWatch 上で setting ごとの判定経緯を追跡できるように、検
 
 ## 16.1 qualify から runtime config への変換
 
-`qualify/params/{slot_id}/*.json` は研究・検証側の入力であり、そのまま `setting_config` へ投入しない。
+`qualify/params/{slot_id}/{version_id}/*.json` は研究・検証側の入力であり、そのまま `setting_config` へ投入しない。
 
 責務分担は以下とする。
 

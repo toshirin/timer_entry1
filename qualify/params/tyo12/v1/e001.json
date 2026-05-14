@@ -1,0 +1,17 @@
+{
+  "experiment_code": "E001",
+  "variant_code": null,
+  "slot_id": "tyo12",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "12:55",
+    "forced_exit_clock_local": "13:50",
+    "tp_pips": 25,
+    "sl_pips": 15,
+    "filter_labels": ["ge0"]
+  },
+  "comparison_family": "pre_open_slope",
+  "comparison_labels": ["ge0", "ge1", "ge2", "ge4", "ge6"],
+  "pass_stability_gate": true,
+  "notes": "tyo12はbuy主線。scanではge0@12:55が最上位かつ安定。gross=567.8, in=136.6, out=431.2, rank_gap_abs=1, ex_top10=317.8, same_bar_conflict=0, unresolved=0。allはbuyでもgate通過0件のため主実験から除外。sellもgate通過0件のため除外。TP/SL主線は25/15、近傍確認候補は20/15, 25/10, 25/25。"
+}

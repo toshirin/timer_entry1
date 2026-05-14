@@ -49,6 +49,16 @@ def _optional_float(data: dict[str, Any], key: str) -> float | None:
     return float(data[key]) if data.get(key) is not None else None
 
 
+def _string_tuple(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, (list, tuple)):
+        return tuple(str(item) for item in value)
+    raise ValueError(f"string array is required: {value!r}")
+
+
 @dataclass(frozen=True)
 class BacktestTrade:
     # 1 trade を scan / qualify / ops で共通に扱える最小単位。
@@ -146,6 +156,7 @@ class RuntimeConfig:
     tp_pips: float
     sl_pips: float
     research_label: str | None
+    labels: tuple[str, ...]
     market_open_check_seconds: int
     max_concurrent_positions: int | None
     kill_switch_dd_pct: float | None
@@ -186,6 +197,7 @@ class StrategySetting:
     margin_ratio_target: float | None = None
     size_scale_pct: float | None = None
     research_label: str | None = None
+    labels: tuple[str, ...] = ()
     market_open_check_seconds: int = 10
     max_concurrent_positions: int | None = 1
     kill_switch_dd_pct: float | None = -0.2
@@ -244,6 +256,7 @@ class StrategySetting:
             tp_pips=float(self.tp_pips),
             sl_pips=float(self.sl_pips),
             research_label=self.research_label,
+            labels=self.labels,
             market_open_check_seconds=int(self.market_open_check_seconds),
             max_concurrent_positions=self.max_concurrent_positions,
             kill_switch_dd_pct=self.kill_switch_dd_pct,
@@ -323,6 +336,7 @@ class QualifyScenario:
     slippage_mode: str | None = None
     fixed_slippage_pips: float | None = None
     entry_delay_seconds: int | None = None
+    target_maintenance_margin_pct: float | None = None
     risk_fraction: float | None = None
     notes: str | None = None
 
@@ -354,6 +368,7 @@ class QualifyPromotionResult:
     e007_passed: bool
     e008_passed: bool
     approved_for_runtime: bool
+    selected_target_maintenance_margin_pct: float | None = None
     selected_risk_fraction: float | None = None
     kill_switch_dd_pct: float | None = -0.2
     min_maintenance_margin_pct: float | None = 150.0
@@ -366,6 +381,7 @@ class QualifyPromotionResult:
     in_gross_pips: float | None = None
     out_gross_pips: float | None = None
     win_rate: float | None = None
+    labels: tuple[str, ...] = ()
     source_params_files: dict[str, str] = field(default_factory=dict)
     source_output_dirs: dict[str, str] = field(default_factory=dict)
     evidence: dict[str, Any] = field(default_factory=dict)
@@ -379,6 +395,7 @@ class QualifyPromotionResult:
         filter_labels = tuple(str(label) for label in data.get("filter_labels", []))
         if not filter_labels:
             raise ValueError("filter_labels must not be empty")
+        labels = _string_tuple(data.get("labels"))
         return cls(
             result_type=result_type,
             schema_version=int(data["schema_version"]),
@@ -398,6 +415,10 @@ class QualifyPromotionResult:
             e007_passed=bool(data["e007_passed"]),
             e008_passed=bool(data["e008_passed"]),
             approved_for_runtime=bool(data["approved_for_runtime"]),
+            selected_target_maintenance_margin_pct=_optional_float(
+                data,
+                "selected_target_maintenance_margin_pct",
+            ),
             selected_risk_fraction=_optional_float(data, "selected_risk_fraction"),
             kill_switch_dd_pct=_optional_float(data, "kill_switch_dd_pct"),
             min_maintenance_margin_pct=_optional_float(data, "min_maintenance_margin_pct"),
@@ -410,6 +431,7 @@ class QualifyPromotionResult:
             in_gross_pips=_optional_float(data, "in_gross_pips"),
             out_gross_pips=_optional_float(data, "out_gross_pips"),
             win_rate=_optional_float(data, "win_rate"),
+            labels=labels,
             source_params_files=dict(data.get("source_params_files", {})),
             source_output_dirs=dict(data.get("source_output_dirs", {})),
             evidence=dict(data.get("evidence", {})),
@@ -445,7 +467,7 @@ class QualifyPromotionResult:
         if self.initial_capital_jpy is None:
             raise ValueError("initial_capital_jpy must be set before promotion")
         required_metric_names = (
-            "selected_risk_fraction",
+            "selected_target_maintenance_margin_pct",
             "final_equity_jpy",
             "min_maintenance_margin_pct",
             "annualized_pips",
@@ -459,6 +481,11 @@ class QualifyPromotionResult:
         missing_metrics = [name for name in required_metric_names if getattr(self, name) is None]
         if missing_metrics:
             raise ValueError(f"promotion result metrics must be set before promotion: {missing_metrics}")
+        if self.min_maintenance_margin_pct != self.selected_target_maintenance_margin_pct:
+            raise ValueError(
+                "min_maintenance_margin_pct must match selected_target_maintenance_margin_pct "
+                "for runtime promotion"
+            )
 
     def to_strategy_setting(self) -> StrategySetting:
         return StrategySetting(
@@ -472,6 +499,7 @@ class QualifyPromotionResult:
             sl_pips=self.sl_pips,
             filter_labels=self.filter_labels,
             research_label=self.result_id,
+            labels=self.labels,
             notes=self.notes,
         )
 

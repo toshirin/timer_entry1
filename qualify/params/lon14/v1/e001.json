@@ -1,0 +1,23 @@
+{
+  "experiment_code": "E001",
+  "variant_code": null,
+  "slot_id": "lon14",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "14:50",
+    "forced_exit_clock_local": "15:45",
+    "tp_pips": 25,
+    "sl_pips": 25,
+    "filter_labels": ["right_stronger"]
+  },
+  "comparison_family": "shape_balance",
+  "comparison_labels": [
+    "all",
+    "right_stronger",
+    "right_dom_ge2",
+    "right_dom_ge4",
+    "right_dom_ge6"
+  ],
+  "pass_stability_gate": true,
+  "notes": "summary_lon14.csv shows the strongest stable candidate is lon14 buy right_stronger at 14:50 with SL25/TP25: gross_pips=953.1, in_gross_pips=54.8, out_gross_pips=898.3, rank_gap_abs=46, ex_top10_gross_pips=703.1, same_bar_conflict_count=0, same_bar_unresolved_count=0. Keep all only as comparison, not as the main baseline, because all at the same TP/SL fails stability due to negative in_gross."
+}

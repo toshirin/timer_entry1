@@ -1,0 +1,248 @@
+{
+  "result_type": "qualify_promotion_result",
+  "schema_version": 1,
+  "result_id": "lon09_sell_v1",
+  "slot_id": "lon09",
+  "side": "sell",
+  "labels": [],
+  "market_tz": "Europe/London",
+  "entry_clock_local": "09:45",
+  "forced_exit_clock_local": "10:35",
+  "tp_pips": 10,
+  "sl_pips": 15,
+  "filter_labels": [
+    "range_lt_0_3"
+  ],
+  "pass_stability_gate": true,
+  "e004_passed": true,
+  "e005_passed": true,
+  "e006_passed": true,
+  "e007_passed": true,
+  "e008_passed": true,
+  "approved_for_runtime": true,
+  "selected_target_maintenance_margin_pct": 150.0,
+  "kill_switch_dd_pct": -0.2,
+  "min_maintenance_margin_pct": 150.0,
+  "initial_capital_jpy": 100000,
+  "final_equity_jpy": 134865.037045,
+  "annualized_pips": 39.8,
+  "cagr": 0.043655,
+  "trade_rate": 0.318482,
+  "gross_pips": 278.6,
+  "in_gross_pips": 136.5,
+  "out_gross_pips": 142.1,
+  "win_rate": 0.535406,
+  "source_params_files": {
+    "E004": "qualify/params/lon09/v1/e004.json",
+    "E005-E008": "qualify/params/lon09/v1/e005-e008.json"
+  },
+  "source_output_dirs": {
+    "E004": "qualify/out/lon09/v1/E004/latest",
+    "E005-E008": "qualify/out/lon09/v1"
+  },
+  "evidence": {
+    "E004": {
+      "trade_count": 579,
+      "gross_pips": 278.6,
+      "minute_gross_pips": 262.010651,
+      "delta_gross_pips": 16.589349,
+      "in_gross_pips": 136.5,
+      "out_gross_pips": 142.1,
+      "profit_factor": 1.15171,
+      "max_dd_pips": -119.1,
+      "annualized_pips": 39.8,
+      "tick_pass_positive_inout_gate": true,
+      "tick_not_found_count": 0,
+      "forced_exit_missing_count": 0,
+      "entry_after_forced_exit_count": 0,
+      "same_bar_conflict_count": 0,
+      "same_bar_unresolved_count": 0
+    },
+    "E005": {
+      "max_one_way_slip_pips_passed": 0.3,
+      "max_round_trip_slip_pips_passed": 0.6,
+      "slippage_sweep": [
+        {
+          "slip_pips": 0.0,
+          "round_trip_slip_pips": 0.0,
+          "gross_pips": 142.1,
+          "annualized_pips": 47.366667,
+          "profit_factor": 1.139014,
+          "max_dd_pips": -119.1,
+          "win_rate": 0.552124
+        },
+        {
+          "slip_pips": 0.1,
+          "round_trip_slip_pips": 0.2,
+          "gross_pips": 100.4,
+          "annualized_pips": 33.466667,
+          "profit_factor": 1.095948,
+          "max_dd_pips": -123.8,
+          "win_rate": 0.552124
+        },
+        {
+          "slip_pips": 0.2,
+          "round_trip_slip_pips": 0.4,
+          "gross_pips": 48.7,
+          "annualized_pips": 16.233333,
+          "profit_factor": 1.045646,
+          "max_dd_pips": -129.0,
+          "win_rate": 0.517375
+        },
+        {
+          "slip_pips": 0.3,
+          "round_trip_slip_pips": 0.6,
+          "gross_pips": 8.4,
+          "annualized_pips": 2.8,
+          "profit_factor": 1.007701,
+          "max_dd_pips": -134.5,
+          "win_rate": 0.509653
+        }
+      ]
+    },
+    "E006": {
+      "wf_windows": 5,
+      "positive_out_pnl_windows": 5,
+      "pf_gt_1_windows": 5,
+      "min_out_pnl": 0.1,
+      "median_out_pnl": 66.3,
+      "max_out_pnl": 92.6,
+      "min_pf": 1.000292,
+      "worst_max_dd_pips": -110.7,
+      "worst_continuous_loss_period": 8,
+      "summary": "walk-forward accepted; all 5 test windows kept out_pnl > 0 and pf > 1, though 2021 and 2024 were near-flat"
+    },
+    "E007": {
+      "selected_target_maintenance_margin_pct": 150.0,
+      "top_level_min_maintenance_margin_pct_note": "Top-level min_maintenance_margin_pct is runtime entry pre-guard threshold and equals selected_target_maintenance_margin_pct.",
+      "selected_summary_min_maintenance_margin_pct_immediate_sl": 146.341963,
+      "annualized_pips": 39.8,
+      "trade_rate": 0.318482,
+      "win_rate": 0.535406,
+      "cagr": 0.043655,
+      "maintenance_margin_sweep": [
+        {
+          "target_maintenance_margin_pct": 150.0,
+          "final_equity_jpy": 134865.037045,
+          "total_return_pct": 0.34865,
+          "cagr": 0.043655,
+          "annualized_pips": 39.8,
+          "trade_rate": 0.318482,
+          "win_rate": 0.535406,
+          "max_dd_pct": -0.126627,
+          "min_maintenance_margin_pct": 146.341963,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 1.111133
+        },
+        {
+          "target_maintenance_margin_pct": 180.0,
+          "final_equity_jpy": 128882.424159,
+          "total_return_pct": 0.288824,
+          "cagr": 0.036912,
+          "annualized_pips": 39.8,
+          "trade_rate": 0.318482,
+          "win_rate": 0.535406,
+          "max_dd_pct": -0.106357,
+          "min_maintenance_margin_pct": 176.341963,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.925944
+        },
+        {
+          "target_maintenance_margin_pct": 200.0,
+          "final_equity_jpy": 125906.638237,
+          "total_return_pct": 0.259066,
+          "cagr": 0.033458,
+          "annualized_pips": 39.8,
+          "trade_rate": 0.318482,
+          "win_rate": 0.535406,
+          "max_dd_pct": -0.096098,
+          "min_maintenance_margin_pct": 196.341963,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.83335
+        },
+        {
+          "target_maintenance_margin_pct": 230.0,
+          "final_equity_jpy": 122430.847594,
+          "total_return_pct": 0.224308,
+          "cagr": 0.029333,
+          "annualized_pips": 39.8,
+          "trade_rate": 0.318482,
+          "win_rate": 0.535406,
+          "max_dd_pct": -0.083948,
+          "min_maintenance_margin_pct": 226.341963,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.724652
+        },
+        {
+          "target_maintenance_margin_pct": 260.0,
+          "final_equity_jpy": 119772.286734,
+          "total_return_pct": 0.197723,
+          "cagr": 0.02611,
+          "annualized_pips": 39.8,
+          "trade_rate": 0.318482,
+          "win_rate": 0.535406,
+          "max_dd_pct": -0.074525,
+          "min_maintenance_margin_pct": 256.341963,
+          "maintenance_below_130_count": 0,
+          "maintenance_below_100_count": 0,
+          "stop_triggered": false,
+          "pips_year_rate_pct_at_150usd": 0.641038
+        }
+      ]
+    },
+    "E008": {
+      "max_entry_delay_seconds_passed": 30,
+      "entry_delay_sweep": [
+        {
+          "entry_delay_seconds": 0,
+          "gross_pips": 142.1,
+          "annualized_pips": 47.366667,
+          "profit_factor": 1.139014,
+          "max_dd_pips": -119.1,
+          "win_rate": 0.552124
+        },
+        {
+          "entry_delay_seconds": 5,
+          "gross_pips": 118.6,
+          "annualized_pips": 39.533333,
+          "profit_factor": 1.114269,
+          "max_dd_pips": -120.1,
+          "win_rate": 0.544402
+        },
+        {
+          "entry_delay_seconds": 10,
+          "gross_pips": 141.0,
+          "annualized_pips": 47.0,
+          "profit_factor": 1.138793,
+          "max_dd_pips": -124.4,
+          "win_rate": 0.544402
+        },
+        {
+          "entry_delay_seconds": 30,
+          "gross_pips": 96.2,
+          "annualized_pips": 32.066667,
+          "profit_factor": 1.092965,
+          "max_dd_pips": -117.5,
+          "win_rate": 0.548263
+        },
+        {
+          "entry_delay_seconds": 60,
+          "gross_pips": 47.4,
+          "annualized_pips": 15.8,
+          "profit_factor": 1.043602,
+          "max_dd_pips": -152.9,
+          "win_rate": 0.53668
+        }
+      ]
+    }
+  },
+  "notes": "Approved for runtime. E004-E008 all passed. Use lon09 sell 09:45->10:35, tp10/sl15, range_lt_0_3. Runtime entry pre-guard min_maintenance_margin_pct is 150.0 and equals selected_target_maintenance_margin_pct. E007 summary min_maintenance_margin_pct values are retained in evidence as immediate-SL assumed maintenance. Runtime promotion will initialize this setting as unit_level=0 / fixed_units=10; monthly unit level changes are handled by Unit Level Policy."
+}

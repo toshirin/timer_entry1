@@ -1,0 +1,24 @@
+{
+  "experiment_code": "E005-E008",
+  "variant_code": null,
+  "slot_id": "lon14",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "14:50",
+    "forced_exit_clock_local": "15:35",
+    "tp_pips": 25,
+    "sl_pips": 25,
+    "filter_labels": ["right_dom_ge6"]
+  },
+  "pass_stability_gate": true,
+  "selected_experiments": ["E005", "E006", "E007", "E008"],
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "slippage_values": [0.0, 0.1, 0.2, 0.3],
+  "entry_delay_values": [0, 30, 60, 120],
+  "target_maintenance_margin_candidates": [150, 180, 200],
+  "kill_switch_dd_pct": -0.2,
+  "initial_capital_jpy": 100000,
+  "notes": "E004 tick replay passed with gross_pips=720.7, PF=1.291, max_dd_pips=-161.8, and minute-vs-tick gross delta=-0.303 pips. Run standard robustness suite: E005 one-way slippage up to 0.3 pips, E008 delay up to 120s, and E007 standard maintenance margin grid 150/180/200 with kill_switch_dd_pct=-0.2."
+}

@@ -10,7 +10,7 @@
 
 - 添付された `summary.csv` などを `pandas.read_csv()` で読み込んでください
 - 読み込んだ各 CSV について、行数、列名、主要列の欠損状況を確認してください
-- E007 では `risk_fraction` ごとの比較表を Python で作成してください
+- E007 では `target_maintenance_margin_pct` ごとの比較表を Python で作成してください
 - E005 では `slip_pips` と実質往復 penalty `2 * slip_pips` の対応表を Python で作成してください
 - 読み込みに失敗した場合、または必要列が不足している場合は、採用 / 合格の結論を出さず、不足ファイルまたは不足列を明記してください
 - 回答本文には、Code Interpreter で確認したことが分かるように、読み込んだファイル名、行数、使った主要列を明記してください
@@ -26,11 +26,15 @@
 - プロンプト2では、結果 CSV を読み、目的値が決まったか / 安全が確認されたかを判断します
 - E001 で問題があれば、派生実験 `E001A` のように新しい params JSON を出してよいです
 - E005 の `slip_pips` は one-way 表示で、実質往復 penalty は `2 * slip_pips` です
-- E007 では各 `risk_fraction` ごとに、`annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_150_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct` を本文に数値で列挙してください
-- E007 では `SL5 -> risk_fraction 0.5%` を基準に、今回の `sl_pips` へ換算した中心 risk が妥当か確認してください
-- `annualized_pips` は `10 pips ≒ 1%/年` を目安として `cagr` と照合し、大きく乖離する場合は理由を説明してください
-- `min_maintenance_margin_pct` は 150% 前後を実運用目安として解釈し、著しく不自然な値が出た場合は、採用判断の前に列定義または計算仕様の確認が必要と明記してください
-- E007 の結論は CAGR 最大ではなく、`min_maintenance_margin_pct >= 150` を満たしたうえでの安全側採用を優先してください
+- E007 では各 `target_maintenance_margin_pct` ごとに、`annualized_pips`, `cagr`, `trade_rate`, `win_rate`, `max_dd_pct`, `min_maintenance_margin_pct`, `maintenance_below_130_count`, `maintenance_below_100_count`, `stop_triggered`, `final_equity_jpy`, `total_return_pct`, `pips_year_rate_pct_at_150usd` を本文に数値で列挙してください
+- E007 summary の `min_maintenance_margin_pct` / below count は、entry 直後の維持率ではなく、各 trade が即時 SL 到達した場合の想定維持率で評価してください
+- E007 では 150 -> 180 -> 200 -> 必要なら 230 -> 260 の順に、安全条件を満たした最初の維持率を採用してください
+- `maintenance_below_100_count > 0` は一発NGです
+- `stop_triggered == true` または `maintenance_below_130_count > 0` は一発アウトではなく、一段上の維持率確認シグナルとして読んでください
+- 120%ラインと `maintenance_below_150_count` は採用判定の主役にしないでください
+- `pips_year_rate_pct_at_150usd` は `166.67 / target_maintenance_margin_pct` の近似指標として、`annualized_pips` と `cagr` の関係を読む補助にしてください
+- E007 の結論は CAGR 最大ではなく、安全条件を満たした最小の維持率候補を優先してください
+- `stop_triggered == true` の候補では、`cagr` と `annualized_pips` が kill-switch 停止時点までの部分期間集計であることを明記してください
 
 ## 添付する資料
 
@@ -47,7 +51,7 @@
 1. 結果 CSV から、今回の目的値が決まったか判断してください
 2. gross 最大だけでなく、PF、maxDD、in/out、trade_count、sanity を併せて見てください
 3. E005 では one-way slip と往復 penalty の読み替えを明記してください
-4. E007 では risk grid の妥当性、維持率、`cagr`、`annualized_pips` との整合を含めて安全性を判断してください
+4. E007 では維持率候補、130%警戒線、100%絶対NG、`cagr`、`annualized_pips`、`pips_year_rate_pct_at_150usd` との整合を含めて安全性を判断してください
 5. 問題がなければ次 experiment へ進む結論を出してください
 6. E008 まで合格した場合は、次に `qualify/prompts/final_promotion_result_thread.md` で最終結果 JSON を作るよう指示してください
 7. 問題があれば、派生実験として再実験 JSON を `json` コードブロックで出してください

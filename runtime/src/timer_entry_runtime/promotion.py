@@ -5,7 +5,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from timer_entry.filters import parse_volatility_filter_label
 from timer_entry.schemas import QualifyPromotionResult, StrategySetting
+
+from .level_policy import POLICY_NAME, POLICY_VERSION, infer_level_from_sizing
 
 
 def _load_payload(path: str | Path) -> dict[str, Any]:
@@ -25,6 +28,7 @@ def _setting_from_result(payload: dict[str, Any]) -> tuple[StrategySetting, dict
             "source_result_id": result.result_id,
             "source_params_files": result.source_params_files,
             "source_output_dirs": result.source_output_dirs,
+            "selected_target_maintenance_margin_pct": result.selected_target_maintenance_margin_pct,
             "selected_risk_fraction": result.selected_risk_fraction,
             "final_equity_jpy": result.final_equity_jpy,
             "annualized_pips": result.annualized_pips,
@@ -40,6 +44,86 @@ def _setting_from_result(payload: dict[str, Any]) -> tuple[StrategySetting, dict
     )
 
 
+def _read_json_if_exists(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"JSON object is required: {path}")
+    return payload
+
+
+def _source_metadata_payloads(result_path: Path, payload: dict[str, Any]) -> list[dict[str, Any]]:
+    candidates: list[Path] = []
+    source_output_dirs = payload.get("source_output_dirs")
+    if isinstance(source_output_dirs, dict):
+        for key in ("E004", "E005-E008"):
+            raw_dir = source_output_dirs.get(key)
+            if isinstance(raw_dir, str) and raw_dir:
+                source_dir = Path(raw_dir)
+                candidates.append(source_dir / "metadata.json")
+                candidates.append(source_dir / "suite_metadata.json")
+                if not source_dir.is_absolute():
+                    candidates.append(result_path.parent / source_dir / "metadata.json")
+                    candidates.append(result_path.parent / source_dir / "suite_metadata.json")
+
+    payloads: list[dict[str, Any]] = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        metadata = _read_json_if_exists(candidate)
+        if metadata is not None:
+            payloads.append(metadata)
+    return payloads
+
+
+def _threshold_from_metadata(label: str, metadata: dict[str, Any]) -> float | None:
+    threshold_metadata = metadata.get("threshold_metadata")
+    if isinstance(threshold_metadata, dict):
+        label_meta = threshold_metadata.get(label)
+        if isinstance(label_meta, dict):
+            raw = label_meta.get("resolved_pre_range_threshold")
+            if raw is not None:
+                return float(raw)
+    raw_threshold = metadata.get("pre_range_threshold")
+    if raw_threshold is not None:
+        return float(raw_threshold)
+    return None
+
+
+def _resolve_pre_range_threshold(
+    *,
+    result_path: Path,
+    payload: dict[str, Any],
+    filter_labels: tuple[str, ...],
+) -> float | None:
+    volatility_labels = [label for label in filter_labels if parse_volatility_filter_label(label) is not None]
+    if not volatility_labels:
+        return None
+
+    thresholds: set[float] = set()
+    for label in volatility_labels:
+        threshold = _threshold_from_metadata(label, payload)
+        if threshold is None:
+            for metadata in _source_metadata_payloads(result_path, payload):
+                threshold = _threshold_from_metadata(label, metadata)
+                if threshold is not None:
+                    break
+        if threshold is None:
+            raise ValueError(
+                f"pre_range_threshold is required for {label}; "
+                "include threshold_metadata/pre_range_threshold in the qualify result or source metadata"
+            )
+        thresholds.add(float(threshold))
+
+    if len(thresholds) > 1:
+        raise ValueError(f"multiple pre_range thresholds in one runtime setting are not supported: {sorted(thresholds)}")
+    return next(iter(thresholds))
+
+
 def promote_qualify_result_to_runtime_config(
     path: str | Path,
     *,
@@ -53,8 +137,14 @@ def promote_qualify_result_to_runtime_config(
     min_maintenance_margin_pct: float | None = None,
     max_concurrent_positions: int | None = 1,
 ) -> dict[str, object]:
-    payload = _load_payload(path)
+    result_path = Path(path)
+    payload = _load_payload(result_path)
     setting, execution_spec, result = _setting_from_result(payload)
+    pre_range_threshold = _resolve_pre_range_threshold(
+        result_path=result_path,
+        payload=payload,
+        filter_labels=setting.filter_labels,
+    )
 
     if setting.tp_pips <= 0:
         raise ValueError("tp_pips must be greater than zero before promotion")
@@ -62,6 +152,8 @@ def promote_qualify_result_to_runtime_config(
         raise ValueError("sl_pips must be greater than zero before promotion")
     if fixed_units is not None and fixed_units <= 0:
         raise ValueError("fixed_units must be greater than zero when provided")
+    if margin_ratio_target is None:
+        margin_ratio_target = result.selected_target_maintenance_margin_pct
     if fixed_units is None and margin_ratio_target is None:
         raise ValueError("margin_ratio_target is required when fixed_units is not provided")
     if margin_ratio_target is not None and margin_ratio_target <= 0:
@@ -86,13 +178,25 @@ def promote_qualify_result_to_runtime_config(
             if min_maintenance_margin_pct is not None
             else result.min_maintenance_margin_pct,
             "max_concurrent_positions": max_concurrent_positions,
+            "pre_range_threshold": pre_range_threshold,
             "execution_spec": {
                 **execution_spec,
+                "pre_range_threshold": pre_range_threshold,
                 "source_file": str(path),
             },
         }
     )
     runtime_config = resolved_setting.to_runtime_json_dict()
+    runtime_config["unit_level"] = infer_level_from_sizing(
+        unit_level=None,
+        fixed_units=fixed_units,
+        size_scale_pct=size_scale_pct,
+    )
+    runtime_config["unit_level_policy_name"] = POLICY_NAME
+    runtime_config["unit_level_policy_version"] = POLICY_VERSION
+    runtime_config["unit_level_updated_at"] = None
+    runtime_config["unit_level_updated_by"] = "promotion"
+    runtime_config["unit_level_decision_month"] = None
     if not runtime_config.get("filter_spec_json") and tuple(setting.filter_labels) != ("all",):
         raise ValueError("filter_labels could not be converted to runtime filter_spec_json")
     return runtime_config

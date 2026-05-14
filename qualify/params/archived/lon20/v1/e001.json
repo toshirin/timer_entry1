@@ -1,0 +1,17 @@
+{
+  "experiment_code": "E001",
+  "variant_code": null,
+  "slot_id": "lon20",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "20:00",
+    "forced_exit_clock_local": "20:55",
+    "tp_pips": 25,
+    "sl_pips": 20,
+    "filter_labels": ["vol_ge_med"]
+  },
+  "comparison_family": "pre_range_regime",
+  "comparison_labels": ["all", "vol_ge_med", "vol_ge_p60", "vol_ge_p70", "vol_ge_p80"],
+  "pass_stability_gate": true,
+  "notes": "Only buy/20:00 vol_ge_med candidates pass stability gate. all is retained as comparison anchor only; high pre_range regime appears to be the active filter family. Baseline uses TP25/SL20 because it has the strongest gross/out performance with positive ex_top10 and zero same-bar conflict."
+}

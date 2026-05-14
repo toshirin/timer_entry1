@@ -5,11 +5,13 @@ from dataclasses import asdict
 from datetime import datetime
 from typing import Any
 
+from timer_entry.calendar import is_trading_day_excluded
 from timer_entry.direction import get_direction_spec
 
 from .aws_runtime import RuntimeAws
 from .config import RuntimeConfig
 from .filtering import evaluate_filters
+from .level_policy import WATCH_LABEL
 from .logging_utils import emit_log
 from .models import HandlerResult, SettingConfig, TriggerContext, pnl_pips
 from .oanda_client import OandaApiError, OandaClient
@@ -82,12 +84,20 @@ def _record_decision(
     now_utc: datetime,
     decision: str,
     reason: str | None,
+    correlation_id: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> None:
     try:
+        decision_id = _decision_id(setting, handler_name, now_utc)
+        effective_correlation_id = (
+            correlation_id
+            or (str(extra["trade_id"]) if extra and extra.get("trade_id") is not None else None)
+            or decision_id
+        )
         aws_runtime.create_decision_log(
             aws_runtime.build_decision_log_seed(
-                decision_id=_decision_id(setting, handler_name, now_utc),
+                decision_id=decision_id,
+                correlation_id=effective_correlation_id,
                 setting=setting,
                 handler_name=handler_name,
                 trigger_bucket=trigger_bucket,
@@ -150,20 +160,98 @@ def _filter_checks(
     return all(item["passed"] for item in serialized), serialized
 
 
-def _concurrency_check(*, setting: SettingConfig, oanda_client: OandaClient) -> tuple[bool, dict[str, Any]]:
+def _exclude_window_check(*, setting: SettingConfig, now_utc: datetime) -> tuple[bool, dict[str, Any]]:
+    execution_spec = setting.parsed_execution_spec()
+    raw_windows = execution_spec.get("exclude_windows", [])
+    if raw_windows is None:
+        raw_windows = []
+    if isinstance(raw_windows, str):
+        exclude_windows = [raw_windows]
+    elif isinstance(raw_windows, list):
+        exclude_windows = [str(item) for item in raw_windows]
+    else:
+        raise ValueError("execution_spec_json.exclude_windows must be a string or array")
+
+    session_date = trade_date_local(now_utc, setting.market_tz)
+    details: dict[str, Any] = {
+        "exclude_windows": exclude_windows,
+        "session_date": session_date,
+        "session_tz": setting.market_tz,
+    }
+    if not exclude_windows:
+        details["trigger_reason"] = None
+        return True, details
+
+    excluded = is_trading_day_excluded(session_date, setting.market_tz, exclude_windows)
+    details["trigger_reason"] = "exclude_window" if excluded else None
+    return not excluded, details
+
+
+def _open_trade_setting_id(open_trade: dict[str, Any]) -> str | None:
+    for key in ("clientExtensions", "tradeClientExtensions"):
+        extensions = open_trade.get(key)
+        if isinstance(extensions, dict) and extensions.get("id"):
+            return str(extensions["id"])
+    return None
+
+
+def _has_watch_label(setting: SettingConfig | None) -> bool:
+    if setting is None:
+        return False
+    return any(str(label).strip().lower() == WATCH_LABEL for label in setting.labels)
+
+
+def _concurrency_check(
+    *,
+    setting: SettingConfig,
+    oanda_client: OandaClient,
+    aws_runtime: RuntimeAws,
+) -> tuple[bool, dict[str, Any]]:
     max_concurrent_positions = setting.max_concurrent_positions
     open_trades = oanda_client.get_open_trades()
+    blocking_trades: list[dict[str, Any]] = []
+    ignored_watch_trades: list[dict[str, Any]] = []
+    open_trade_setting_ids: list[str | None] = []
+    setting_cache: dict[str, SettingConfig | None] = {}
+
+    for trade in open_trades:
+        trade_setting_id = _open_trade_setting_id(trade)
+        open_trade_setting_ids.append(trade_setting_id)
+        trade_setting = None
+        if trade_setting_id:
+            if trade_setting_id not in setting_cache:
+                setting_cache[trade_setting_id] = aws_runtime.get_setting_config(trade_setting_id)
+            trade_setting = setting_cache[trade_setting_id]
+        if _has_watch_label(trade_setting):
+            ignored_watch_trades.append(trade)
+        else:
+            blocking_trades.append(trade)
+
     details: dict[str, Any] = {
         "max_concurrent_positions": max_concurrent_positions,
         "open_trade_count": len(open_trades),
         "open_trade_ids": [str(item.get("id")) for item in open_trades if item.get("id") is not None],
+        "open_trade_setting_ids": open_trade_setting_ids,
+        "blocking_open_trade_count": len(blocking_trades),
+        "blocking_open_trade_ids": [str(item.get("id")) for item in blocking_trades if item.get("id") is not None],
+        "ignored_watch_open_trade_count": len(ignored_watch_trades),
+        "ignored_watch_open_trade_ids": [
+            str(item.get("id")) for item in ignored_watch_trades if item.get("id") is not None
+        ],
     }
     if max_concurrent_positions is None:
         details["trigger_reason"] = None
         return True, details
-    if len(open_trades) >= max_concurrent_positions:
+    if len(blocking_trades) >= max_concurrent_positions:
         details["trigger_reason"] = "open_position_limit_reached"
-        details["blocking_trade_id"] = str(open_trades[0].get("id")) if open_trades and open_trades[0].get("id") is not None else None
+        details["blocking_trade_id"] = (
+            str(blocking_trades[0].get("id"))
+            if blocking_trades and blocking_trades[0].get("id") is not None
+            else None
+        )
+        details["blocking_trade_setting_id"] = (
+            _open_trade_setting_id(blocking_trades[0]) if blocking_trades else None
+        )
         return False, details
     details["trigger_reason"] = None
     return True, details
@@ -226,6 +314,7 @@ def _create_entry_trade(
     price_snapshot: Any,
 ) -> dict[str, Any]:
     trade_id = f"{setting.setting_id}#{trade_date_local(now_utc, setting.market_tz)}"
+    correlation_id = trade_id
     execution_id = f"{trade_id}#{int(now_utc.timestamp())}"
     scheduled_local = scheduled_clock_iso_for_date(now_utc, setting.market_tz, setting.entry_clock_local)
     seed = aws_runtime.build_trade_state_seed(
@@ -303,6 +392,7 @@ def _create_entry_trade(
         aws_runtime.create_execution_log(
             aws_runtime.build_execution_log_seed(
                 execution_id=execution_id,
+                correlation_id=correlation_id,
                 trade_id=trade_id,
                 setting=setting,
                 units=sizing.requested_units,
@@ -312,6 +402,19 @@ def _create_entry_trade(
                 now_utc=now_utc,
                 trade_date_local=trade_date_local(now_utc, setting.market_tz),
             )
+        )
+        aws_runtime.update_execution_log(
+            execution_id,
+            requested_units=sizing.requested_units,
+            sizing_basis=sizing.sizing_basis,
+            balance=account.balance,
+            effective_margin_ratio=sizing.effective_margin_ratio,
+            estimated_margin_ratio_after_entry=sizing.estimated_margin_ratio_after_entry,
+            margin_price=sizing.margin_price,
+            margin_price_side=sizing.margin_price_side,
+            requested_entry_price=requested_entry.price,
+            requested_entry_price_side=requested_entry.price_side,
+            updated_at=now_utc.isoformat(),
         )
         order_result = oanda_client.create_market_order(
             setting=setting,
@@ -415,6 +518,7 @@ def _create_entry_trade(
             now_utc=now_utc,
             decision="entered",
             reason=None,
+            correlation_id=correlation_id,
             extra={"trade_id": trade_id, "entry_trade_id": order_result.trade_id},
         )
         return {
@@ -448,6 +552,7 @@ def _create_entry_trade(
             now_utc=now_utc,
             decision=decision,
             reason=reason,
+            correlation_id=correlation_id,
             extra={"trade_id": trade_id},
         )
         raise
@@ -489,6 +594,24 @@ def run_entry_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 results.append({"setting_id": setting.setting_id, "status": "skipped_clock_mismatch"})
                 continue
 
+            exclude_allowed, exclude_details = _exclude_window_check(setting=setting, now_utc=now_utc)
+            emit_log("SETTING_CHECK", setting_id=setting.setting_id, check_name="exclude_window", **exclude_details, passed=exclude_allowed)
+            if not exclude_allowed:
+                emit_log("SETTING_SKIP", setting_id=setting.setting_id, reason="exclude_window", exclude_window_details=exclude_details)
+                _record_decision(
+                    aws_runtime=aws_runtime,
+                    setting=setting,
+                    handler_name="entry_handler",
+                    trigger_bucket=setting.trigger_bucket_entry,
+                    scheduled_local=scheduled_local,
+                    now_utc=now_utc,
+                    decision="skipped_exclude_window",
+                    reason="exclude_window",
+                    extra=exclude_details,
+                )
+                results.append({"setting_id": setting.setting_id, "status": "skipped_exclude_window"})
+                continue
+
             market_open, price_snapshot = _market_open_check(setting=setting, oanda_client=oanda_client, now_utc=now_utc)
             if not market_open:
                 emit_log("SETTING_SKIP", setting_id=setting.setting_id, reason="market_closed")
@@ -496,7 +619,11 @@ def run_entry_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 results.append({"setting_id": setting.setting_id, "status": "skipped_market_closed"})
                 continue
 
-            concurrency_allowed, concurrency_details = _concurrency_check(setting=setting, oanda_client=oanda_client)
+            concurrency_allowed, concurrency_details = _concurrency_check(
+                setting=setting,
+                oanda_client=oanda_client,
+                aws_runtime=aws_runtime,
+            )
             emit_log("SETTING_CHECK", setting_id=setting.setting_id, check_name="concurrency", **concurrency_details, passed=concurrency_allowed)
             if not concurrency_allowed:
                 emit_log("SETTING_SKIP", setting_id=setting.setting_id, reason="open_position_exists", concurrency_details=concurrency_details)
@@ -591,7 +718,28 @@ def run_forced_exit_handler(event: dict[str, Any], context: Any) -> dict[str, An
                     updated_at=now_utc.isoformat(),
                 )
                 emit_log("SETTING_EXIT", setting_id=setting.setting_id, trade_id=trade_id, entry_trade_id=entry_trade_id, exit_price=average_close_price, exit_price_side=exit_side, exit_reason="broker_closed", pnl_jpy=realized_pl)
-                _record_decision(aws_runtime=aws_runtime, setting=setting, handler_name="forced_exit_handler", trigger_bucket=setting.trigger_bucket_exit, scheduled_local=scheduled_local, now_utc=now_utc, decision="exited", reason="broker_closed", extra={"trade_id": trade_id})
+                _record_decision(
+                    aws_runtime=aws_runtime,
+                    setting=setting,
+                    handler_name="forced_exit_handler",
+                    trigger_bucket=setting.trigger_bucket_exit,
+                    scheduled_local=scheduled_local,
+                    now_utc=now_utc,
+                    decision="exited",
+                    reason="broker_closed",
+                    extra={
+                        "trade_id": trade_id,
+                        "entry_trade_id": entry_trade_id,
+                        "exit_price": average_close_price,
+                        "exit_price_side": exit_side,
+                        "pnl_jpy": realized_pl,
+                        "pnl_pips": (
+                            pnl_pips(float(state["entry_price"]), average_close_price, setting.side)
+                            if state.get("entry_price") is not None and average_close_price is not None
+                            else None
+                        ),
+                    },
+                )
                 results.append({"setting_id": setting.setting_id, "status": "exited", "trade_id": trade_id})
                 continue
 
@@ -625,7 +773,33 @@ def run_forced_exit_handler(event: dict[str, Any], context: Any) -> dict[str, An
                 updated_at=now_utc.isoformat(),
             )
             emit_log("SETTING_EXIT", setting_id=setting.setting_id, trade_id=trade_id, entry_trade_id=entry_trade_id, exit_order_id=close_result.order_id if close_result else None, exit_price=close_result.fill_price if close_result else None, exit_price_side=exit_side, exit_reason="forced_exit")
-            _record_decision(aws_runtime=aws_runtime, setting=setting, handler_name="forced_exit_handler", trigger_bucket=setting.trigger_bucket_exit, scheduled_local=scheduled_local, now_utc=now_utc, decision="exited", reason="forced_exit", extra={"trade_id": trade_id})
+            _record_decision(
+                aws_runtime=aws_runtime,
+                setting=setting,
+                handler_name="forced_exit_handler",
+                trigger_bucket=setting.trigger_bucket_exit,
+                scheduled_local=scheduled_local,
+                now_utc=now_utc,
+                decision="exited",
+                reason="forced_exit",
+                extra={
+                    "trade_id": trade_id,
+                    "entry_trade_id": entry_trade_id,
+                    "exit_order_id": close_result.order_id if close_result else None,
+                    "exit_price": close_result.fill_price if close_result else None,
+                    "exit_price_side": exit_side,
+                    "pnl_jpy": (
+                        float(close_result.raw_response["orderFillTransaction"]["pl"])
+                        if close_result and close_result.raw_response.get("orderFillTransaction", {}).get("pl") is not None
+                        else None
+                    ),
+                    "pnl_pips": (
+                        pnl_pips(float(state["entry_price"]), float(close_result.fill_price), setting.side)
+                        if state.get("entry_price") is not None and close_result and close_result.fill_price is not None
+                        else None
+                    ),
+                },
+            )
             results.append({"setting_id": setting.setting_id, "status": "exited", "trade_id": trade_id})
         except Exception as exc:  # noqa: BLE001
             if trade_id_for_error:

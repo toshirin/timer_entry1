@@ -1,0 +1,18 @@
+{
+  "experiment_code": "E004",
+  "variant_code": null,
+  "slot_id": "tyo08",
+  "side": "sell",
+  "baseline": {
+    "entry_clock_local": "08:20",
+    "forced_exit_clock_local": "09:25",
+    "tp_pips": 25,
+    "sl_pips": 12,
+    "filter_labels": ["vol_ge_p80"]
+  },
+  "pass_stability_gate": true,
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "notes": "Run pure tick replay validation for E003 winner. No slippage and no entry delay to isolate execution correctness (order of fills, Bid/Ask consistency, forced exit realism). Robustness factors will be tested in E005-E008."
+}

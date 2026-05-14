@@ -1,0 +1,18 @@
+{
+  "experiment_code": "E004",
+  "variant_code": null,
+  "slot_id": "lon14",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "14:50",
+    "forced_exit_clock_local": "15:35",
+    "tp_pips": 25,
+    "sl_pips": 25,
+    "filter_labels": ["right_dom_ge6"]
+  },
+  "pass_stability_gate": true,
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "notes": "E003 selected fx1535 with gross_pips=721.0, PF=1.295, max_dd_pips=-161.7, annualized_pips=103.0, and same_bar_unresolved_count=0. E004 fixes the setting and runs baseline tick replay without slippage or entry delay."
+}

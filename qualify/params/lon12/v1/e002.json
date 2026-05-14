@@ -1,0 +1,18 @@
+{
+  "experiment_code": "E002",
+  "variant_code": null,
+  "slot_id": "lon12",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "12:50",
+    "forced_exit_clock_local": "13:45",
+    "tp_pips": 25,
+    "sl_pips": 15,
+    "filter_labels": ["range_lt_0_25"],
+    "exclude_windows": ["us_uk_dst_mismatch"]
+  },
+  "tp_values": [20, 25, 30],
+  "sl_values": [10, 15, 20],
+  "pass_stability_gate": true,
+  "notes": "E001 best filter range_lt_0_25 fixed. Sweep narrow TP/SL neighborhood around 25/15 to confirm robustness without overfitting."
+}

@@ -29,7 +29,7 @@
 ## 運用原則
 
 - E001 は scan の `summary_{slot_id}.csv` を読み、filter family 深掘りを決める
-- E002 以降は前段の `qualify/out/E00N/...` を読み、次段の JSON を決める
+- E002 以降は前段の `qualify/out/{slot_id}/{version_id}/E00N/...` を読み、次段の JSON を決める
 - E005-E008 は `e005-e008.py` で一括実行を基本とし、`e005-e008.json` を入力にする
 - JSON の出力は必ず `json` コードブロックにする
 - E001 の新規 filter 定義は Codex 宛の仕様書として `markdown` コードブロックにする

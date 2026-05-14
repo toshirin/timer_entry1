@@ -1,0 +1,18 @@
+{
+  "experiment_code": "E004",
+  "variant_code": null,
+  "slot_id": "lon16",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "16:50",
+    "forced_exit_clock_local": "17:55",
+    "tp_pips": 20,
+    "sl_pips": 30,
+    "filter_labels": ["opposite_sign"]
+  },
+  "pass_stability_gate": true,
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "notes": "E003通過設定のtick再現性検証。forced_exit依存が高いため、まずslip/delayなしで1分足との乖離を純粋確認する。"
+}

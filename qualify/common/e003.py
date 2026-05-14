@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.minute_data import load_trading_days
 
-from .e001 import _eligible_days_by_segment, _eligible_feature_rows, _filter_days
+from .e001 import _baseline_threshold_context, _eligible_days_by_segment, _eligible_feature_rows, _filter_days
 from .e001 import _concat_trade_frames
 from .io import ensure_run_layout, write_json
 from .params import E003Params
@@ -104,10 +104,19 @@ def run_e003(
         raise ValueError("pass_stability_gate is False; rerun with explicit override if this is intentional")
 
     paths = ensure_run_layout(out_dir)
-    days, load_summary = load_trading_days(years, dataset_dir=dataset_dir, session_tz=params.market_tz)  # type: ignore[arg-type]
+    days, load_summary = load_trading_days(
+        years,
+        dataset_dir=dataset_dir,
+        session_tz=params.market_tz,  # type: ignore[arg-type]
+        exclude_windows=params.baseline.exclude_windows,
+    )
     filtered_days = _filter_days(days, date_from=params.date_from, date_to=params.date_to)
     feature_rows = _eligible_feature_rows(filtered_days, params)  # type: ignore[arg-type]
     eligible_days_by_segment = _eligible_days_by_segment(feature_rows)
+    pre_range_threshold, dynamic_filter_threshold, threshold_metadata = _baseline_threshold_context(
+        params.baseline.filter_labels,
+        feature_rows,
+    )
 
     all_trade_frames: list[pd.DataFrame] = []
     summary_rows: list[dict[str, object]] = []
@@ -116,7 +125,11 @@ def run_e003(
 
     for forced_exit_clock_local in tqdm(params.forced_exit_values, desc="E003 comparisons", unit="clock", mininterval=0.2):
         comparison_label = params.comparison_label(forced_exit_clock_local=forced_exit_clock_local)
-        setting = params.to_strategy_setting(forced_exit_clock_local=forced_exit_clock_local)
+        setting = params.to_strategy_setting(
+            forced_exit_clock_local=forced_exit_clock_local,
+            pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
+        )
         result = run_backtest_1m(
             filtered_days,
             setting,
@@ -174,6 +187,9 @@ def run_e003(
         "date_from": params.date_from,
         "date_to": params.date_to,
         "eligible_days_by_segment": eligible_days_by_segment,
+        "pre_range_threshold": pre_range_threshold,
+        "dynamic_filter_threshold": dynamic_filter_threshold,
+        "threshold_metadata": threshold_metadata,
         "load_summary": asdict(load_summary),
         "notes": params.notes,
     }

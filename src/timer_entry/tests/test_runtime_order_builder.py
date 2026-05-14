@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import json
+import math
 from pathlib import Path
 import sys
 
@@ -8,14 +10,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "runtime" / "src"))
 
-from timer_entry_runtime.models import PriceSnapshot, SettingConfig
+from timer_entry_runtime.filtering import evaluate_filters
+from timer_entry_runtime.models import Candle, PriceSnapshot, SettingConfig
 from timer_entry_runtime.models import AccountSnapshot, OrderResult
 from timer_entry_runtime.order_builder import (
     protection_levels,
     requested_entry_from_snapshot,
     trade_protection_order_body,
 )
-from timer_entry_runtime.runtime import _create_entry_trade
+from timer_entry_runtime.runtime import _concurrency_check, _create_entry_trade, _exclude_window_check
 from timer_entry_runtime.sizing import compute_units
 
 
@@ -39,6 +42,7 @@ def _setting(side: str, *, tp_pips: float = 10.0, sl_pips: float = 30.0) -> Sett
         tp_pips=tp_pips,
         sl_pips=sl_pips,
         research_label=None,
+        labels=[],
         market_open_check_seconds=10,
         max_concurrent_positions=1,
         kill_switch_dd_pct=-0.2,
@@ -67,6 +71,50 @@ def test_requested_entry_uses_ask_for_buy_and_bid_for_sell() -> None:
     assert buy_entry.price == 150.005
     assert sell_entry.price_side == "bid"
     assert sell_entry.price == 149.990
+
+
+def test_concurrency_ignores_open_trades_from_watch_settings() -> None:
+    class FakeOanda:
+        def get_open_trades(self) -> list[dict[str, object]]:
+            return [{"id": "101", "clientExtensions": {"id": "watch_setting"}}]
+
+    class FakeAws:
+        def get_setting_config(self, setting_id: str) -> SettingConfig | None:
+            assert setting_id == "watch_setting"
+            return SettingConfig(**{**_setting("buy").__dict__, "setting_id": setting_id, "labels": ["watch"]})
+
+    allowed, details = _concurrency_check(
+        setting=_setting("sell"),
+        oanda_client=FakeOanda(),  # type: ignore[arg-type]
+        aws_runtime=FakeAws(),  # type: ignore[arg-type]
+    )
+
+    assert allowed is True
+    assert details["open_trade_count"] == 1
+    assert details["blocking_open_trade_count"] == 0
+    assert details["ignored_watch_open_trade_ids"] == ["101"]
+    assert details["trigger_reason"] is None
+
+
+def test_concurrency_blocks_unknown_open_trades_safely() -> None:
+    class FakeOanda:
+        def get_open_trades(self) -> list[dict[str, object]]:
+            return [{"id": "102"}]
+
+    class FakeAws:
+        def get_setting_config(self, setting_id: str) -> SettingConfig | None:
+            raise AssertionError("unknown open trades should not query setting_config")
+
+    allowed, details = _concurrency_check(
+        setting=_setting("sell"),
+        oanda_client=FakeOanda(),  # type: ignore[arg-type]
+        aws_runtime=FakeAws(),  # type: ignore[arg-type]
+    )
+
+    assert allowed is False
+    assert details["blocking_open_trade_count"] == 1
+    assert details["blocking_trade_id"] == "102"
+    assert details["trigger_reason"] == "open_position_limit_reached"
 
 
 def test_buy_protection_uses_bid_tp_and_ask_sl_from_fill_price() -> None:
@@ -103,6 +151,200 @@ def test_margin_price_uses_ask_for_buy_and_sell() -> None:
     assert buy_sizing.margin_price == 150.005
     assert sell_sizing.margin_price_side == "ask"
     assert sell_sizing.margin_price == 150.005
+
+
+def test_runtime_filter_supports_opposite_sign_right_strength_balance() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "filter_spec_json": json.dumps(
+                [
+                    {
+                        "filter_type": "shape_balance",
+                        "mode": "opposite_sign_right_strength_balance",
+                        "operator": "ge",
+                        "threshold": 4.0,
+                    }
+                ],
+                separators=(",", ":"),
+            ),
+        }
+    )
+    candles = [
+        Candle(
+            time_utc=datetime(2024, 1, 1, 23, 30, tzinfo=timezone.utc),
+            bid_open=150.00,
+            bid_high=150.00,
+            bid_low=149.99,
+            bid_close=149.99,
+            complete=True,
+        ),
+        Candle(
+            time_utc=datetime(2024, 1, 1, 23, 55, tzinfo=timezone.utc),
+            bid_open=150.00,
+            bid_high=150.05,
+            bid_low=149.99,
+            bid_close=149.99,
+            complete=True,
+        ),
+        Candle(
+            time_utc=datetime(2024, 1, 2, 0, 20, tzinfo=timezone.utc),
+            bid_open=150.00,
+            bid_high=150.05,
+            bid_low=150.00,
+            bid_close=150.05,
+            complete=True,
+        ),
+    ]
+
+    decisions = evaluate_filters(
+        setting=setting,
+        now_utc=datetime(2024, 1, 2, 0, 25, tzinfo=timezone.utc),
+        candles=candles,
+    )
+
+    assert decisions[0].passed is True
+    assert decisions[0].values["opposite_sign"] is True
+    assert round(float(decisions[0].values["right_strength_balance_pips"]), 6) == 4.0
+
+
+def test_runtime_trend_ratio_zero_range_does_not_pass_range_lt_filter() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "filter_spec_json": json.dumps(
+                [
+                    {
+                        "filter_type": "trend_ratio",
+                        "operator": "lt",
+                        "threshold": 0.25,
+                        "lookback_start_min": 55,
+                        "lookback_end_min": 5,
+                    }
+                ],
+                separators=(",", ":"),
+            ),
+        }
+    )
+    start_utc = datetime(2024, 1, 1, 23, 30, tzinfo=timezone.utc)
+    candles = [
+        Candle(
+            time_utc=start_utc + timedelta(minutes=offset),
+            bid_open=150.00,
+            bid_high=150.00,
+            bid_low=150.00,
+            bid_close=150.00,
+            complete=True,
+        )
+        for offset in range(51)
+    ]
+
+    decisions = evaluate_filters(
+        setting=setting,
+        now_utc=datetime(2024, 1, 2, 0, 25, tzinfo=timezone.utc),
+        candles=candles,
+    )
+
+    assert decisions[0].passed is False
+    assert math.isnan(float(decisions[0].values["trend_ratio"]))
+    assert decisions[0].values["threshold"] == 0.25
+
+
+def test_runtime_exclude_window_skips_london_us_uk_dst_mismatch_day() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "market_session": "london",
+            "market_tz": "Europe/London",
+            "entry_clock_local": "12:30",
+            "forced_exit_clock_local": "13:25",
+            "trigger_bucket_entry": "ENTRY#Europe/London#1230",
+            "trigger_bucket_exit": "EXIT#Europe/London#1325",
+            "execution_spec_json": json.dumps({"exclude_windows": ["us_uk_dst_mismatch"]}, separators=(",", ":")),
+        }
+    )
+
+    allowed, details = _exclude_window_check(
+        setting=setting,
+        now_utc=datetime(2024, 3, 15, 12, 30, tzinfo=timezone.utc),
+    )
+
+    assert allowed is False
+    assert details["session_date"] == "2024-03-15"
+    assert details["session_tz"] == "Europe/London"
+    assert details["trigger_reason"] == "exclude_window"
+
+
+def test_runtime_exclude_window_does_not_skip_london_after_dst_gap() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "market_session": "london",
+            "market_tz": "Europe/London",
+            "entry_clock_local": "12:30",
+            "forced_exit_clock_local": "13:25",
+            "trigger_bucket_entry": "ENTRY#Europe/London#1230",
+            "trigger_bucket_exit": "EXIT#Europe/London#1325",
+            "execution_spec_json": json.dumps({"exclude_windows": ["us_uk_dst_mismatch"]}, separators=(",", ":")),
+        }
+    )
+
+    allowed, details = _exclude_window_check(
+        setting=setting,
+        now_utc=datetime(2024, 3, 31, 11, 30, tzinfo=timezone.utc),
+    )
+
+    assert allowed is True
+    assert details["session_date"] == "2024-03-31"
+    assert details["trigger_reason"] is None
+
+
+def test_runtime_exclude_window_does_not_skip_london_after_autumn_dst_gap() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "market_session": "london",
+            "market_tz": "Europe/London",
+            "entry_clock_local": "12:30",
+            "forced_exit_clock_local": "13:25",
+            "trigger_bucket_entry": "ENTRY#Europe/London#1230",
+            "trigger_bucket_exit": "EXIT#Europe/London#1325",
+            "execution_spec_json": json.dumps({"exclude_windows": ["us_uk_dst_mismatch"]}, separators=(",", ":")),
+        }
+    )
+
+    allowed, details = _exclude_window_check(
+        setting=setting,
+        now_utc=datetime(2024, 11, 3, 12, 30, tzinfo=timezone.utc),
+    )
+
+    assert allowed is True
+    assert details["session_date"] == "2024-11-03"
+    assert details["trigger_reason"] is None
+
+
+def test_runtime_exclude_window_passes_without_execution_spec() -> None:
+    setting = SettingConfig(
+        **{
+            **_setting("buy").__dict__,
+            "market_session": "london",
+            "market_tz": "Europe/London",
+            "entry_clock_local": "12:30",
+            "forced_exit_clock_local": "13:25",
+            "trigger_bucket_entry": "ENTRY#Europe/London#1230",
+            "trigger_bucket_exit": "EXIT#Europe/London#1325",
+            "execution_spec_json": None,
+        }
+    )
+
+    allowed, details = _exclude_window_check(
+        setting=setting,
+        now_utc=datetime(2024, 3, 15, 12, 30, tzinfo=timezone.utc),
+    )
+
+    assert allowed is True
+    assert details["exclude_windows"] == []
+    assert details["trigger_reason"] is None
 
 
 def test_tp_sl_failure_keeps_trade_state_entered_for_forced_exit() -> None:

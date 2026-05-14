@@ -1,0 +1,16 @@
+{
+  "experiment_code": "E003",
+  "variant_code": null,
+  "slot_id": "lon11",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "11:05",
+    "forced_exit_clock_local": "12:00",
+    "tp_pips": 15,
+    "sl_pips": 30,
+    "filter_labels": ["vol_ge_p60"]
+  },
+  "forced_exit_values": ["11:50", "12:00", "12:10"],
+  "pass_stability_gate": true,
+  "notes": "E002でTP15/SL30確定。London midの自然減衰帯確認のため±10分の小規模exit sweep"
+}

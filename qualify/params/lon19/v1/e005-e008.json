@@ -1,0 +1,24 @@
+{
+  "experiment_code": "E005-E008",
+  "variant_code": "E007A",
+  "slot_id": "lon19",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "19:15",
+    "forced_exit_clock_local": "20:10",
+    "tp_pips": 15,
+    "sl_pips": 30,
+    "filter_labels": ["le0"]
+  },
+  "pass_stability_gate": true,
+  "selected_experiments": ["E007"],
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "slippage_values": [0.0, 0.1, 0.2, 0.3],
+  "entry_delay_values": [0, 30, 60, 120],
+  "target_maintenance_margin_candidates": [150, 180, 200],
+  "kill_switch_dd_pct": -0.2,
+  "initial_capital_jpy": 100000,
+  "notes": "E007をrisk_fraction最適化ではなくtarget maintenance margin審査としてE007Aで再実行する。既存E005/E006/E008結果は維持し、今回はE007のみを --only E007 --output-alias E007=E007A で分離保存する前提。採用順序は150→180→200。maintenance_below_100_count>0は一発NG、maintenance_below_130_count>0またはstop_triggered=trueは一段上確認。min_maintenance_margin_pct/below countはentry直後ではなく即時SL到達時の想定維持率として解釈する。"
+}

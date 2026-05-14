@@ -1,0 +1,18 @@
+{
+  "experiment_code": "E004",
+  "variant_code": null,
+  "slot_id": "lon09",
+  "side": "sell",
+  "baseline": {
+    "entry_clock_local": "09:45",
+    "forced_exit_clock_local": "10:35",
+    "tp_pips": 10,
+    "sl_pips": 15,
+    "filter_labels": ["range_lt_0_3"]
+  },
+  "pass_stability_gate": true,
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "notes": "pure execution validation on tick replay; no slippage or delay to isolate bid/ask handling and same-bar ordering integrity"
+}

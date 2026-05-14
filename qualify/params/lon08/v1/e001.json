@@ -1,0 +1,17 @@
+{
+  "experiment_code": "E001",
+  "variant_code": null,
+  "slot_id": "lon08",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "08:50",
+    "forced_exit_clock_local": "09:45",
+    "tp_pips": 25,
+    "sl_pips": 20,
+    "filter_labels": ["ge0"]
+  },
+  "comparison_family": "pre_open_slope",
+  "comparison_labels": ["all", "ge0", "ge2", "ge4"],
+  "pass_stability_gate": true,
+  "notes": "Resolved side to buy from attached lon08 scan. At 08:50 with TP25/SL20, ge0 materially outperforms all while keeping clean stability metrics; keep all as anchor comparator."
+}

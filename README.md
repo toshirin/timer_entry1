@@ -6,6 +6,8 @@
 最上位の不変方針は [docs/FX_Research_Constitution.md](docs/FX_Research_Constitution.md) に置きます。
 特に Bid / Ask 完全分離、未来参照禁止、監視窓の分離は本リポジトリ全体で厳守します。
 
+近い将来の作業と長期メモは [RoadMap.md](RoadMap.md) に置きます。
+
 ## このリポジトリの目的
 
 - タイマー売買戦略の研究資産を専用 repo として整理する
@@ -72,7 +74,7 @@
 - E001 は scan で反応した filter family を深掘りする段階とする
 - 例として `pre_open_slope` では `ge2` / `ge4` などの閾値 sweep、`vol` 系では percentile sweep を行う
 - `all` は追加の有効 filter がないかを見直す入口としても使う
-- holdout、walk-forward、slippage、entry delay、kill-switch、risk_fraction、tick replay をここで評価する
+- holdout、walk-forward、slippage、entry delay、kill-switch、target maintenance margin、tick replay をここで評価する
 - E001-E008 は個別スクリプトの寄せ集めではなく、共通シナリオ実行基盤で扱う
 
 ### runtime

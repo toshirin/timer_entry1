@@ -1,0 +1,22 @@
+{
+  "experiment_code": "E001",
+  "variant_code": null,
+  "slot_id": "lon10",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "10:40",
+    "forced_exit_clock_local": "11:35",
+    "tp_pips": 10,
+    "sl_pips": 20,
+    "filter_labels": ["opposite_sign"]
+  },
+  "comparison_family": "shape_balance",
+  "comparison_labels": [
+    "opposite_sign",
+    "opp_right_dom_ge2",
+    "opp_right_dom_ge4",
+    "opp_right_dom_ge6"
+  ],
+  "pass_stability_gate": true,
+  "notes": "lon10 summary suggests buy is the actionable side. Start from the best stable scan candidate: 10:40 TP10 SL20 opposite_sign. Exclude all from E001 comparison because the same entry/tp/sl with all is materially negative and gate-failed in scan. Keep tp/sl fixed in E001 and defer tp/sl neighborhood checks to E002."
+}

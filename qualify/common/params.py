@@ -24,6 +24,7 @@ class BaselineSettingInput:
     tp_pips: float
     sl_pips: float
     filter_labels: tuple[str, ...]
+    exclude_windows: tuple[str, ...] = ()
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "BaselineSettingInput":
@@ -36,6 +37,7 @@ class BaselineSettingInput:
             tp_pips=float(data["tp_pips"]),
             sl_pips=float(data["sl_pips"]),
             filter_labels=labels,
+            exclude_windows=tuple(str(value) for value in data.get("exclude_windows", [])),
         )
 
 
@@ -109,6 +111,7 @@ class E001Params:
             tp_pips=self.baseline.tp_pips,
             sl_pips=self.baseline.sl_pips,
             filter_labels=(comparison_label,),
+            exclude_windows=self.baseline.exclude_windows,
             pre_range_threshold=pre_range_threshold,
             dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
@@ -173,6 +176,8 @@ class E002Params:
         *,
         tp_pips: float,
         sl_pips: float,
+        pre_range_threshold: float | None = None,
+        dynamic_filter_threshold: float | None = None,
     ) -> StrategySetting:
         comparison_label = self.comparison_label(tp_pips=tp_pips, sl_pips=sl_pips)
         setting_suffix = comparison_label.replace(".", "_")
@@ -186,6 +191,9 @@ class E002Params:
             tp_pips=float(tp_pips),
             sl_pips=float(sl_pips),
             filter_labels=self.baseline.filter_labels,
+            exclude_windows=self.baseline.exclude_windows,
+            pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
         )
 
@@ -242,6 +250,8 @@ class E003Params:
         self,
         *,
         forced_exit_clock_local: str,
+        pre_range_threshold: float | None = None,
+        dynamic_filter_threshold: float | None = None,
     ) -> StrategySetting:
         comparison_label = self.comparison_label(forced_exit_clock_local=forced_exit_clock_local)
         setting_suffix = comparison_label.replace(".", "_")
@@ -255,6 +265,9 @@ class E003Params:
             tp_pips=self.baseline.tp_pips,
             sl_pips=self.baseline.sl_pips,
             filter_labels=self.baseline.filter_labels,
+            exclude_windows=self.baseline.exclude_windows,
+            pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
         )
 
@@ -317,7 +330,12 @@ class E004Params:
             f"fx{_label_fragment(self.baseline.forced_exit_clock_local)}"
         )
 
-    def to_strategy_setting(self) -> StrategySetting:
+    def to_strategy_setting(
+        self,
+        *,
+        pre_range_threshold: float | None = None,
+        dynamic_filter_threshold: float | None = None,
+    ) -> StrategySetting:
         return StrategySetting(
             setting_id=f"{self.slot_id}_{self.side}_{self.run_label}_tick_replay",
             slot_id=self.slot_id,
@@ -328,6 +346,9 @@ class E004Params:
             tp_pips=self.baseline.tp_pips,
             sl_pips=self.baseline.sl_pips,
             filter_labels=self.baseline.filter_labels,
+            exclude_windows=self.baseline.exclude_windows,
+            pre_range_threshold=pre_range_threshold,
+            dynamic_filter_threshold=dynamic_filter_threshold,
             notes=self.notes,
         )
 
@@ -346,7 +367,7 @@ class E005E008Params:
     selected_experiments: tuple[str, ...]
     slippage_values: tuple[float, ...]
     entry_delay_values: tuple[int, ...]
-    risk_fractions: tuple[float, ...]
+    target_maintenance_margin_candidates: tuple[float, ...]
     kill_switch_dd_pct: float
     initial_capital_jpy: float = 100_000.0
     slippage_mode: str = "none"
@@ -369,13 +390,26 @@ class E005E008Params:
             raise ValueError(f"Unsupported selected_experiments: {unsupported}")
         slippage_values = tuple(float(value) for value in data.get("slippage_values", []))
         entry_delay_values = tuple(int(value) for value in data.get("entry_delay_values", []))
-        risk_fractions = tuple(float(value) for value in data.get("risk_fractions", []))
+        raw_margin_candidates = data.get("target_maintenance_margin_candidates")
+        if raw_margin_candidates is None:
+            legacy_risk_fractions = tuple(float(value) for value in data.get("risk_fractions", []))
+            sl_pips = float(dict(data["baseline"])["sl_pips"])
+            # Legacy compatibility only: convert old risk_fraction grids to
+            # target maintenance margin using the same USDJPY=150 approximation
+            # as pips_year_rate_pct_at_150usd. New params must use
+            # target_maintenance_margin_candidates directly.
+            raw_margin_candidates = [
+                25.0 * sl_pips / (risk_fraction * 150.0)
+                for risk_fraction in legacy_risk_fractions
+                if risk_fraction > 0.0
+            ]
+        target_maintenance_margin_candidates = tuple(sorted(float(value) for value in raw_margin_candidates))
         if not slippage_values:
             raise ValueError("slippage_values must not be empty")
         if not entry_delay_values:
             raise ValueError("entry_delay_values must not be empty")
-        if not risk_fractions:
-            raise ValueError("risk_fractions must not be empty")
+        if not target_maintenance_margin_candidates:
+            raise ValueError("target_maintenance_margin_candidates must not be empty")
         return cls(
             experiment_code=experiment_code,
             variant_code=str(data["variant_code"]) if data.get("variant_code") is not None else None,
@@ -386,7 +420,7 @@ class E005E008Params:
             selected_experiments=selected_experiments,
             slippage_values=slippage_values,
             entry_delay_values=entry_delay_values,
-            risk_fractions=risk_fractions,
+            target_maintenance_margin_candidates=target_maintenance_margin_candidates,
             kill_switch_dd_pct=float(data["kill_switch_dd_pct"]),
             initial_capital_jpy=float(data.get("initial_capital_jpy", 100_000.0)),
             slippage_mode=str(data.get("slippage_mode", "none")),

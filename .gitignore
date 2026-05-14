@@ -9,3 +9,17 @@ source_docs/
 runtime/.build/
 runtime/dist/
 runtime/out/
+runtime/cdk/cdk.out/
+runtime/cdk/node_modules/
+runtime/cdk/*.tsbuildinfo
+ops/dist/
+ops/cdk/cdk.out/
+ops/cdk/node_modules/
+ops/cdk/*.tsbuildinfo
+ops/web/.next/
+ops/web/node_modules/
+ops/web/*.tsbuildinfo
+ops/web/config/dashboard.json
+**/__pycache__/
+.pycache/
+qualify/results/all_results.json*

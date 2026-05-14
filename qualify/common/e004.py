@@ -9,7 +9,7 @@ import pandas as pd
 from timer_entry.backtest_1m import BacktestRunResult
 from timer_entry.minute_data import load_trading_days
 
-from .e001 import _eligible_days_by_segment, _eligible_feature_rows, _filter_days
+from .e001 import _baseline_threshold_context, _eligible_days_by_segment, _eligible_feature_rows, _filter_days
 from .e001 import _concat_trade_frames
 from .io import ensure_run_layout, write_json
 from .params import E004Params
@@ -289,13 +289,28 @@ def run_e004(
 
     paths = ensure_run_layout(out_dir)
     print(f"[LOAD] minute dataset from {dataset_dir}")
-    days, load_summary = load_trading_days(years, dataset_dir=dataset_dir, session_tz=params.market_tz)  # type: ignore[arg-type]
+    days, load_summary = load_trading_days(
+        years,
+        dataset_dir=dataset_dir,
+        session_tz=params.market_tz,  # type: ignore[arg-type]
+        exclude_windows=params.baseline.exclude_windows,
+    )
     filtered_days = _filter_days(days, date_from=params.date_from, date_to=params.date_to)
     feature_rows = _eligible_feature_rows(filtered_days, params)  # type: ignore[arg-type]
     eligible_days_by_segment = _eligible_days_by_segment(feature_rows)
+    pre_range_threshold, dynamic_filter_threshold, threshold_metadata = _baseline_threshold_context(
+        params.baseline.filter_labels,
+        feature_rows,
+    )
 
     print(f"[SIGNALS] building E004 signal days from {len(filtered_days)} filtered days")
-    signals, minute_result = generate_e004_signal_days(filtered_days, params=params, load_summary=load_summary)
+    signals, minute_result = generate_e004_signal_days(
+        filtered_days,
+        params=params,
+        load_summary=load_summary,
+        pre_range_threshold=pre_range_threshold,
+        dynamic_filter_threshold=dynamic_filter_threshold,
+    )
     comparison_label = params.comparison_label()
     filter_label = ",".join(params.baseline.filter_labels)
 
@@ -372,6 +387,9 @@ def run_e004(
         "date_from": params.date_from,
         "date_to": params.date_to,
         "eligible_days_by_segment": eligible_days_by_segment,
+        "pre_range_threshold": pre_range_threshold,
+        "dynamic_filter_threshold": dynamic_filter_threshold,
+        "threshold_metadata": threshold_metadata,
         "load_summary": asdict(load_summary),
         "signal_day_count": int(len(signals_df)),
         "tick_trade_count": int(len(tick_trade_df)),

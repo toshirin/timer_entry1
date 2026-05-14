@@ -1,0 +1,16 @@
+{
+  "experiment_code": "E003",
+  "variant_code": null,
+  "slot_id": "lon16",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "16:50",
+    "forced_exit_clock_local": "17:45",
+    "tp_pips": 20,
+    "sl_pips": 30,
+    "filter_labels": ["opposite_sign"]
+  },
+  "forced_exit_values": ["17:35", "17:45", "17:55"],
+  "pass_stability_gate": true,
+  "notes": "E002採用値tp20/sl30/opposite_signを固定。forced_exit_countが高くtime-exit依存が強いため、17:45を中心に前後10分の小規模sweepで構造確認を行う。"
+}

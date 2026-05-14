@@ -11,7 +11,12 @@ from tqdm.auto import tqdm
 
 from timer_entry.backtest_1m import run_backtest_1m
 from timer_entry.features import compute_feature_row
-from timer_entry.filters import parse_right_dominance_filter_label, parse_volatility_filter_label
+from timer_entry.filters import (
+    parse_opposite_right_dominance_filter_label,
+    parse_right_dominance_filter_label,
+    parse_trend_ratio_filter_label,
+    parse_volatility_filter_label,
+)
 from timer_entry.minute_data import MinuteDataSummary, TradingDay, load_trading_days
 
 from .io import ensure_run_layout, write_json
@@ -114,8 +119,9 @@ def _resolve_threshold_metadata(
     if not feature_rows:
         if needs_pre_range:
             raise ValueError("feature rows are required to resolve pre_range percentile thresholds")
-        return metadata
-    feature_df = pd.DataFrame(feature_rows)
+        feature_df = pd.DataFrame()
+    else:
+        feature_df = pd.DataFrame(feature_rows)
     values = (
         pd.to_numeric(feature_df["pre_range_pips"], errors="coerce").dropna()
         if needs_pre_range and "pre_range_pips" in feature_df.columns
@@ -139,9 +145,13 @@ def _resolve_threshold_metadata(
             continue
 
         right_dom_spec = parse_right_dominance_filter_label(label)
-        if right_dom_spec is None:
+        opp_right_dom_spec = parse_opposite_right_dominance_filter_label(label)
+        threshold_spec = right_dom_spec or opp_right_dom_spec
+        if threshold_spec is None:
+            threshold_spec = parse_trend_ratio_filter_label(label)
+        if threshold_spec is None:
             continue
-        _, threshold = right_dom_spec
+        _, threshold = threshold_spec
         threshold = float(threshold)
         metadata[label] = {
             "resolved_threshold": threshold,
@@ -150,6 +160,25 @@ def _resolve_threshold_metadata(
             "threshold_source": "label_threshold",
         }
     return metadata
+
+
+def _baseline_threshold_context(
+    filter_labels: tuple[str, ...],
+    feature_rows: list[dict[str, object]],
+) -> tuple[float | None, float | None, dict[str, dict[str, object]]]:
+    threshold_metadata = _resolve_threshold_metadata(filter_labels, feature_rows)
+    pre_range_thresholds = {
+        float(meta["resolved_pre_range_threshold"])
+        for meta in threshold_metadata.values()
+        if meta.get("resolved_pre_range_threshold") is not None
+    }
+    if len(pre_range_thresholds) > 1:
+        raise ValueError(
+            "multiple pre_range percentile thresholds in one baseline are not supported: "
+            f"{sorted(pre_range_thresholds)}"
+        )
+    pre_range_threshold = next(iter(pre_range_thresholds), None)
+    return pre_range_threshold, None, threshold_metadata
 
 
 def _comparison_trade_frame(
@@ -250,7 +279,12 @@ def run_e001(
         raise ValueError("pass_stability_gate is False; rerun with explicit override if this is intentional")
 
     paths = ensure_run_layout(out_dir)
-    days, load_summary = load_trading_days(years, dataset_dir=dataset_dir, session_tz=params.market_tz)  # type: ignore[arg-type]
+    days, load_summary = load_trading_days(
+        years,
+        dataset_dir=dataset_dir,
+        session_tz=params.market_tz,  # type: ignore[arg-type]
+        exclude_windows=params.baseline.exclude_windows,
+    )
     filtered_days = _filter_days(days, date_from=params.date_from, date_to=params.date_to)
     feature_rows = _eligible_feature_rows(filtered_days, params)
     eligible_days_by_segment = _eligible_days_by_segment(feature_rows)

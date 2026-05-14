@@ -1,0 +1,17 @@
+{
+  "experiment_code": "E002",
+  "variant_code": null,
+  "slot_id": "tyo11",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "11:10",
+    "forced_exit_clock_local": "12:05",
+    "tp_pips": 20,
+    "sl_pips": 25,
+    "filter_labels": ["right_stronger"]
+  },
+  "tp_values": [5, 10, 15, 20, 25],
+  "sl_values": [20, 25, 30],
+  "pass_stability_gate": true,
+  "notes": "E001でright_strongerが唯一gate通過。TP20/SL25を中心に、TPは5-25の範囲でDD/外れ値耐性を確認、SLは±5のみで過剰最適化を回避"
+}

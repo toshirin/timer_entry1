@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import math
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -92,6 +93,24 @@ def _shape_balance(spec: dict[str, Any], local_map: dict[datetime, Candle], entr
             passed=_compare(operator, balance, threshold),
             values={"right_strength_balance_pips": balance, "operator": operator, "threshold": threshold, "mode": mode},
         )
+    elif mode == "opposite_sign_right_strength_balance":
+        operator = str(spec.get("operator", "ge"))
+        threshold = float(spec.get("threshold", 0.0))
+        opposite = left_ret != 0 and right_ret != 0 and (left_ret > 0) != (right_ret > 0)
+        balance = (abs(right_ret) - abs(left_ret)) / PIP_SIZE
+        return FilterDecision(
+            filter_type="shape_balance",
+            passed=opposite and _compare(operator, balance, threshold),
+            values={
+                "left_ret_pips": left_ret / PIP_SIZE,
+                "right_ret_pips": right_ret / PIP_SIZE,
+                "right_strength_balance_pips": balance,
+                "opposite_sign": opposite,
+                "operator": operator,
+                "threshold": threshold,
+                "mode": mode,
+            },
+        )
     else:
         raise ValueError(f"Unsupported shape_balance mode: {mode}")
     return FilterDecision(
@@ -123,12 +142,12 @@ def _trend_ratio(spec: dict[str, Any], local_map: dict[datetime, Candle], entry_
     candles = _window(local_map, entry_dt, start_min, end_min)
     net_move = abs(end_candle.bid_close - start_candle.bid_open) / PIP_SIZE
     path_range = (max(c.bid_high for c in candles) - min(c.bid_low for c in candles)) / PIP_SIZE
-    ratio = net_move / path_range if path_range > 0 else 0.0
+    ratio = net_move / path_range if path_range > 0 else math.nan
     operator = str(spec.get("operator", "ge"))
     threshold = float(spec.get("threshold", 0.5))
     return FilterDecision(
         filter_type="trend_ratio",
-        passed=_compare(operator, ratio, threshold),
+        passed=path_range > 0 and _compare(operator, ratio, threshold),
         values={"trend_ratio": ratio, "net_move_pips": net_move, "path_range_pips": path_range, "operator": operator, "threshold": threshold},
     )
 

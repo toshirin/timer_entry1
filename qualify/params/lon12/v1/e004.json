@@ -1,0 +1,19 @@
+{
+  "experiment_code": "E004",
+  "variant_code": null,
+  "slot_id": "lon12",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "12:50",
+    "forced_exit_clock_local": "13:45",
+    "tp_pips": 30,
+    "sl_pips": 15,
+    "filter_labels": ["range_lt_0_25"],
+    "exclude_windows": ["us_uk_dst_mismatch"]
+  },
+  "pass_stability_gate": true,
+  "slippage_mode": "none",
+  "fixed_slippage_pips": 0.0,
+  "entry_delay_seconds": 0,
+  "notes": "E003 confirmed. Run clean tick replay (no slip, no delay) to validate execution parity before robustness tests."
+}

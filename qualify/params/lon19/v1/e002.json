@@ -1,0 +1,17 @@
+{
+  "experiment_code": "E002",
+  "variant_code": null,
+  "slot_id": "lon19",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "19:15",
+    "forced_exit_clock_local": "20:10",
+    "tp_pips": 15,
+    "sl_pips": 25,
+    "filter_labels": ["le0"]
+  },
+  "tp_values": [12, 15, 18],
+  "sl_values": [20, 25, 30],
+  "pass_stability_gate": true,
+  "notes": "E001でle0が明確優位。TP15/SL25中心の近傍確認。forced_exit依存が高いためTP拡張は限定的、SL側の安定性確認を重視。"
+}

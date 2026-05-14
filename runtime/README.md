@@ -10,6 +10,7 @@
 - Oanda REST API での成行 entry、TP/SL 作成、forced exit
 - `SETTING_*` 監査ログ出力
 - `decision_log` による不発・skip 理由の永続化
+- `execution_spec_json.exclude_windows` による entry 日除外
 - setting 単位の kill switch
 - qualify の最終結果から runtime setting_config JSON への promotion
 - CDK による基盤作成
@@ -145,6 +146,41 @@ docker run --rm \
 - `DECISION_LOG_TTL_DAYS`
 - `LOG_LEVEL`
 
+`runtime/config` の setting JSON から `ENTRY_SCHEDULE_EXPRESSION` / `EXIT_SCHEDULE_EXPRESSION` を生成する場合:
+
+```bash
+python3 runtime/scripts/generate_schedule_expressions.py \
+  --config-dir runtime/config
+```
+
+出力例:
+
+```bash
+ENTRY_SCHEDULE_EXPRESSION='cron(*/5 14,15 * * ? *)'
+EXIT_SCHEDULE_EXPRESSION='cron(*/5 15,16 * * ? *)'
+# entry_utc_pairs=14:40,15:40
+# exit_utc_pairs=15:45,16:45
+```
+
+Docker 実行:
+
+```bash
+docker run --rm \
+  -v "$PWD:/work" \
+  -w /work \
+  python:3.12-slim \
+  python runtime/scripts/generate_schedule_expressions.py \
+    --config-dir runtime/config
+```
+
+補足:
+
+- EventBridge Rule の cron は UTC として扱う
+- `Europe/London` は DST により同じ local clock が 2 種類の UTC clock になり得る
+- script は default では `enabled=false` の config も含める。投入後に DynamoDB 側だけ `enabled=true` へ切り替える運用でも EventBridge が起動するようにするため
+- `enabled=true` の config だけで生成する場合は `--enabled-only` を付ける
+- minute は常に `*/5` とし、hour だけを config 群から絞り込む。そのため必要時刻以外にも起動するが、handler 側の local clock 判定で skip される
+
 ## setting_config
 
 runtime は DynamoDB の `setting_config` を参照して動作します。
@@ -166,6 +202,7 @@ runtime は DynamoDB の `setting_config` を参照して動作します。
 - `sl_pips`
 - `market_open_check_seconds`
 - `max_concurrent_positions`
+- `labels`
 
 サイズ設定:
 
@@ -184,23 +221,35 @@ kill switch 設定:
 - `max_concurrent_positions`
 - 初期運用では `1` を推奨
 - `1` の場合、Oanda 口座上に open trade が 1 本でも残っていれば新規 entry を見送る
+- ただし `labels` に `watch` が付いた setting 由来の open trade は、監視枠として concurrency count から除外する
 - 見送りは `decision_log` に `skipped_concurrency` として残す
+
+除外 window:
+
+- `execution_spec_json.exclude_windows` に `us_uk_dst_mismatch` を指定すると、London 系 setting は US / UK DST mismatch 期間中の entry を `skipped_exclude_window` として見送る
+- forced exit は安全側の処理なので、除外 window では止めない
 
 filter 設定:
 
 - `filter_spec_json`
 
+ops 用ラベル:
+
+- `labels`
+- 文字列配列として指定する
+- runtime の売買判定には使わず、ops dashboard のフィルタ用に使う
+
 ## qualify から setting_config を作る
 
 qualify の最終昇格結果 JSON から runtime setting_config JSON を作成します。
 初期状態では `enabled=false` で出力されます。
-既定では `fixed_units=10`、`max_concurrent_positions=1` を補完します。`kill_switch_dd_pct`、`kill_switch_reference_balance_jpy`、`min_maintenance_margin_pct` は最終昇格結果 JSON の値を優先します。必要に応じて `--fixed-units`、`--use-margin-ratio --margin-ratio-target`、`--size-scale-pct`、`--kill-switch-dd-pct`、`--kill-switch-reference-balance-jpy`、`--min-maintenance-margin-pct`、`--max-concurrent-positions` で上書きします。
+既定では `fixed_units=10`、`unit_level=0`、`unit_level_policy_name=unit_level_policy`、`max_concurrent_positions=1` を補完します。`kill_switch_dd_pct`、`kill_switch_reference_balance_jpy`、`min_maintenance_margin_pct` は最終昇格結果 JSON の値を優先します。必要に応じて `--fixed-units`、`--use-margin-ratio --margin-ratio-target`、`--size-scale-pct`、`--kill-switch-dd-pct`、`--kill-switch-reference-balance-jpy`、`--min-maintenance-margin-pct`、`--max-concurrent-positions` で上書きします。
 
 ```bash
 PYTHONPATH="$PWD/src:$PWD/runtime/src:$PWD" \
 python3 -m timer_entry_runtime.promotion \
   --result-file qualify/results/{slot_id}/{result_id}.json \
-  --out-file runtime/out/{slot_id}_runtime.json \
+  --out-file runtime/config/{slot_id}/{result_id}.json \
   --setting-id {slot_id}_{side}_runtime_v1
 ```
 
@@ -214,7 +263,7 @@ docker run --rm \
   python:3.12-slim \
   python -m timer_entry_runtime.promotion \
     --result-file qualify/results/{slot_id}/{result_id}.json \
-    --out-file runtime/out/{slot_id}_runtime.json \
+    --out-file runtime/config/{slot_id}/{result_id}.json \
     --setting-id {slot_id}_{side}_runtime_v1
 ```
 
@@ -224,7 +273,7 @@ docker run --rm \
 PYTHONPATH="$PWD/src:$PWD/runtime/src:$PWD" \
 python3 -m timer_entry_runtime.promotion \
   --result-file qualify/results/{slot_id}/{result_id}.json \
-  --out-file runtime/out/{slot_id}_runtime_enabled.json \
+  --out-file runtime/config/{slot_id}/{result_id}.json \
   --setting-id {slot_id}_{side}_runtime_v1 \
   --enabled
 ```
@@ -239,7 +288,7 @@ docker run --rm \
   python:3.12-slim \
   python -m timer_entry_runtime.promotion \
     --result-file qualify/results/{slot_id}/{result_id}.json \
-    --out-file runtime/out/{slot_id}_runtime_enabled.json \
+    --out-file runtime/config/{slot_id}/{result_id}.json \
     --setting-id {slot_id}_{side}_runtime_v1 \
     --enabled
 ```
@@ -251,7 +300,7 @@ AWS_ACCESS_KEY_ID=xxx \
 AWS_SECRET_ACCESS_KEY=xxx \
 AWS_REGION=ap-northeast-1 \
 bash runtime/apply_setting.sh \
-  runtime/out/{slot_id}_runtime.json
+  runtime/config/{slot_id}/{result_id}.json
 ```
 
 無効化:
@@ -261,7 +310,7 @@ AWS_ACCESS_KEY_ID=xxx \
 AWS_SECRET_ACCESS_KEY=xxx \
 AWS_REGION=ap-northeast-1 \
 bash runtime/disable_setting.sh \
-  {slot_id}_{side}_runtime_v1
+  {result_id}
 ```
 
 補足:
@@ -281,7 +330,7 @@ docker run --rm \
   -e AWS_REGION=ap-northeast-1 \
   -w /work \
   python:3.12-slim \
-  -lc "pip install --no-cache-dir awscli && bash runtime/apply_setting.sh runtime/out/{slot_id}_runtime.json"
+  -lc "pip install --no-cache-dir awscli && bash runtime/apply_setting.sh runtime/config/{slot_id}/{result_id}.json"
 ```
 
 Docker で無効化:
@@ -295,7 +344,7 @@ docker run --rm \
   -e AWS_REGION=ap-northeast-1 \
   -w /work \
   python:3.12-slim \
-  -lc "pip install --no-cache-dir awscli && bash runtime/disable_setting.sh {slot_id}_{side}_runtime_v1"
+  -lc "pip install --no-cache-dir awscli && bash runtime/disable_setting.sh {result_id}"
 ```
 
 ## trigger_bucket

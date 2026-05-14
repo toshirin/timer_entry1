@@ -59,6 +59,13 @@ class RuntimeAws:
         )
         return [SettingConfig.from_item(item) for item in response.get("Items", [])]
 
+    def get_setting_config(self, setting_id: str) -> SettingConfig | None:
+        response = self._setting_config_table.get_item(Key={"setting_id": setting_id})
+        item = response.get("Item")
+        if not item:
+            return None
+        return SettingConfig.from_item(item)
+
     def create_trade_state_if_absent(self, item: dict[str, Any]) -> bool:
         try:
             self._trade_state_table.put_item(
@@ -130,6 +137,7 @@ class RuntimeAws:
             "setting_id": setting.setting_id,
             "strategy_id": setting.strategy_id,
             "slot_id": setting.slot_id,
+            "setting_labels": setting.labels,
             "trade_date_local": trade_date_local,
             "market_tz": setting.market_tz,
             "instrument": setting.instrument,
@@ -146,6 +154,7 @@ class RuntimeAws:
         self,
         *,
         execution_id: str,
+        correlation_id: str,
         trade_id: str,
         setting: SettingConfig,
         units: int | None,
@@ -157,10 +166,12 @@ class RuntimeAws:
     ) -> dict[str, Any]:
         return {
             "execution_id": execution_id,
+            "correlation_id": correlation_id,
             "trade_id": trade_id,
             "setting_id": setting.setting_id,
             "strategy_id": setting.strategy_id,
             "slot_id": setting.slot_id,
+            "setting_labels": setting.labels,
             "trade_date_local": trade_date_local,
             "market_tz": setting.market_tz,
             "instrument": setting.instrument,
@@ -180,6 +191,7 @@ class RuntimeAws:
         self,
         *,
         decision_id: str,
+        correlation_id: str,
         setting: SettingConfig,
         handler_name: str,
         trigger_bucket: str | None,
@@ -193,9 +205,11 @@ class RuntimeAws:
     ) -> dict[str, Any]:
         return {
             "decision_id": decision_id,
+            "correlation_id": correlation_id,
             "setting_id": setting.setting_id,
             "strategy_id": setting.strategy_id,
             "slot_id": setting.slot_id,
+            "setting_labels": setting.labels,
             "trade_date_local": trade_date_local,
             "market_tz": setting.market_tz,
             "instrument": setting.instrument,

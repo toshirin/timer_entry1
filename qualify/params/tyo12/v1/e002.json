@@ -1,0 +1,17 @@
+{
+  "experiment_code": "E002",
+  "variant_code": null,
+  "slot_id": "tyo12",
+  "side": "buy",
+  "baseline": {
+    "entry_clock_local": "12:55",
+    "forced_exit_clock_local": "13:50",
+    "tp_pips": 25,
+    "sl_pips": 15,
+    "filter_labels": ["ge0"]
+  },
+  "tp_values": [20, 25, 30],
+  "sl_values": [10, 15, 25],
+  "pass_stability_gate": true,
+  "notes": "E001でge0が通過。baselineは12:55 buy / FE13:50 / TP25 / SL15。E002ではfilterを固定し、scan上位近傍に限定してTP/SLの小規模sweepを行う。中心は25/15、比較はTP20/25/30とSL10/15/25。same_bar conflict/unresolvedはE001で0。"
+}

@@ -56,11 +56,25 @@ docker run --rm \
     --out-dir scan/out/latest
 ```
 
+US/UK DST のズレ期間を London trading day から除外して再 scan する場合:
+
+```bash
+docker run --rm \
+  -v "$PWD:/work" \
+  timer_entry1 \
+  python scan/run_scan.py \
+    --years 2019 2020 2021 2022 2023 2024 2025 \
+    --dataset-dir dataset \
+    --out-dir scan/out/latest \
+    --exclude-windows us_uk_dst_mismatch
+```
+
 ## 補足
 
 - `tqdm` を必須とし、slot ごとの進捗を表示する
 - 東京系は `tyoXX`、ロンドン系は `lonXX` の slot 名を使う
 - slot ごとの処理が終わるたびに `summary.csv` と `per_slot` へ append する
+- `--exclude-windows us_uk_dst_mismatch` は米国と英国の DST 適用状態が異なる London trading day を除外する
 - `scan` の昇格ゲートとして `pass_stability_gate` を計算する
 - `pass_stability_gate`
   - `in_gross_pips > 0`

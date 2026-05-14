@@ -6,6 +6,7 @@ from typing import Iterable, Literal
 
 import pandas as pd
 
+from .calendar import is_trading_day_excluded
 from .time_utils import (
     LONDON_TZ,
     TimeNormalizationSummary,
@@ -73,6 +74,7 @@ class MinuteDataSummary:
     duplicate_clock_jst_count: int
     duplicate_clock_london_count: int
     duplicate_clock_removed_count: int
+    excluded_session_day_count: int
 
 
 def _validate_required_columns(df: pd.DataFrame, *, year: int) -> None:
@@ -145,6 +147,7 @@ def load_trading_days(
     *,
     dataset_dir: str | Path = "dataset",
     session_tz: SessionTz = "Asia/Tokyo",
+    exclude_windows: tuple[str, ...] | list[str] = (),
 ) -> tuple[list[TradingDay], MinuteDataSummary]:
     # 日次単位の TradingDay へ切り分ける。
     # 時刻 fallback や重複時計の除去件数もここで集計する。
@@ -159,6 +162,7 @@ def load_trading_days(
     duplicate_clock_jst_count = 0
     duplicate_clock_london_count = 0
     duplicate_clock_removed_count = 0
+    excluded_session_day_count = 0
 
     for year in years:
         df, summary = load_year_frame(year, dataset_dir=dataset_dir, market_tz=session_tz)
@@ -171,6 +175,9 @@ def load_trading_days(
 
         weekday_filtered = filter_weekdays(df, weekday_col)
         for session_date, day_df in weekday_filtered.groupby(date_col, sort=True):
+            if is_trading_day_excluded(str(session_date), session_tz, exclude_windows):
+                excluded_session_day_count += 1
+                continue
             deduped, removed = sort_and_deduplicate_by_clock(
                 day_df,
                 date_col=date_col,
@@ -203,6 +210,7 @@ def load_trading_days(
         duplicate_clock_jst_count=duplicate_clock_jst_count,
         duplicate_clock_london_count=duplicate_clock_london_count,
         duplicate_clock_removed_count=duplicate_clock_removed_count,
+        excluded_session_day_count=excluded_session_day_count,
     )
     return days, summary
 
