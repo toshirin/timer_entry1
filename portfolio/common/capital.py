@@ -5,21 +5,15 @@ from typing import Any
 
 import pandas as pd
 
+from .runtime_policy import LEVEL0_FIXED_UNITS, MAX_LEVEL, MIN_LEVEL, level_sizing_fields
 
 OANDA_MARGIN_RATE = 0.04
 PIP_VALUE_JPY_PER_UNIT = 0.01
 
 LEVEL_SIZE_SCALE_PCT: dict[int, float | None] = {
-    0: None,
-    1: 0.1,
-    2: 0.3,
-    3: 1.0,
-    4: 3.0,
-    5: 10.0,
-    6: 30.0,
-    7: 100.0,
+    level: level_sizing_fields(level)["size_scale_pct"]  # type: ignore[dict-item]
+    for level in range(MIN_LEVEL, MAX_LEVEL + 1)
 }
-LEVEL0_FIXED_UNITS = 10
 
 
 def compute_units(
@@ -51,13 +45,13 @@ def compute_units_for_level(
     margin_ratio_target: float | None,
     level: int,
 ) -> int:
-    if level == 0:
-        return LEVEL0_FIXED_UNITS
+    sizing_fields = level_sizing_fields(level)
     return compute_units(
         equity_jpy=equity_jpy,
         entry_price=entry_price,
         margin_ratio_target=margin_ratio_target,
-        size_scale_pct=LEVEL_SIZE_SCALE_PCT[level],
+        size_scale_pct=sizing_fields["size_scale_pct"],  # type: ignore[arg-type]
+        fixed_units=sizing_fields["fixed_units"],  # type: ignore[arg-type]
     )
 
 
@@ -95,4 +89,3 @@ def write_jsonable_float(value: Any) -> Any:
     if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
         return None
     return value
-

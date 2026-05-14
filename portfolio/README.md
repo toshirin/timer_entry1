@@ -71,6 +71,7 @@ E012 も `sizing_mode` 列で以下の 2 系統を出します。
 
 太い edge を高 level から開始したい場合は、`--initial-level-setting SETTING_OR_SLOT=LEVEL` を列挙します。
 キーは `setting_id` または一意な `slot_id` を指定できます。全 setting を同じ level にしたい場合は `--initial-level` を使います。
+E012/E013 の昇降格判定と level sizing は、ops と同じ `runtime/src/timer_entry_runtime/level_policy.py` を import して使います。
 
 現在の太い edge 候補を level 3 start にする引数:
 

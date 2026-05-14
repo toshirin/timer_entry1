@@ -4,11 +4,8 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from .capital import LEVEL0_FIXED_UNITS, compute_units_for_level, pnl_jpy
-
-
-MIN_LEVEL = 0
-MAX_LEVEL = 7
+from .capital import compute_units_for_level, pnl_jpy
+from .runtime_policy import LEVEL0_FIXED_UNITS, UNIT_BASIS_MONTH_END, decide_monthly_level, threshold_jpy_for_units as runtime_threshold_jpy_for_units
 
 
 @dataclass
@@ -17,22 +14,18 @@ class LevelState:
 
 
 def threshold_jpy_for_units(units: int) -> float:
-    return 0.1 * int(units)
+    return runtime_threshold_jpy_for_units(int(units))
 
 
 def decide_level(current_level: int, current_units: int, cum_jpy_month: float, *, is_watch: bool) -> tuple[int, str, str]:
-    threshold = threshold_jpy_for_units(current_units)
-    if is_watch:
-        return MIN_LEVEL, "force_level0_watch", "watch_label"
-    if cum_jpy_month > threshold:
-        if current_level >= MAX_LEVEL:
-            return MAX_LEVEL, "keep", "already_at_max_level_profit_above_threshold"
-        return current_level + 1, "promote", "monthly_profit_above_threshold"
-    if cum_jpy_month < -threshold:
-        if current_level <= MIN_LEVEL:
-            return MIN_LEVEL, "keep", "already_at_min_level_loss_below_threshold"
-        return current_level - 1, "demote", "monthly_loss_below_threshold"
-    return current_level, "keep", "monthly_pnl_within_band"
+    decision = decide_monthly_level(
+        current_level=current_level,
+        current_units=current_units,
+        cum_jpy_month=cum_jpy_month,
+        labels=("watch",) if is_watch else (),
+        unit_basis=UNIT_BASIS_MONTH_END,
+    )
+    return decision.next_level, decision.decision, decision.decision_reason
 
 
 def simulate_level_basis(

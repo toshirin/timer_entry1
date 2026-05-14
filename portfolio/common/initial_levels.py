@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .unit_level import MAX_LEVEL, MIN_LEVEL
+from .runtime_policy import MAX_LEVEL, MIN_LEVEL
 
 
 def add_initial_level_args(parser) -> None:
