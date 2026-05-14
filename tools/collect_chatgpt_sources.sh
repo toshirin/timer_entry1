@@ -46,6 +46,9 @@ copy_doc "qualify/results/README.md" "qualify_results_README.md" | tee -a "${OUT
 copy_doc "qualify/docs/Audit_Result.md" "qualify_docs_Audit_Result.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 copy_doc "qualify/docs/Ops.md" "qualify_docs_Ops.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 
+copy_doc "portfolio/README.md" "portfolio_README.md" | tee -a "${OUT_DIR}/MANIFEST.md"
+copy_doc "portfolio/Spec.md" "portfolio_Spec.md" | tee -a "${OUT_DIR}/MANIFEST.md"
+
 copy_doc "ops/README.md" "ops_README.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 copy_doc "ops/Spec.md" "ops_Spec.md" | tee -a "${OUT_DIR}/MANIFEST.md"
 copy_doc "ops/docs/Dashboard_UI.md" "ops_docs_Dashboard_UI.md" | tee -a "${OUT_DIR}/MANIFEST.md"
